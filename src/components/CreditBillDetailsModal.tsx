@@ -108,13 +108,14 @@ export function CreditBillDetailsModal({ bill, onClose }: CreditBillDetailsModal
             </TableHeader>
             <TableBody>
               {bill.transactions
-                .filter(t => t.type === 'expense' && t.category_id) // Apenas despesas categorizadas (compras)
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell>{format(new Date(transaction.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
                     <TableCell>{transaction.description}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(transaction.amount)}</TableCell>
+                    <TableCell className={`text-right ${transaction.type === 'income' ? 'text-success' : ''}`}>
+                      {transaction.type === 'income' ? '-' : ''}{formatCurrency(Math.abs(transaction.amount))}
+                    </TableCell>
                   </TableRow>
                 ))}
             </TableBody>

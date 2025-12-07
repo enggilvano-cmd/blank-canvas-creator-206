@@ -506,8 +506,12 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                     // APENAS transações concluídas devem aparecer nos detalhes
                     if (t.status !== 'completed') return false;
                     
+                    // Despesas (compras) ou receitas (pagamentos)
+                    if (t.type !== 'expense' && t.type !== 'income') return false;
+                    
                     const tDate = typeof t.date === 'string' ? new Date(t.date) : t.date;
                     if (!tDate || isNaN(tDate.getTime())) return false;
+                    
                     const eff = (t.invoice_month_overridden && t.invoice_month)
                       ? t.invoice_month
                       : (details.account.closing_date
@@ -517,7 +521,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                               details.account.due_date || 1
                             )
                           : format(tDate, 'yyyy-MM'));
-                    return t.type === 'expense' && eff === currentMonth;
+                    return eff === currentMonth;
                   });
 
                   setSelectedBillForDetails({
@@ -574,11 +578,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
             })(),
             minimum_payment: selectedBillForDetails.billDetails.currentBillAmount * 0.15,
             late_fee: 0,
-            // CORREÇÃO: As transações já foram filtradas corretamente no onViewDetails
-            transactions: selectedBillForDetails.transactions.filter((t) => {
-              // Garante que são apenas despesas (compras) - pagamentos não aparecem aqui
-              return t.type === 'expense' && t.category_id;
-            }),
+            // Transações já foram filtradas corretamente no onViewDetails
+            transactions: selectedBillForDetails.transactions,
             account: selectedBillForDetails.account,
           }}
           onClose={() => setSelectedBillForDetails(null)}
