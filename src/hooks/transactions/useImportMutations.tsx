@@ -69,7 +69,7 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelayMs: number = 500
+  baseDelayMs: number = 1000
 ): Promise<T> {
   let lastError: Error | null = null;
   
@@ -81,6 +81,7 @@ async function withRetry<T>(
       
       if (attempt < maxRetries - 1) {
         const delay = baseDelayMs * Math.pow(2, attempt);
+        logger.warn(`[Import] Retry ${attempt + 1}/${maxRetries} após ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -90,26 +91,28 @@ async function withRetry<T>(
 }
 
 /**
- * Processa um lote de itens com delay entre lotes e retry
+ * Processa itens um por vez (sequencial) com delay entre cada
  */
-async function processBatch<T, R>(
+async function processSequentially<T, R>(
   items: T[],
   processor: (item: T, index: number) => Promise<R>,
-  batchSize: number = 2,
-  delayMs: number = 800
+  delayMs: number = 500
 ): Promise<PromiseSettledResult<R>[]> {
   const results: PromiseSettledResult<R>[] = [];
   
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.allSettled(
-      batch.map((item, batchIndex) => 
-        withRetry(() => processor(item, i + batchIndex), 3, 500)
-      )
-    );
-    results.push(...batchResults);
+  for (let i = 0; i < items.length; i++) {
+    try {
+      const result = await withRetry(() => processor(items[i], i), 3, 1000);
+      results.push({ status: 'fulfilled', value: result });
+    } catch (error) {
+      results.push({ 
+        status: 'rejected', 
+        reason: error instanceof Error ? error : new Error(String(error))
+      });
+    }
     
-    if (i + batchSize < items.length) {
+    // Delay entre cada item
+    if (i < items.length - 1) {
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
@@ -169,9 +172,9 @@ export function useImportMutations() {
     const { pairs: inferredTransferPairs, remaining: transactionsToProcess } = 
       detectTransferPairs(nonInstallmentTransactions);
 
-    // Processar transferências
+    // Processar transferências sequencialmente
     if (inferredTransferPairs.length > 0) {
-      const transferResults = await processBatch(
+      const transferResults = await processSequentially(
         inferredTransferPairs,
         async (pair) => {
           const status = pair.expense.status === 'pending' || pair.income.status === 'pending'
@@ -194,7 +197,7 @@ export function useImportMutations() {
           if (result.error) throw result.error;
           return result;
         },
-        3, 500
+        500
       );
 
       transferResults.forEach(result => {
@@ -239,9 +242,9 @@ export function useImportMutations() {
       }
     }
 
-    // Processar transações simples
+    // Processar transações simples sequencialmente
     if (transactionsToProcess.length > 0) {
-      const simpleResults = await processBatch(
+      const simpleResults = await processSequentially(
         transactionsToProcess,
         async (data, index) => {
           let transactionType = data.type;
@@ -288,7 +291,7 @@ export function useImportMutations() {
           }
           return result;
         },
-        5, 300
+        500
       );
 
       simpleResults.forEach((result, index) => {
