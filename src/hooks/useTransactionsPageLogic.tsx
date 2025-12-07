@@ -116,38 +116,13 @@ export function useTransactionsPageLogic({
     onDateToChange(format(end, 'yyyy-MM-dd'));
   };
 
-  // ✅ BUGFIX: Sincronizar dateFrom/dateTo com periodFilter na inicialização
-  // Isso garante que quando o filtro de período é "all", os filtros de data são removidos
+  // Update date range when custom dates change
   useEffect(() => {
-    if (periodFilter === "all") {
-      // Se período é "all", garantir que não há filtros de data aplicados
-      if (dateFrom !== undefined || dateTo !== undefined) {
-        onDateFromChange(undefined);
-        onDateToChange(undefined);
-      }
-    } else if (periodFilter === "current_month") {
-      // Sincronizar com mês atual
-      const now = new Date();
-      const expectedStart = format(startOfMonth(now), 'yyyy-MM-dd');
-      const expectedEnd = format(endOfMonth(now), 'yyyy-MM-dd');
-      if (dateFrom !== expectedStart || dateTo !== expectedEnd) {
-        onDateFromChange(expectedStart);
-        onDateToChange(expectedEnd);
-      }
-    } else if (periodFilter === "month_picker") {
-      // Sincronizar com mês selecionado
-      const expectedStart = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
-      const expectedEnd = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
-      if (dateFrom !== expectedStart || dateTo !== expectedEnd) {
-        onDateFromChange(expectedStart);
-        onDateToChange(expectedEnd);
-      }
-    } else if (periodFilter === "custom" && customStartDate && customEndDate) {
+    if (periodFilter === "custom" && customStartDate && customEndDate) {
       onDateFromChange(format(customStartDate, 'yyyy-MM-dd'));
       onDateToChange(format(customEndDate, 'yyyy-MM-dd'));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodFilter, selectedMonth, customStartDate, customEndDate]);
+  }, [customStartDate, customEndDate, periodFilter]);
 
   // Generate filter chips
   const filterChips = useMemo(() => {
