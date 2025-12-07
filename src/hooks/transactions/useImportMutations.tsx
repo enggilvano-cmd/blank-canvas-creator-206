@@ -28,7 +28,6 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
     
     if (!isTransferOutgoing) return;
 
-    // Procurar por INCOME correspondente
     const incomeIndex = transactions.findIndex((incomeData, index) => {
       if (usedIndexes.has(index) || index === expenseIndex) return false;
       if (incomeData.type !== 'income') return false;
@@ -64,10 +63,200 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
   return { pairs, remaining };
 }
 
+/**
+ * Processa um lote de itens com delay entre lotes
+ */
+async function processBatch<T, R>(
+  items: T[],
+  processor: (item: T, index: number) => Promise<R>,
+  batchSize: number = 5,
+  delayMs: number = 300
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
+  
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.allSettled(
+      batch.map((item, batchIndex) => processor(item, i + batchIndex))
+    );
+    results.push(...batchResults);
+    
+    if (i + batchSize < items.length) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  return results;
+}
+
 export function useImportMutations() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  /**
+   * Fallback: processa transações usando as edge functions existentes
+   */
+  const processWithLegacyMethod = useCallback(async (
+    transactionsData: ImportTransactionData[],
+    transactionsToReplace: string[],
+    categoryMap: Map<string, string>
+  ) => {
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Deletar transações a substituir
+    if (transactionsToReplace.length > 0) {
+      await Promise.allSettled(
+        transactionsToReplace.map(txId =>
+          supabase.functions.invoke('atomic-delete-transaction', {
+            body: { transaction_id: txId, scope: 'current' }
+          })
+        )
+      );
+    }
+
+    // Separar por tipo
+    const installmentGroups = new Map<string, ImportTransactionData[]>();
+    const nonInstallmentTransactions: ImportTransactionData[] = [];
+
+    transactionsData.forEach((data) => {
+      if (data.installments && data.current_installment && data.installments > 1) {
+        const descBase = data.description.replace(/\s*-\s*Parcela\s*\d+.*$/i, '').trim();
+        const groupKey = `${descBase}|${data.account_id}|${data.amount}|${data.installments}`;
+        
+        if (!installmentGroups.has(groupKey)) {
+          installmentGroups.set(groupKey, []);
+        }
+        installmentGroups.get(groupKey)!.push(data);
+      } else {
+        nonInstallmentTransactions.push(data);
+      }
+    });
+
+    installmentGroups.forEach((group) => {
+      group.sort((a, b) => (a.current_installment || 0) - (b.current_installment || 0));
+    });
+
+    const { pairs: inferredTransferPairs, remaining: transactionsToProcess } = 
+      detectTransferPairs(nonInstallmentTransactions);
+
+    // Processar transferências
+    if (inferredTransferPairs.length > 0) {
+      const transferResults = await processBatch(
+        inferredTransferPairs,
+        async (pair) => {
+          const status = pair.expense.status === 'pending' || pair.income.status === 'pending'
+            ? 'pending' : 'completed';
+
+          const result = await supabase.functions.invoke('atomic-transfer', {
+            body: {
+              transfer: {
+                from_account_id: pair.expense.account_id,
+                to_account_id: pair.income.account_id,
+                amount: pair.expense.amount,
+                date: pair.expense.date,
+                outgoing_description: pair.expense.description,
+                incoming_description: pair.income.description,
+                status,
+              }
+            }
+          });
+          
+          if (result.error) throw result.error;
+          return result;
+        },
+        3, 500
+      );
+
+      transferResults.forEach(result => {
+        if (result.status === 'fulfilled') successCount += 2;
+        else errorCount++;
+      });
+    }
+
+    // Processar parcelas
+    for (const [, group] of installmentGroups) {
+      const category_id = group[0].category ? categoryMap.get(group[0].category) || null : null;
+
+      for (const data of group) {
+        const transactionType = data.type === 'transfer' ? 'expense' : data.type;
+        
+        try {
+          const result = await supabase.functions.invoke('atomic-transaction', {
+            body: {
+              transaction: {
+                description: data.description,
+                amount: data.amount,
+                date: data.date,
+                type: transactionType,
+                category_id: category_id,
+                account_id: data.account_id,
+                status: data.status || 'completed',
+                invoice_month: data.invoice_month || null,
+              }
+            }
+          });
+
+          if (result.error) {
+            errorCount++;
+          } else {
+            successCount++;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch {
+          errorCount++;
+        }
+      }
+    }
+
+    // Processar transações simples
+    if (transactionsToProcess.length > 0) {
+      const simpleResults = await processBatch(
+        transactionsToProcess,
+        async (data) => {
+          let transactionType = data.type;
+          if (transactionType === 'transfer') {
+            if (data.to_account_id) throw new Error('Transferência não tratada');
+            transactionType = 'expense';
+          }
+          
+          if (transactionType !== 'income' && transactionType !== 'expense') {
+            throw new Error(`Tipo não suportado: ${data.type}`);
+          }
+
+          const category_id = data.category ? categoryMap.get(data.category) || null : null;
+
+          const result = await supabase.functions.invoke('atomic-transaction', {
+            body: {
+              transaction: {
+                description: data.description,
+                amount: data.amount,
+                date: data.date,
+                type: transactionType,
+                category_id: category_id,
+                account_id: data.account_id,
+                status: data.status || 'completed',
+                invoice_month: data.invoice_month || null,
+              }
+            }
+          });
+
+          if (result.error) throw result.error;
+          return result;
+        },
+        5, 300
+      );
+
+      simpleResults.forEach(result => {
+        if (result.status === 'fulfilled') successCount++;
+        else errorCount++;
+      });
+    }
+
+    return { successCount, errorCount };
+  }, []);
 
   const handleImportTransactions = useCallback(async (
     transactionsData: ImportTransactionData[],
@@ -78,7 +267,7 @@ export function useImportMutations() {
     const startTime = Date.now();
     
     try {
-      logger.info('[Import] 🚀 Iniciando importação BULK otimizada:', {
+      logger.info('[Import] 🚀 Iniciando importação:', {
         totalTransactions: transactionsData.length,
         transactionsToReplace: transactionsToReplace.length
       });
@@ -100,7 +289,7 @@ export function useImportMutations() {
         existingCategories?.map(cat => [cat.name, cat.id]) || []
       );
 
-      // Criar categorias faltantes em batch
+      // Criar categorias faltantes
       const categoriesToCreate = uniqueCategoryNames.filter(
         name => !categoryMap.has(name)
       );
@@ -128,116 +317,124 @@ export function useImportMutations() {
 
       logger.info('[Import] 📁 Categorias processadas:', {
         existing: existingCategories?.length || 0,
-        created: categoriesToCreate.length,
-        total: categoryMap.size
+        created: categoriesToCreate.length
       });
 
-      // 2. Separar transações por tipo
-      const installmentGroups = new Map<string, ImportTransactionData[]>();
-      const nonInstallmentTransactions: ImportTransactionData[] = [];
+      // 2. Tentar bulk import primeiro, fallback para método legado
+      let successCount = 0;
+      let errorCount = 0;
+      let usedBulkImport = false;
 
-      transactionsData.forEach((data) => {
-        if (data.installments && data.current_installment && data.installments > 1) {
-          const descBase = data.description.replace(/\s*-\s*Parcela\s*\d+.*$/i, '').trim();
-          const groupKey = `${descBase}|${data.account_id}|${data.amount}|${data.installments}`;
-          
-          if (!installmentGroups.has(groupKey)) {
-            installmentGroups.set(groupKey, []);
+      try {
+        // Preparar dados para bulk import
+        const installmentGroups = new Map<string, ImportTransactionData[]>();
+        const nonInstallmentTransactions: ImportTransactionData[] = [];
+
+        transactionsData.forEach((data) => {
+          if (data.installments && data.current_installment && data.installments > 1) {
+            const descBase = data.description.replace(/\s*-\s*Parcela\s*\d+.*$/i, '').trim();
+            const groupKey = `${descBase}|${data.account_id}|${data.amount}|${data.installments}`;
+            
+            if (!installmentGroups.has(groupKey)) {
+              installmentGroups.set(groupKey, []);
+            }
+            installmentGroups.get(groupKey)!.push(data);
+          } else {
+            nonInstallmentTransactions.push(data);
           }
-          installmentGroups.get(groupKey)!.push(data);
-        } else {
-          nonInstallmentTransactions.push(data);
-        }
-      });
+        });
 
-      // Ordenar parcelas
-      installmentGroups.forEach((group) => {
-        group.sort((a, b) => (a.current_installment || 0) - (b.current_installment || 0));
-      });
+        installmentGroups.forEach((group) => {
+          group.sort((a, b) => (a.current_installment || 0) - (b.current_installment || 0));
+        });
 
-      // 3. Detectar pares de transferência
-      const { pairs: inferredTransferPairs, remaining: transactionsToProcess } = 
-        detectTransferPairs(nonInstallmentTransactions);
+        const { pairs: inferredTransferPairs, remaining: transactionsToProcess } = 
+          detectTransferPairs(nonInstallmentTransactions);
 
-      logger.info('[Import] 📊 Análise concluída:', {
-        totalLinhas: transactionsData.length,
-        gruposParcelados: installmentGroups.size,
-        transferencias: inferredTransferPairs.length,
-        transacoesSimples: transactionsToProcess.length
-      });
-
-      // 4. Preparar dados para bulk import
-      const bulkTransactions = transactionsToProcess
-        .filter(data => {
-          const type = data.type === 'transfer' ? 'expense' : data.type;
-          return type === 'income' || type === 'expense';
-        })
-        .map(data => ({
-          description: data.description,
-          amount: data.amount,
-          date: data.date,
-          type: (data.type === 'transfer' ? 'expense' : data.type) as 'income' | 'expense',
-          category_id: data.category ? categoryMap.get(data.category) || null : null,
-          account_id: data.account_id,
-          status: data.status || 'completed',
-          invoice_month: data.invoice_month || null,
-          installments: null,
-          current_installment: null,
-        }));
-
-      // Adicionar parcelas ao bulk
-      for (const [, group] of installmentGroups) {
-        for (const data of group) {
-          const type = data.type === 'transfer' ? 'expense' : data.type;
-          if (type !== 'income' && type !== 'expense') continue;
-          
-          bulkTransactions.push({
+        const bulkTransactions = transactionsToProcess
+          .filter(data => {
+            const type = data.type === 'transfer' ? 'expense' : data.type;
+            return type === 'income' || type === 'expense';
+          })
+          .map(data => ({
             description: data.description,
             amount: data.amount,
             date: data.date,
-            type: type as 'income' | 'expense',
+            type: (data.type === 'transfer' ? 'expense' : data.type) as 'income' | 'expense',
             category_id: data.category ? categoryMap.get(data.category) || null : null,
             account_id: data.account_id,
             status: data.status || 'completed',
             invoice_month: data.invoice_month || null,
-            installments: data.installments || null,
-            current_installment: data.current_installment || null,
-          });
+            installments: null,
+            current_installment: null,
+          }));
+
+        for (const [, group] of installmentGroups) {
+          for (const data of group) {
+            const type = data.type === 'transfer' ? 'expense' : data.type;
+            if (type !== 'income' && type !== 'expense') continue;
+            
+            bulkTransactions.push({
+              description: data.description,
+              amount: data.amount,
+              date: data.date,
+              type: type as 'income' | 'expense',
+              category_id: data.category ? categoryMap.get(data.category) || null : null,
+              account_id: data.account_id,
+              status: data.status || 'completed',
+              invoice_month: data.invoice_month || null,
+              installments: data.installments || null,
+              current_installment: data.current_installment || null,
+            });
+          }
         }
+
+        const bulkTransfers = inferredTransferPairs.map(pair => ({
+          from_account_id: pair.expense.account_id,
+          to_account_id: pair.income.account_id,
+          amount: pair.expense.amount,
+          date: pair.expense.date,
+          outgoing_description: pair.expense.description,
+          incoming_description: pair.income.description,
+          status: (pair.expense.status === 'pending' || pair.income.status === 'pending'
+            ? 'pending' : 'completed') as 'pending' | 'completed',
+        }));
+
+        logger.info('[Import] 📦 Tentando bulk import...');
+
+        const { data: result, error } = await supabase.functions.invoke('atomic-bulk-import', {
+          body: {
+            transactions: bulkTransactions,
+            transfers: bulkTransfers,
+            delete_ids: transactionsToReplace,
+          }
+        });
+
+        if (error) throw error;
+
+        successCount = (result?.transactions_created || 0) + (result?.transfers_created || 0) * 2;
+        errorCount = result?.errors?.length || 0;
+        usedBulkImport = true;
+
+        logger.info('[Import] ✅ Bulk import bem-sucedido');
+
+      } catch (bulkError) {
+        logger.warn('[Import] ⚠️ Bulk import falhou, usando método legado:', {
+          error: bulkError instanceof Error ? bulkError.message : String(bulkError)
+        });
+
+        // Fallback para método legado
+        const legacyResult = await processWithLegacyMethod(
+          transactionsData,
+          transactionsToReplace,
+          categoryMap
+        );
+
+        successCount = legacyResult.successCount;
+        errorCount = legacyResult.errorCount;
       }
 
-      const bulkTransfers = inferredTransferPairs.map(pair => ({
-        from_account_id: pair.expense.account_id,
-        to_account_id: pair.income.account_id,
-        amount: pair.expense.amount,
-        date: pair.expense.date,
-        outgoing_description: pair.expense.description,
-        incoming_description: pair.income.description,
-        status: (pair.expense.status === 'pending' || pair.income.status === 'pending'
-          ? 'pending'
-          : 'completed') as 'pending' | 'completed',
-      }));
-
-      logger.info('[Import] 📦 Enviando bulk import:', {
-        transactions: bulkTransactions.length,
-        transfers: bulkTransfers.length,
-        deleteIds: transactionsToReplace.length,
-      });
-
-      // 5. Chamar edge function de bulk import
-      const { data: result, error } = await supabase.functions.invoke('atomic-bulk-import', {
-        body: {
-          transactions: bulkTransactions,
-          transfers: bulkTransfers,
-          delete_ids: transactionsToReplace,
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      // 6. Invalidar cache
+      // 3. Invalidar cache
       await Promise.all([
         queryClient.invalidateQueries({ 
           queryKey: queryKeys.transactionsBase,
@@ -251,28 +448,25 @@ export function useImportMutations() {
       ]);
 
       const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
-      const totalCreated = (result?.transactions_created || 0) + (result?.transfers_created || 0) * 2;
       const totalRequested = transactionsData.length;
-      const successRate = ((totalCreated / totalRequested) * 100).toFixed(1);
+      const successRate = totalRequested > 0 ? ((successCount / totalRequested) * 100).toFixed(1) : '0';
 
-      logger.info('[Import] ✅ Bulk import concluído:', {
+      logger.info('[Import] ✅ Importação concluída:', {
+        metodo: usedBulkImport ? 'bulk' : 'legado',
         tempo: `${elapsedTime}s`,
-        tempoServer: `${result?.elapsed_ms}ms`,
         total: totalRequested,
-        sucesso: totalCreated,
-        erros: result?.errors?.length || 0,
+        sucesso: successCount,
+        erros: errorCount,
         taxa: `${successRate}%`
       });
 
-      const errorCount = result?.errors?.length || 0;
-      
       toast({
         title: 'Importação concluída',
-        description: `✅ ${totalCreated} de ${totalRequested} transações importadas (${successRate}%) em ${elapsedTime}s${errorCount > 0 ? ` | ❌ ${errorCount} erros` : ''}`,
+        description: `✅ ${successCount} de ${totalRequested} transações importadas (${successRate}%) em ${elapsedTime}s${errorCount > 0 ? ` | ❌ ${errorCount} erros` : ''}`,
       });
 
     } catch (error: unknown) {
-      logger.error('[Import] ❌ Erro na importação bulk:', {
+      logger.error('[Import] ❌ Erro na importação:', {
         error,
         errorMessage: error instanceof Error ? error.message : String(error)
       });
@@ -287,7 +481,7 @@ export function useImportMutations() {
       
       throw error;
     }
-  }, [user, queryClient, toast]);
+  }, [user, queryClient, toast, processWithLegacyMethod]);
 
   return {
     handleImportTransactions,
