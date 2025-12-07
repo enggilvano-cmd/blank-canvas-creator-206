@@ -215,14 +215,21 @@ export function useImportMutations() {
     if (transactionsToProcess.length > 0) {
       const simpleResults = await processBatch(
         transactionsToProcess,
-        async (data) => {
+        async (data, index) => {
           let transactionType = data.type;
+          
+          // Transferências com to_account_id já foram processadas como pares
+          // Se chegou aqui, trata como expense (transferência de saída sem par de entrada)
           if (transactionType === 'transfer') {
-            if (data.to_account_id) throw new Error('Transferência não tratada');
             transactionType = 'expense';
           }
           
           if (transactionType !== 'income' && transactionType !== 'expense') {
+            logger.error('[Import] Tipo não suportado:', { 
+              index, 
+              type: data.type, 
+              description: data.description 
+            });
             throw new Error(`Tipo não suportado: ${data.type}`);
           }
 
@@ -243,15 +250,29 @@ export function useImportMutations() {
             }
           });
 
-          if (result.error) throw result.error;
+          if (result.error) {
+            logger.error('[Import] Erro na transação:', {
+              index,
+              description: data.description,
+              error: result.error
+            });
+            throw result.error;
+          }
           return result;
         },
         5, 300
       );
 
-      simpleResults.forEach(result => {
-        if (result.status === 'fulfilled') successCount++;
-        else errorCount++;
+      simpleResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          successCount++;
+        } else {
+          logger.error('[Import] Falha na transação:', {
+            index,
+            reason: result.reason
+          });
+          errorCount++;
+        }
       });
     }
 
