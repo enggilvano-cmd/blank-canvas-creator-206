@@ -2,98 +2,763 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Apple-Inspired Clean Design System */
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 15%;
+    /* Financial App Color System - Tema Claro */
+    /* Cores baseadas na paleta especificada para finanças pessoais */
+    
+    /* Backgrounds - Clean & Bright */
+    --background: 210 20% 98%; /* Fundo principal muito claro, quase branco */
+    --foreground: 210 28% 13%; /* Texto principal escuro para contraste */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 15%;
+    /* Card system - Branco puro com sombras sutis */
+    --card: 0 0% 100%; /* Cards brancos */
+    --card-foreground: 210 28% 13%; /* Texto escuro */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%;
+    /* Popover system */
+    --popover: 0 0% 100%; /* Popovers brancos */
+    --popover-foreground: 210 28% 13%; /* Texto escuro */
 
-    --primary: 0 0% 20%;
-    --primary-foreground: 0 0% 98%;
+    /* Primary - Azul confiável */
+    --primary: 207 77% 40%; /* Azul sólido e profissional */
+    --primary-foreground: 0 0% 100%; /* Texto branco */
+    --primary-glow: 207 77% 50%;
+    --primary-deep: 207 77% 30%;
 
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 20%;
+    /* Secondary - Neutro e funcional */
+    --secondary: 210 20% 96%; /* Cinza muito claro */
+    --secondary-foreground: 210 28% 13%; /* Texto escuro */
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    /* Muted tones */
+    --muted: 210 20% 96%; /* Fundo muted claro */
+    --muted-foreground: 210 10% 40%; /* Texto muted cinza */
 
-    --accent: 0 0% 94%;
-    --accent-foreground: 0 0% 20%;
+    /* Accent/Alert - Laranja para destaques e alertas */
+    --accent: 27 74% 56%; /* #E68F36 */
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 27 74% 66%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    /* Status colors para finanças */
+    --success: 142 76% 36%; /* Verde */
+    --success-foreground: 0 0% 100%;
+    --success-glow: 142 76% 46%;
+    --warning: 27 74% 56%; /* Laranja */
+    --warning-foreground: 0 0% 100%;
+    --warning-glow: 27 74% 66%;
+    --destructive: 0 84% 60%; /* Vermelho */
+    --destructive-foreground: 0 0% 100%;
+    --destructive-glow: 0 84% 70%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 20%;
+    /* Interactive elements */
+    --border: 214 32% 91%; /* Bordas sutis */
+    --input: 214 32% 91%; /* Inputs claros */
+    --ring: 207 77% 40%; /* Anel de foco azul */
 
-    --radius: 0.5rem;
+    /* Financial App gradients para tema claro */
+    --gradient-primary: linear-gradient(135deg, hsl(207 77% 40%) 0%, hsl(207 77% 50%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 76% 46%) 100%);
+    --gradient-warning: linear-gradient(135deg, hsl(27 74% 56%) 0%, hsl(27 74% 66%) 100%);
+    --gradient-destructive: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(0 84% 70%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.8) 0%, hsl(0 0% 100% / 0.6) 100%);
+    --gradient-surface: linear-gradient(135deg, hsl(210 20% 98%) 0%, hsl(210 20% 95%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(210 30% 96%) 0%, hsl(210 25% 93%) 100%);
+    
+    /* Apple-style shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(210 20% 10% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(210 20% 10% / 0.1), 0 2px 4px -2px hsl(210 20% 10% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(210 20% 10% / 0.1), 0 4px 6px -4px hsl(210 20% 10% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(210 20% 10% / 0.1), 0 8px 10px -6px hsl(210 20% 10% / 0.05);
+    --shadow-card: 0 1px 3px 0 hsl(210 20% 10% / 0.1), 0 1px 2px -1px hsl(210 20% 10% / 0.06);
+    --shadow-floating: 0 4px 12px 0 hsl(210 20% 10% / 0.08);
+    --shadow-glass: 0 8px 32px 0 hsl(210 20% 10% / 0.1);
+    --shadow-inner: inset 0 1px 2px 0 hsl(210 20% 10% / 0.06);
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 0 0% 15%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 95%;
-    --sidebar-accent-foreground: 0 0% 15%;
-    --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 0 0% 20%;
+    --radius: 0.75rem;
+
+    /* Sidebar using financial palette */
+    --sidebar-background: 0 0% 100%; /* Branco */
+    --sidebar-foreground: 210 28% 13%; /* Texto escuro */
+    --sidebar-primary: 207 77% 40%; /* Azul */
+    --sidebar-primary-foreground: 0 0% 100%; /* Texto branco */
+    --sidebar-accent: 210 20% 96%; /* Hover cinza claro */
+    --sidebar-accent-foreground: 210 28% 13%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 207 77% 40%;
   }
 
   .dark {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 95%;
-
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 95%;
-
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 95%;
-
-    --primary: 0 0% 95%;
-    --primary-foreground: 0 0% 10%;
-
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 95%;
-
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%;
-
-    --accent: 0 0% 20%;
-    --accent-foreground: 0 0% 95%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 0% 80%;
+    /* Financial App Color System - Tema Escuro Completo */
+    /* Todas as áreas convertidas para tons escuros */
     
-    --sidebar-background: 0 0% 12%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 0 0% 90%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 18%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 0 0% 80%;
+    /* Backgrounds - Totalmente escuro */
+    --background: 210 30% 6%; /* Fundo principal muito escuro */
+    --foreground: 210 10% 92%; /* Texto principal claro */
+
+    /* Card system - Escuro com contraste sutil */
+    --card: 210 25% 10%; /* Cards escuros */
+    --card-foreground: 210 10% 92%; /* Texto claro nos cards */
+
+    /* Popover system - Escuro */
+    --popover: 210 25% 8%; /* Popovers escuros */
+    --popover-foreground: 210 10% 92%; /* Texto claro */
+
+    /* Primary - Mantém identidade visual azul */
+    --primary: 203 87% 62%; /* Azul vibrante preservado */
+    --primary-foreground: 210 30% 6%; /* Texto escuro para contraste */
+    --primary-glow: 203 87% 72%;
+    --primary-deep: 203 87% 52%;
+
+    /* Secondary - Escuro com texto claro */
+    --secondary: 210 20% 18%; /* Fundo escuro */
+    --secondary-foreground: 210 10% 88%; /* Texto claro */
+
+    /* Muted - Tons escuros suaves */
+    --muted: 210 20% 12%; /* Fundo muted escuro */
+    --muted-foreground: 210 15% 70%; /* Texto muted claro */
+
+    /* Accent - Mantém laranja mas ajusta foreground */
+    --accent: 27 100% 68%; /* Laranja preservado */
+    --accent-foreground: 210 30% 8%; /* Texto escuro para contraste */
+    --accent-glow: 27 100% 78%;
+
+    /* Status colors - Preserva identidade mas ajusta foreground */
+    --success: 142 76% 45%; /* Verde preservado */
+    --success-foreground: 210 30% 8%; /* Texto escuro */
+    --success-glow: 142 76% 55%;
+    
+    --warning: 27 100% 68%; /* Laranja preservado */
+    --warning-foreground: 210 30% 8%; /* Texto escuro */
+    --warning-glow: 27 100% 78%;
+    
+    --destructive: 0 84% 68%; /* Vermelho preservado */
+    --destructive-foreground: 210 30% 8%; /* Texto escuro */
+    --destructive-glow: 0 84% 78%;
+
+    /* Interactive elements - Todos escuros */
+    --border: 210 15% 20%; /* Bordas escuras */
+    --input: 210 20% 10%; /* Inputs escuros */
+    --ring: 203 87% 62%; /* Anel de foco mantém primary */
+
+    /* Gradients escuros */
+    --gradient-primary: linear-gradient(135deg, hsl(203 87% 62%) 0%, hsl(203 87% 72%) 100%);
+    --gradient-glass: linear-gradient(135deg, hsl(210 25% 8% / 0.95) 0%, hsl(210 20% 10% / 0.85) 100%);
+    --gradient-surface: linear-gradient(135deg, hsl(210 30% 6%) 0%, hsl(210 25% 8%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(210 25% 10%) 0%, hsl(210 20% 12%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(210 30% 5%) 0%, hsl(210 25% 7%) 100%);
+
+    /* Sidebar completamente escuro */
+    --sidebar-background: 210 30% 6%; /* Mesmo fundo escuro */
+    --sidebar-foreground: 210 10% 92%; /* Texto claro */
+    --sidebar-primary: 203 87% 62%; /* Azul preservado */
+    --sidebar-primary-foreground: 210 30% 6%; /* Texto escuro */
+    --sidebar-accent: 210 20% 12%; /* Accent escuro */
+    --sidebar-accent-foreground: 210 10% 88%; /* Texto claro */
+    --sidebar-border: 210 15% 18%; /* Border escura */
+    --sidebar-ring: 203 87% 62%; /* Ring preserva primary */
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  #root {
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    overflow-x: hidden;
+    max-width: 100vw;
+    font-feature-settings: "kern" 1, "liga" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  /* Prevent zoom on input focus (iOS Safari) */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  @media (min-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: 14px !important;
+    }
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: hidden; /* prevent double scrollbars; main handles scroll */
+  }
+
+  /* Hide scrollbar globally */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* Responsive container queries support */
+  @supports (container-type: inline-size) {
+    .container-query {
+      container-type: inline-size;
+    }
+  }
+}
+
+@layer components {
+  /* Apple-Inspired Component System - Clean & Responsive */
+  
+  /* Financial Card - Primary card style with Apple aesthetics */
+  .financial-card {
+    background: var(--gradient-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    @apply rounded-xl sm:rounded-2xl border border-border/60 shadow-[var(--shadow-card)] p-4 sm:p-5 md:p-6;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .financial-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-floating);
+    border-color: hsl(var(--border) / 0.8);
+  }
+
+  .financial-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--border) / 0.5), transparent);
+    border-radius: inherit;
+  }
+  
+  /* Apple-style Interactive Card */
+  .apple-card {
+    background: var(--gradient-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    @apply rounded-2xl border border-border/40 shadow-[var(--shadow-lg)] p-4 sm:p-6 md:p-8;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .apple-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+    border-color: hsl(var(--primary) / 0.2);
+  }
+
+  @media (min-width: 768px) {
+    .apple-card:hover {
+      transform: translateY(-3px);
+    }
+  }
+
+  /* Hero Card - Apple-inspired feature card */
+  .hero-card {
+    background: var(--gradient-hero);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    @apply rounded-2xl sm:rounded-3xl border border-border/30 shadow-[var(--shadow-xl)] p-6 sm:p-8 md:p-10;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.3), transparent);
+  }
+
+  /* Glass morphism - Apple-style */
+  .glass-morphism {
+    background: var(--gradient-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    @apply border border-border/30 shadow-[var(--shadow-lg)] rounded-xl sm:rounded-2xl;
+    position: relative;
+  }
+
+  /* Apple-style Button */
+  .apple-button {
+    background: var(--gradient-primary);
+    @apply rounded-xl shadow-[var(--shadow-md)] border-0 font-medium;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .apple-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .apple-button:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  @media (min-width: 768px) {
+    .apple-button:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* Responsive Balance Display */
+  .balance-positive {
+    @apply text-success text-lg sm:text-xl md:text-2xl;
+    text-shadow: 0 0 20px hsl(var(--success-glow) / 0.3);
+  }
+
+  .balance-negative {
+    @apply text-destructive text-lg sm:text-xl md:text-2xl;
+    text-shadow: 0 0 20px hsl(var(--destructive-glow) / 0.3);
+  }
+
+  .balance-neutral {
+    @apply text-muted-foreground text-lg sm:text-xl md:text-2xl;
+  }
+
+  /* =================================================================
+     SISTEMA DE TIPOGRAFIA PADRONIZADO - Apple-inspired Typography
+     ================================================================= */
+  
+  /* Caption - Para labels, textos auxiliares e informações secundárias */
+  .text-caption {
+    @apply text-xs sm:text-xs font-medium tracking-wide;
+    letter-spacing: 0.025em;
+  }
+
+  /* Body - Texto padrão do corpo */
+  .text-body {
+    @apply text-sm sm:text-sm font-normal leading-relaxed;
+  }
+
+  /* Body Large - Texto do corpo em destaque */
+  .text-body-large {
+    @apply text-sm sm:text-base font-normal leading-relaxed;
+  }
+
+  /* Headline - Títulos de seção e cards */
+  .text-headline {
+    @apply text-base sm:text-lg font-semibold tracking-tight leading-tight;
+  }
+
+  /* Title - Títulos principais de página */
+  .text-title {
+    @apply text-lg sm:text-xl md:text-2xl font-bold tracking-tight leading-tight;
+  }
+
+  /* Display - Títulos hero e destaques principais */
+  .text-display {
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight leading-tight;
+  }
+
+  /* Responsive Balance Display - Para valores monetários */
+  .balance-text {
+    @apply text-lg sm:text-xl md:text-2xl font-bold tracking-tight leading-none;
+  }
+
+  /* Legacy responsive classes - Mantidas para compatibilidade */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm md:text-base;
+  }
+
+  .text-responsive-base {
+    @apply text-sm sm:text-base md:text-lg;
+  }
+
+  .text-responsive-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  .text-responsive-2xl {
+    @apply text-xl sm:text-2xl md:text-3xl;
+  }
+
+  /* Responsive Spacing Classes */
+  .spacing-responsive-sm {
+    @apply space-y-2 sm:space-y-3 md:space-y-4;
+  }
+
+  .spacing-responsive-md {
+    @apply space-y-3 sm:space-y-4 md:space-y-6;
+  }
+
+  .spacing-responsive-lg {
+    @apply space-y-4 sm:space-y-6 md:space-y-8;
+  }
+
+  .financial-card-compact-top {
+    margin-top: -60px;
+  }
+
+  .personal-info-card-compact-top {
+    margin-top: -60px;
+  }
+
+  @media (min-width: 768px) {
+    .financial-card-compact-top {
+      margin-top: 0;
+    }
+
+    .personal-info-card-compact-top {
+      margin-top: 0;
+    }
+  }
+
+  /* Apple-style Animations - Smooth & Natural */
+  .apple-entrance {
+    animation: appleEntrance 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .apple-scale {
+    animation: appleScale 0.3s ease-out;
+  }
+
+  .apple-fade {
+    animation: appleFade 0.4s ease-out;
+  }
+
+  .apple-interaction {
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .apple-interaction:hover {
+    transform: translateY(-1px);
+  }
+
+  .apple-interaction:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Touch-friendly interactions - Respecting Apple's touch guidelines */
+  @media (hover: none) and (pointer: coarse) {
+    .apple-interaction:hover {
+      transform: none;
+    }
+    
+    .apple-card:hover {
+      transform: none;
+    }
+    
+    .apple-button:hover {
+      transform: none;
+    }
+    
+    /* Enhanced touch targets */
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Dynamic Background Surface */
+  .dynamic-surface {
+    background: var(--gradient-surface);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dynamic-surface::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.1), transparent);
+    animation: shimmer 3s infinite;
+  }
+
+  /* Grid Responsive System */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  .grid-responsive-2 {
+    @apply grid grid-cols-1 md:grid-cols-2;
+  }
+
+  .grid-responsive-3 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3;
+  }
+
+  /* Container Responsive */
+  .container-responsive {
+    @apply w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl 2xl:max-w-4xl mx-auto;
+  }
+
+  /* Apple-style Keyframes */
+  @keyframes appleEntrance {
+    0% { 
+      opacity: 0; 
+      transform: translateY(16px) scale(0.96);
+    }
+    100% { 
+      opacity: 1; 
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes appleScale {
+    0% { 
+      transform: scale(0.95);
+    }
+    50% { 
+      transform: scale(1.02);
+    }
+    100% { 
+      transform: scale(1);
+    }
+  }
+
+  @keyframes appleFade {
+    0% { 
+      opacity: 0;
+    }
+    100% { 
+      opacity: 1;
+    }
+  }
+
+  @keyframes float {
+    0%, 100% { 
+      transform: translateY(0px);
+    }
+    50% { 
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  /* Legacy support & Additional utilities */
+  .fade-in {
+    animation: appleEntrance 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .scale-in {
+    animation: appleScale 0.3s ease-out;
+  }
+
+  /* Typography System - Standardized based on sidebar menu */
+  
+  /* Page Titles (H1) */
+  .text-system-h1 {
+    @apply text-xl sm:text-2xl font-bold tracking-tight text-foreground;
+  }
+
+  /* Section Titles (H2) */
+  .text-system-h2 {
+    @apply text-lg sm:text-xl font-semibold tracking-tight text-foreground;
+  }
+
+  /* Subsection Titles (H3) */
+  .text-system-h3 {
+    @apply text-base font-semibold text-foreground;
+  }
+
+  /* Body Text - Matches menu items */
+  .text-system-body {
+    @apply text-sm font-medium text-foreground;
+  }
+
+  /* Secondary Body Text */
+  .text-system-body-secondary {
+    @apply text-sm font-normal text-muted-foreground;
+  }
+
+  /* Labels - Matches sidebar group labels */
+  .text-system-label {
+    @apply text-xs font-semibold text-muted-foreground uppercase tracking-wider;
+  }
+
+  /* Captions / Helper Text */
+  .text-system-caption {
+    @apply text-xs font-normal text-muted-foreground;
+  }
+
+  /* Financial Values - Bold, tabular nums for amounts */
+  .text-system-value {
+    @apply text-base sm:text-lg font-bold tabular-nums;
+  }
+
+  /* Small Text */
+  .text-system-small {
+    @apply text-[10px] font-medium text-muted-foreground;
+  }
+
+  /* Button Text */
+  .text-system-button {
+    @apply text-sm font-medium;
+    /* 16px, sempre medium ou bold */
+  }
+
+  /* Inputs e Placeholders */
+  .text-financial-input {
+    @apply text-base font-normal;
+    /* 16px */
+  }
+
+  /* Labels de Ícones e Badges */
+  .text-financial-caption {
+    @apply text-xs md:text-sm font-normal text-muted-foreground;
+    /* Mobile/Desktop: 12-14px */
+  }
+
+  /* Classes de compatibilidade com sistema anterior */
+  .text-title-1 {
+    @apply text-financial-h1;
+  }
+
+  .text-title-2 {
+    @apply text-system-h2;
+  }
+
+  .text-title-3 {
+    @apply text-system-h3;
+  }
+
+  .text-headline {
+    @apply text-system-h3;
+  }
+
+  .text-body {
+    @apply text-system-body;
+  }
+
+  .text-caption {
+    @apply text-system-caption;
+  }
+
+  /* Apple-style layout containers */
+  .container-apple {
+    @apply max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl mx-auto px-4 sm:px-6;
+  }
+
+  .container-wide {
+    @apply max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* System status bar spacing (iOS/Android safe areas) */
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+
+  .safe-left {
+    padding-left: max(env(safe-area-inset-left), 0px);
+  }
+
+  .safe-right {
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
+
+  /* Responsive viewport height for mobile browsers */
+  .min-h-screen-mobile {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+
+  /* Prevent horizontal scroll on small screens */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Responsive table wrapper */
+  .table-responsive {
+    @apply w-full overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0;
+  }
+
+  /* Prevent overflow and ensure responsive containers */
+  .page-container {
+    @apply w-full max-w-full overflow-x-hidden;
+  }
+
+  /* Responsive grid with no overflow */
+  .responsive-grid {
+    @apply grid gap-3 sm:gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  }
+
+  /* Responsive flex container */
+  .responsive-flex {
+    @apply flex flex-wrap gap-2 sm:gap-3;
+  }
+
+  /* Prevent text overflow */
+  .text-safe {
+    @apply break-words overflow-wrap-anywhere;
+  }
+
+  /* Ensure all content stays within bounds */
+  .content-safe {
+    @apply max-w-full overflow-x-hidden;
+  }
+
+  /* Breakpoint-specific utilities */
+  @media (max-width: 640px) {
+    .compact-mobile {
+      @apply text-sm px-2 py-1;
+    }
+    
+    /* Prevent any horizontal overflow on mobile */
+    body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .wide-desktop {
+      @apply max-w-[1800px];
+    }
   }
 }

@@ -1,20 +1,71 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Página em Branco</title>
-    <meta name="description" content="Uma página web em branco limpa e minimalista" />
-    <meta name="author" content="Lovable" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover, user-scalable=yes" />
+    <title>PlaniFlow - Gestão Financeira Pessoal</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="description" content="Aplicativo completo para gestão financeira pessoal - controle suas contas, cartões e investimentos" />
+    <meta name="author" content="PlaniFlow" />
 
-    <meta property="og:title" content="3dc20a8f-2dff-41bf-b5c6-b0c093f002ba" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <!-- Prevent caching of index.html to ensure PWA updates are detected -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <!-- Apple Web App Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PlaniFlow" />
+    <link rel="apple-touch-icon" href="/pwa-icon-192.png" />
+    
+    <!-- iOS Splash Screens -->
+    <link rel="apple-touch-startup-image" href="/pwa-icon-512.png" />
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#176EB5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0ea5e9" media="(prefers-color-scheme: dark)" />
+    <meta name="msapplication-TileColor" content="#176EB5" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    
+    <!-- PWA Chrome Specific Tags -->
+    <meta name="application-name" content="PlaniFlow" />
+    <meta name="apple-mobile-web-app-title" content="PlaniFlow" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-square70x70logo" content="/pwa-icon-192.png" />
+    <meta name="msapplication-square150x150logo" content="/pwa-icon-512.png" />
+
+    <meta property="og:title" content="PlaniFlow - Gestão Financeira Pessoal" />
+    <meta property="og:description" content="Aplicativo completo para gestão financeira pessoal - controle suas contas, cartões e investimentos" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <!-- Preload Apple System Fonts -->
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', system-ui, sans-serif;
+        overscroll-behavior-y: none;
+      }
+      
+      /* Prevent rubber-band scrolling on iOS */
+      html {
+        overscroll-behavior-y: none;
+        height: 100%;
+      }
+      
+      #root {
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+    </style>
   </head>
 
   <body>

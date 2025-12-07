@@ -1,0 +1,11 @@
+{
+  "name": "bundle-analysis",
+  "description": "Bundle size analysis script",
+  "type": "module",
+  "scripts": {
+    "analyze": "node scripts/bundle-analysis.js"
+  },
+  "devDependencies": {
+    "bundle-analyzer": "^1.0.0"
+  }
+}

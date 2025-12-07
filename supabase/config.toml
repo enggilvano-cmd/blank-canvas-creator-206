@@ -1,0 +1,43 @@
+project_id = "sdberrkfwoozezletfuq"
+
+[functions.delete-user]
+verify_jwt = true
+
+[functions.generate-recurring-transactions]
+verify_jwt = false
+
+[functions.generate-fixed-transactions-yearly]
+verify_jwt = false
+
+[functions.generate-scheduled-backup]
+verify_jwt = false
+
+[functions.cleanup-old-backups]
+verify_jwt = false
+
+[functions.atomic-transaction]
+verify_jwt = true
+
+[functions.atomic-transfer]
+verify_jwt = true
+
+[functions.atomic-edit-transaction]
+verify_jwt = true
+
+[functions.atomic-delete-transaction]
+verify_jwt = true
+
+[functions.atomic-pay-bill]
+verify_jwt = true
+
+[functions.atomic-create-recurring]
+verify_jwt = true
+
+[functions.atomic-create-fixed]
+verify_jwt = true
+
+[functions.generate-test-data]
+verify_jwt = true
+
+[functions.renew-fixed-transactions]
+verify_jwt = false
