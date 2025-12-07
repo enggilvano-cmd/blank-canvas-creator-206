@@ -365,8 +365,8 @@ export function useImportMutations() {
             account_id: data.account_id,
             status: data.status || 'completed',
             invoice_month: data.invoice_month || null,
-            installments: null,
-            current_installment: null,
+            installments: data.installments || null,
+            current_installment: data.current_installment || null,
           }));
 
         for (const [, group] of installmentGroups) {
