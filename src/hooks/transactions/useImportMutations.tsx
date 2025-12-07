@@ -64,20 +64,48 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
 }
 
 /**
- * Processa um lote de itens com delay entre lotes
+ * Executa uma função com retry exponencial
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelayMs: number = 500
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+/**
+ * Processa um lote de itens com delay entre lotes e retry
  */
 async function processBatch<T, R>(
   items: T[],
   processor: (item: T, index: number) => Promise<R>,
-  batchSize: number = 5,
-  delayMs: number = 300
+  batchSize: number = 2,
+  delayMs: number = 800
 ): Promise<PromiseSettledResult<R>[]> {
   const results: PromiseSettledResult<R>[] = [];
   
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     const batchResults = await Promise.allSettled(
-      batch.map((item, batchIndex) => processor(item, i + batchIndex))
+      batch.map((item, batchIndex) => 
+        withRetry(() => processor(item, i + batchIndex), 3, 500)
+      )
     );
     results.push(...batchResults);
     
