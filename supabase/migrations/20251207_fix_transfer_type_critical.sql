@@ -1,10 +1,8 @@
--- ✅ BUG FIX #6: Add SERIALIZABLE isolation level to atomic_create_transfer
--- Prevents lost updates and ensures consistency in concurrent transfers
+-- ✅ CORREÇÃO CRÍTICA: Transferências estavam sendo criadas com tipo 'expense' em vez de 'transfer'
+-- Esta correção garante que as transferências sejam identificadas corretamente no sistema
 
--- Drop existing function
 DROP FUNCTION IF EXISTS public.atomic_create_transfer(uuid, uuid, uuid, numeric, text, text, date, transaction_status);
 
--- Recreate with proper transaction isolation
 CREATE OR REPLACE FUNCTION public.atomic_create_transfer(
   p_user_id uuid,
   p_from_account_id uuid,
@@ -39,14 +37,14 @@ DECLARE
   v_from_chart_account_id UUID;
   v_to_chart_account_id UUID;
 BEGIN
-  -- ✅ BUG FIX #6: Set SERIALIZABLE isolation to prevent lost updates
+  -- ✅ Set SERIALIZABLE isolation to prevent lost updates
   SET LOCAL TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
   -- ✅ Lock accounts with SELECT FOR UPDATE to prevent concurrent modifications
   SELECT type, balance, limit_amount INTO v_from_account_type, v_from_balance, v_from_limit
   FROM accounts 
   WHERE id = p_from_account_id AND user_id = p_user_id
-  FOR UPDATE; -- Pessimistic lock
+  FOR UPDATE;
   
   IF NOT FOUND THEN
     RETURN QUERY SELECT false, 'Source account not found'::TEXT, NULL::UUID, NULL::UUID, 0::NUMERIC, 0::NUMERIC;
@@ -56,7 +54,7 @@ BEGIN
   SELECT type, balance INTO v_to_account_type, v_to_balance
   FROM accounts 
   WHERE id = p_to_account_id AND user_id = p_user_id
-  FOR UPDATE; -- Pessimistic lock
+  FOR UPDATE;
   
   IF NOT FOUND THEN
     RETURN QUERY SELECT false, 'Destination account not found'::TEXT, NULL::UUID, NULL::UUID, 0::NUMERIC, 0::NUMERIC;
@@ -77,7 +75,7 @@ BEGIN
     RETURN;
   END IF;
   
-  -- Criar transação de saída (✅ CORRIGIDO: tipo 'transfer' em vez de 'expense')
+  -- ✅ CORREÇÃO CRÍTICA: Criar transação de saída com tipo 'transfer' (não 'expense')
   INSERT INTO transactions (
     user_id, account_id, type, amount, date, description, status, to_account_id
   ) VALUES (
@@ -169,4 +167,4 @@ EXCEPTION
 END;
 $function$;
 
-COMMENT ON FUNCTION public.atomic_create_transfer IS 'Creates atomic transfer between accounts with SERIALIZABLE isolation level to prevent lost updates and race conditions';
+COMMENT ON FUNCTION public.atomic_create_transfer IS 'Creates atomic transfer between accounts with SERIALIZABLE isolation level and correct transfer type';

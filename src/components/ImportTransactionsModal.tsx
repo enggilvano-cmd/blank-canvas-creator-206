@@ -83,6 +83,7 @@ export function ImportTransactionsModal({
   const [importedData, setImportedData] = useState<ImportedTransaction[]>([]);
   const [excludedIndexes, setExcludedIndexes] = useState<Set<number>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'invalid' | 'transfers' | 'valid'>('all');
   const { toast } = useToast();
   const previewSectionRef = useRef<HTMLDivElement>(null);
 
@@ -594,6 +595,22 @@ export function ImportTransactionsModal({
         return acc;
       }, { new: 0, duplicates: 0, invalid: 0 });
 
+      // Log detalhado de erros para debug
+      const invalidTransactions = validatedData.filter(t => !t.isValid);
+      if (invalidTransactions.length > 0) {
+        console.group('❌ Transações inválidas encontradas:');
+        invalidTransactions.forEach((t, idx) => {
+          console.log(`\n[${idx + 1}/${invalidTransactions.length}] Linha ${validatedData.indexOf(t) + 2}:`, {
+            descrição: t.description,
+            tipo: t.type,
+            conta: t.accountName,
+            contaDestino: t.toAccountName || 'N/A',
+            erros: t.errors
+          });
+        });
+        console.groupEnd();
+      }
+
       toast({
         title: 'Arquivo processado',
         description: `Encontradas: ${summary.new} novas, ${summary.duplicates} duplicadas, ${summary.invalid} com erros`,
@@ -643,8 +660,8 @@ export function ImportTransactionsModal({
           current_installment: t.parcelas && t.parcelas.trim() && t.parcelas.includes('/') ? 
             parseInt(t.parcelas.split('/')[0], 10) || undefined : undefined,
           invoice_month: t.invoiceMonth && t.invoiceMonth.trim() ? t.invoiceMonth.trim() : undefined,
-          is_fixed: undefined, // Transações importadas não são fixas
-          is_provision: undefined // Transações importadas não são provisão
+          is_fixed: undefined,
+          is_provision: undefined
         };
       });
 
@@ -858,6 +875,14 @@ export function ImportTransactionsModal({
     ).length;
   }, [importedData, excludedIndexes]);
 
+  const filteredData = useMemo(() => {
+    if (filterType === 'all') return importedData;
+    if (filterType === 'invalid') return importedData.filter(t => !t.isValid);
+    if (filterType === 'transfers') return importedData.filter(t => t.parsedType === 'transfer' || t.tipo?.toLowerCase().includes('transfer'));
+    if (filterType === 'valid') return importedData.filter(t => t.isValid && !t.isDuplicate);
+    return importedData;
+  }, [importedData, filterType]);
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -952,12 +977,45 @@ export function ImportTransactionsModal({
           {importedData.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Prévia das Transações ({importedData.length} total)</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Prévia das Transações ({filteredData.length} de {importedData.length})</CardTitle>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant={filterType === 'all' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setFilterType('all')}
+                    >
+                      Todas ({importedData.length})
+                    </Button>
+                    <Button 
+                      variant={filterType === 'valid' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setFilterType('valid')}
+                    >
+                      Válidas ({summary.new})
+                    </Button>
+                    <Button 
+                      variant={filterType === 'invalid' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setFilterType('invalid')}
+                    >
+                      Com Erros ({summary.invalid})
+                    </Button>
+                    <Button 
+                      variant={filterType === 'transfers' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => setFilterType('transfers')}
+                    >
+                      Transferências
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="max-h-96 overflow-y-auto space-y-3">
-                  {importedData.map((transaction, index) => {
-                    const isExcluded = excludedIndexes.has(index);
+                  {filteredData.map((transaction, index) => {
+                    const originalIndex = importedData.indexOf(transaction);
+                    const isExcluded = excludedIndexes.has(originalIndex);
                     
                     return (
                       <div 
@@ -987,7 +1045,7 @@ export function ImportTransactionsModal({
                             <Button
                               variant={isExcluded ? "outline" : "ghost"}
                               size="sm"
-                              onClick={() => handleToggleExclude(index)}
+                              onClick={() => handleToggleExclude(originalIndex)}
                               className="h-7 px-2"
                               title={isExcluded ? "Incluir" : "Excluir"}
                             >
@@ -1002,14 +1060,14 @@ export function ImportTransactionsModal({
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="z-50 bg-popover">
-                                  <DropdownMenuItem onClick={() => handleResolutionChange(index, 'skip')}>
+                                  <DropdownMenuItem onClick={() => handleResolutionChange(originalIndex, 'skip')}>
                                     Pular (ignorar)
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleResolutionChange(index, 'add')}>
+                                  <DropdownMenuItem onClick={() => handleResolutionChange(originalIndex, 'add')}>
                                     Adicionar como nova
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    onClick={() => handleResolutionChange(index, 'replace')} 
+                                    onClick={() => handleResolutionChange(originalIndex, 'replace')} 
                                     className="text-destructive"
                                   >
                                     Substituir existente

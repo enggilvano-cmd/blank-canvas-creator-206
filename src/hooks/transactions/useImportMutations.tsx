@@ -297,6 +297,7 @@ export function useImportMutations() {
               const transactionId = responseData?.transaction?.id;
 
               if (transactionId) {
+                // Se não temos parent_transaction_id ainda, a primeira parcela se torna a pai
                 if (!parent_transaction_id) {
                   parent_transaction_id = transactionId;
                 }
