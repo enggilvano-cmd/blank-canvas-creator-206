@@ -64,39 +64,6 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
   return { pairs, remaining };
 }
 
-/**
- * Processa um lote de transações em paralelo com rate limiting
- * @param items - Array de itens para processar
- * @param processor - Função que processa cada item
- * @param batchSize - Quantidade de itens por lote (default: 3)
- * @param delayMs - Delay entre lotes em ms (default: 800)
- */
-async function processBatch<T, R>(
-  items: T[],
-  processor: (item: T, index: number) => Promise<R>,
-  batchSize: number = 3,
-  delayMs: number = 800
-): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = [];
-  
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    logger.info(`[Import] 📦 Processando lote ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)} (${batch.length} itens)`);
-    
-    const batchResults = await Promise.allSettled(
-      batch.map((item, batchIndex) => processor(item, i + batchIndex))
-    );
-    results.push(...batchResults);
-    
-    // Delay entre lotes para evitar rate limit
-    if (i + batchSize < items.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-  
-  return results;
-}
-
 export function useImportMutations() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -111,24 +78,12 @@ export function useImportMutations() {
     const startTime = Date.now();
     
     try {
-      logger.info('[Import] 🚀 Iniciando importação otimizada:', {
+      logger.info('[Import] 🚀 Iniciando importação BULK otimizada:', {
         totalTransactions: transactionsData.length,
         transactionsToReplace: transactionsToReplace.length
       });
 
-      // 1. Deletar transações que serão substituídas (em paralelo)
-      if (transactionsToReplace.length > 0) {
-        logger.info('[Import] 🗑️ Deletando transações a substituir...');
-        await Promise.allSettled(
-          transactionsToReplace.map(txId =>
-            supabase.functions.invoke('atomic-delete-transaction', {
-              body: { transaction_id: txId, scope: 'current' }
-            })
-          )
-        );
-      }
-
-      // 2. Batch lookup de categorias (otimizado)
+      // 1. Batch lookup de categorias
       const uniqueCategoryNames = [...new Set(
         transactionsData
           .filter(data => data.category)
@@ -145,7 +100,7 @@ export function useImportMutations() {
         existingCategories?.map(cat => [cat.name, cat.id]) || []
       );
 
-      // Criar categorias faltantes em uma única operação batch
+      // Criar categorias faltantes em batch
       const categoriesToCreate = uniqueCategoryNames.filter(
         name => !categoryMap.has(name)
       );
@@ -177,7 +132,7 @@ export function useImportMutations() {
         total: categoryMap.size
       });
 
-      // 3. Separar transações por tipo
+      // 2. Separar transações por tipo
       const installmentGroups = new Map<string, ImportTransactionData[]>();
       const nonInstallmentTransactions: ImportTransactionData[] = [];
 
@@ -195,12 +150,12 @@ export function useImportMutations() {
         }
       });
 
-      // Ordenar parcelas dentro de cada grupo
+      // Ordenar parcelas
       installmentGroups.forEach((group) => {
         group.sort((a, b) => (a.current_installment || 0) - (b.current_installment || 0));
       });
 
-      // 4. Detectar pares de transferência
+      // 3. Detectar pares de transferência
       const { pairs: inferredTransferPairs, remaining: transactionsToProcess } = 
         detectTransferPairs(nonInstallmentTransactions);
 
@@ -211,197 +166,78 @@ export function useImportMutations() {
         transacoesSimples: transactionsToProcess.length
       });
 
-      // Contadores de resultado
-      let successCount = 0;
-      let errorCount = 0;
+      // 4. Preparar dados para bulk import
+      const bulkTransactions = transactionsToProcess
+        .filter(data => {
+          const type = data.type === 'transfer' ? 'expense' : data.type;
+          return type === 'income' || type === 'expense';
+        })
+        .map(data => ({
+          description: data.description,
+          amount: data.amount,
+          date: data.date,
+          type: (data.type === 'transfer' ? 'expense' : data.type) as 'income' | 'expense',
+          category_id: data.category ? categoryMap.get(data.category) || null : null,
+          account_id: data.account_id,
+          status: data.status || 'completed',
+          invoice_month: data.invoice_month || null,
+          installments: null,
+          current_installment: null,
+        }));
 
-      // 5. Processar TRANSFERÊNCIAS em lotes de 2 (cada uma cria 2 transações)
-      if (inferredTransferPairs.length > 0) {
-        logger.info('[Import] 💸 Processando transferências...');
-        
-        const transferResults = await processBatch(
-          inferredTransferPairs,
-          async (pair) => {
-            const status = pair.expense.status === 'pending' || pair.income.status === 'pending'
-              ? 'pending'
-              : (pair.expense.status || pair.income.status || 'completed');
-
-            const result = await supabase.functions.invoke('atomic-transfer', {
-              body: {
-                transfer: {
-                  from_account_id: pair.expense.account_id,
-                  to_account_id: pair.income.account_id,
-                  amount: pair.expense.amount,
-                  date: pair.expense.date,
-                  outgoing_description: pair.expense.description,
-                  incoming_description: pair.income.description,
-                  status,
-                }
-              }
-            });
-            
-            if (result.error) throw result.error;
-            return result;
-          },
-          2, // Lotes de 2 transferências
-          1000 // 1 segundo entre lotes
-        );
-
-        transferResults.forEach(result => {
-          if (result.status === 'fulfilled') {
-            successCount += 2; // Cada transferência cria 2 transações
-          } else {
-            errorCount++;
-            logger.error('[Import] ❌ Erro em transferência:', result.reason);
-          }
-        });
-      }
-
-      // 6. Processar PARCELAS sequencialmente com delay
-      if (installmentGroups.size > 0) {
-        logger.info('[Import] 📑 Processando grupos de parcelas...');
-        
-        for (const [, group] of installmentGroups) {
-          const category_id = group[0].category ? categoryMap.get(group[0].category) || null : null;
-          let parent_transaction_id: string | null = null;
-
-          // Processar parcelas sequencialmente dentro do grupo (necessário para parent_id)
-          for (const data of group) {
-            // Garantir que o tipo é income ou expense (não transfer)
-            const transactionType = data.type === 'transfer' ? 'expense' : data.type;
-            
-            try {
-              const result = await supabase.functions.invoke('atomic-transaction', {
-                body: {
-                  transaction: {
-                    description: data.description,
-                    amount: data.amount,
-                    date: data.date,
-                    type: transactionType,
-                    category_id: category_id,
-                    account_id: data.account_id,
-                    status: data.status || 'completed',
-                  }
-                }
-              });
-
-              if (result.error) {
-                errorCount++;
-                logger.error('[Import] ❌ Erro em parcela:', result.error);
-                // Aguardar antes de continuar para evitar rate limit
-                await new Promise(resolve => setTimeout(resolve, 500));
-                continue;
-              }
-
-              const responseData = result.data as { transaction?: { id: string } };
-              const transactionId = responseData?.transaction?.id;
-
-              if (transactionId) {
-                if (!parent_transaction_id) {
-                  parent_transaction_id = transactionId;
-                }
-
-                const updates: Record<string, unknown> = {
-                  installments: data.installments,
-                  current_installment: data.current_installment,
-                  parent_transaction_id: parent_transaction_id
-                };
-
-                if (data.invoice_month) {
-                  updates.invoice_month = data.invoice_month;
-                  updates.invoice_month_overridden = true;
-                }
-
-                await supabase
-                  .from('transactions')
-                  .update(updates)
-                  .eq('id', transactionId);
-
-                successCount++;
-              }
-              
-              // Delay entre parcelas para evitar rate limit
-              await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (err) {
-              errorCount++;
-              logger.error('[Import] ❌ Exceção em parcela:', err);
-            }
-          }
+      // Adicionar parcelas ao bulk
+      for (const [, group] of installmentGroups) {
+        for (const data of group) {
+          const type = data.type === 'transfer' ? 'expense' : data.type;
+          if (type !== 'income' && type !== 'expense') continue;
+          
+          bulkTransactions.push({
+            description: data.description,
+            amount: data.amount,
+            date: data.date,
+            type: type as 'income' | 'expense',
+            category_id: data.category ? categoryMap.get(data.category) || null : null,
+            account_id: data.account_id,
+            status: data.status || 'completed',
+            invoice_month: data.invoice_month || null,
+            installments: data.installments || null,
+            current_installment: data.current_installment || null,
+          });
         }
       }
 
-      // 7. Processar TRANSAÇÕES SIMPLES em lotes de 5
-      if (transactionsToProcess.length > 0) {
-        logger.info('[Import] 💰 Processando transações simples...');
-        
-        const simpleResults = await processBatch(
-          transactionsToProcess,
-          async (data) => {
-            // Converter 'transfer' para tipo válido se necessário
-            let transactionType = data.type;
-            if (transactionType === 'transfer') {
-              // Se tem to_account_id, deveria ter sido tratada como transferência
-              if (data.to_account_id) {
-                throw new Error('Transferência não tratada corretamente');
-              }
-              // Senão, tratar como despesa
-              transactionType = 'expense';
-            }
-            
-            // Validar tipo final
-            if (transactionType !== 'income' && transactionType !== 'expense') {
-              throw new Error(`Tipo de transação não suportado: ${data.type}`);
-            }
+      const bulkTransfers = inferredTransferPairs.map(pair => ({
+        from_account_id: pair.expense.account_id,
+        to_account_id: pair.income.account_id,
+        amount: pair.expense.amount,
+        date: pair.expense.date,
+        outgoing_description: pair.expense.description,
+        incoming_description: pair.income.description,
+        status: (pair.expense.status === 'pending' || pair.income.status === 'pending'
+          ? 'pending'
+          : 'completed') as 'pending' | 'completed',
+      }));
 
-            const category_id = data.category ? categoryMap.get(data.category) || null : null;
+      logger.info('[Import] 📦 Enviando bulk import:', {
+        transactions: bulkTransactions.length,
+        transfers: bulkTransfers.length,
+        deleteIds: transactionsToReplace.length,
+      });
 
-            const result = await supabase.functions.invoke('atomic-transaction', {
-              body: {
-                transaction: {
-                  description: data.description,
-                  amount: data.amount,
-                  date: data.date,
-                  type: transactionType,
-                  category_id: category_id,
-                  account_id: data.account_id,
-                  status: data.status || 'completed',
-                }
-              }
-            });
+      // 5. Chamar edge function de bulk import
+      const { data: result, error } = await supabase.functions.invoke('atomic-bulk-import', {
+        body: {
+          transactions: bulkTransactions,
+          transfers: bulkTransfers,
+          delete_ids: transactionsToReplace,
+        }
+      });
 
-            if (result.error) throw result.error;
-
-            // Atualizar metadados extras se necessário
-            const responseData = result.data as { transaction?: { id: string } };
-            const transactionId = responseData?.transaction?.id;
-
-            if (transactionId && data.invoice_month) {
-              await supabase
-                .from('transactions')
-                .update({
-                  invoice_month: data.invoice_month,
-                  invoice_month_overridden: true
-                })
-                .eq('id', transactionId);
-            }
-
-            return result;
-          },
-          3, // Lotes de 3 transações (reduzido)
-          1000 // 1 segundo entre lotes
-        );
-
-        simpleResults.forEach(result => {
-          if (result.status === 'fulfilled') {
-            successCount++;
-          } else {
-            errorCount++;
-            logger.error('[Import] ❌ Erro em transação:', result.reason);
-          }
-        });
+      if (error) {
+        throw error;
       }
 
-      // 8. Invalidar cache e atualizar UI
+      // 6. Invalidar cache
       await Promise.all([
         queryClient.invalidateQueries({ 
           queryKey: queryKeys.transactionsBase,
@@ -415,43 +251,34 @@ export function useImportMutations() {
       ]);
 
       const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
-      const successRate = ((successCount / transactionsData.length) * 100).toFixed(1);
+      const totalCreated = (result?.transactions_created || 0) + (result?.transfers_created || 0) * 2;
+      const totalRequested = transactionsData.length;
+      const successRate = ((totalCreated / totalRequested) * 100).toFixed(1);
 
-      logger.info('[Import] ✅ Importação concluída:', {
+      logger.info('[Import] ✅ Bulk import concluído:', {
         tempo: `${elapsedTime}s`,
-        total: transactionsData.length,
-        sucesso: successCount,
-        erros: errorCount,
+        tempoServer: `${result?.elapsed_ms}ms`,
+        total: totalRequested,
+        sucesso: totalCreated,
+        erros: result?.errors?.length || 0,
         taxa: `${successRate}%`
       });
 
+      const errorCount = result?.errors?.length || 0;
+      
       toast({
         title: 'Importação concluída',
-        description: `✅ ${successCount} de ${transactionsData.length} transações importadas (${successRate}%) em ${elapsedTime}s${errorCount > 0 ? ` | ❌ ${errorCount} erros` : ''}`,
+        description: `✅ ${totalCreated} de ${totalRequested} transações importadas (${successRate}%) em ${elapsedTime}s${errorCount > 0 ? ` | ❌ ${errorCount} erros` : ''}`,
       });
 
     } catch (error: unknown) {
-      logger.error('[Import] ❌ Erro crítico na importação:', {
+      logger.error('[Import] ❌ Erro na importação bulk:', {
         error,
         errorMessage: error instanceof Error ? error.message : String(error)
       });
 
       const errorMessage = getErrorMessage(error);
       
-      // Tratar erros específicos
-      if (typeof error === 'object' && error !== null) {
-        const errorObj = error as Record<string, unknown>;
-        
-        if (errorObj.status === 429 || String(error).includes('429')) {
-          toast({
-            title: 'Limite de requisições excedido',
-            description: '⏱️ Muitas requisições. Aguarde alguns segundos e tente novamente.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-
       toast({
         title: 'Erro na importação',
         description: errorMessage,
