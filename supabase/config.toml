@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.renew-fixed-transactions]
 verify_jwt = false
+
+[functions.atomic-bulk-import]
+verify_jwt = true
