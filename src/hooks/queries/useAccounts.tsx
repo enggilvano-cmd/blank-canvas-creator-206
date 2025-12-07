@@ -6,7 +6,6 @@ import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
-import { offlineSync } from '@/lib/offlineSync';
 
 export function useAccounts() {
   const { user } = useAuth();
@@ -28,15 +27,23 @@ export function useAccounts() {
 
       const { data, error } = await supabase
         .from('accounts')
-        .select('id, name, type, balance, initial_balance, limit_amount, due_date, closing_date, color, created_at, updated_at')
+        .select('id, name, type, balance, limit_amount, due_date, closing_date, color, created_at, updated_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const accounts = (data || []).map((acc) => ({
-        ...acc,
-        limit: acc.limit_amount,
+        id: acc.id,
+        name: acc.name,
+        type: acc.type,
+        balance: acc.balance,
+        limit_amount: acc.limit_amount ?? undefined,
+        due_date: acc.due_date ?? undefined,
+        closing_date: acc.closing_date ?? undefined,
+        color: acc.color,
+        created_at: acc.created_at,
+        updated_at: acc.updated_at,
       })) as Account[];
 
       // Atualizar cache local em background
@@ -84,7 +91,7 @@ export function useAccounts() {
 
       return { previousAccounts };
     },
-    onError: (err, newAccount, context) => {
+    onError: (err, _updatedAccount, context) => {
       if (context?.previousAccounts) {
         queryClient.setQueryData(queryKeys.accounts, context.previousAccounts);
       }

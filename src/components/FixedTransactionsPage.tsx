@@ -4,9 +4,7 @@ import { offlineQueue } from "@/lib/offlineQueue";
 import { offlineDatabase } from "@/lib/offlineDatabase";
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Calendar, Search, CalendarPlus, DollarSign, MoreVertical } from "lucide-react";
 import {
   AlertDialog,
@@ -27,7 +25,6 @@ import { EditFixedTransactionModal } from "./EditFixedTransactionModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
-import { FixedTransactionPageActions } from "./fixedtransactions/FixedTransactionPageActions";
 import { ImportFixedTransactionsModal } from "./ImportFixedTransactionsModal";
 import { loadXLSX } from "@/lib/lazyImports";
 import { formatBRNumber } from "@/lib/formatters";
@@ -58,7 +55,7 @@ export function FixedTransactionsPage({
   onAddModalOpenChange?: (open: boolean) => void;
 } = {}) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  useAuth(); // only used for auth check
   
   // Filters with persistence
   const [filters, setFilters] = usePersistedFilters<FixedTransactionsFilters>(
@@ -211,7 +208,13 @@ export function FixedTransactionsPage({
         .order("name", { ascending: true });
 
       if (error) throw error;
-      setAccounts(data || []);
+      // Map null to undefined for type compatibility
+      setAccounts((data || []).map(acc => ({
+        ...acc,
+        limit_amount: acc.limit_amount ?? undefined,
+        due_date: acc.due_date ?? undefined,
+        closing_date: acc.closing_date ?? undefined,
+      })));
     } catch (error) {
       logger.error("Error loading accounts:", error);
     }
@@ -259,7 +262,6 @@ export function FixedTransactionsPage({
       await offlineQueue.enqueue({
         type: 'add_fixed_transaction',
         data: newTransaction,
-        retries: 0,
       });
 
       toast({
@@ -425,7 +427,6 @@ export function FixedTransactionsPage({
           updates,
           scope: 'current',
         },
-        retries: 0
       });
     };
 
@@ -588,7 +589,6 @@ export function FixedTransactionsPage({
       await offlineQueue.enqueue({
         type: 'delete',
         data: { id: transactionToDelete.id },
-        retries: 0
       });
 
       toast({ title: "Removido offline", description: "Sincronizará quando online." });

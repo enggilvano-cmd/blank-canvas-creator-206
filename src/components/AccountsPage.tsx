@@ -13,12 +13,9 @@ import {
   PiggyBank,
   Wallet,
   MoreVertical,
-  ArrowRight,
   DollarSign,
   TrendingUp,
   TrendingDown,
-  FileDown,
-  Upload,
   Utensils,
 } from "lucide-react";
 import {
@@ -48,7 +45,6 @@ interface AccountsPageProps {
   onEditAccount: (account: Account) => void;
   onDeleteAccount: (accountId: string) => void;
   onPayCreditCard?: (account: Account) => void;
-  onTransfer?: () => void;
   onImportAccounts?: (accounts: ImportAccountData[], accountsToReplace: string[]) => void;
   initialFilterType?: "all" | "checking" | "savings" | "credit" | "investment" | "meal_voucher";
   importModalOpen?: boolean;
@@ -60,7 +56,6 @@ export function AccountsPage({
   onEditAccount,
   onDeleteAccount,
   onPayCreditCard,
-  onTransfer,
   onImportAccounts,
   initialFilterType = "all",
   importModalOpen: externalImportModalOpen,

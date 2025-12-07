@@ -33,14 +33,23 @@ interface TransactionWithRelations extends Transaction {
   account?: {
     id: string;
     name: string;
-    type: 'checking' | 'savings' | 'credit' | 'investment';
+    type: 'checking' | 'savings' | 'credit' | 'investment' | 'meal_voucher';
     color: string;
   };
   to_account?: {
     id: string;
     name: string;
-    type: 'checking' | 'savings' | 'credit' | 'investment';
+    type: 'checking' | 'savings' | 'credit' | 'investment' | 'meal_voucher';
     color: string;
+  };
+  linked_transactions?: {
+    account_id: string;
+    accounts?: {
+      id: string;
+      name: string;
+      type: 'checking' | 'savings' | 'credit' | 'investment' | 'meal_voucher';
+      color: string;
+    };
   };
 }
 
@@ -186,7 +195,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
         throw error;
       }
 
-      const transactions = (data || []).map((trans) => ({
+      const transactions = (data || []).map((trans: any) => ({
         ...trans,
         date: createDateFromString(trans.date),
         category: Array.isArray(trans.categories) ? trans.categories[0] : trans.categories,
