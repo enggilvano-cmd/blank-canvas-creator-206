@@ -67,6 +67,7 @@ interface TransactionsPageProps {
   customEndDate: Date | undefined;
   onCustomEndDateChange: (date: Date | undefined) => void;
   allTransactions?: Transaction[];
+  availableInvoiceMonths: string[];
 }
 
 export function TransactionsPage({
@@ -120,6 +121,7 @@ export function TransactionsPage({
   customEndDate,
   onCustomEndDateChange,
   allTransactions,
+  availableInvoiceMonths,
 }: TransactionsPageProps) {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const { settings, formatCurrency } = useSettings();
@@ -227,6 +229,7 @@ export function TransactionsPage({
         onCustomEndDateChange={onCustomEndDateChange}
         accountsByType={accountsByType}
         categories={categories}
+        availableInvoiceMonths={availableInvoiceMonths}
         filterChips={filterChips}
         onClearAllFilters={clearAllFilters}
       />

@@ -239,6 +239,19 @@ const PlaniFlowApp = () => {
     [authLoading, loadingAccounts, loadingFilteredTransactions, loadingAllTransactions, loadingCategories]
   );
 
+  // Calcular meses de fatura disponíveis a partir de allTransactions
+  const availableInvoiceMonths = useMemo(() => {
+    if (!allTransactions) return [];
+    const months = new Set<string>();
+    allTransactions.forEach(t => {
+      if (t.invoice_month) {
+        months.add(t.invoice_month);
+      }
+    });
+    // Ordenar do mais recente para o mais antigo
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [allTransactions]);
+
   // Modal states
   const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
   const [addTransactionModalOpen, setAddTransactionModalOpen] = useState(false);
@@ -580,6 +593,7 @@ const PlaniFlowApp = () => {
             customEndDate={transactionsCustomEndDate}
             onCustomEndDateChange={setTransactionsCustomEndDate}
             allTransactions={allTransactions}
+            availableInvoiceMonths={availableInvoiceMonths}
           />
         );
       case "fixed":
