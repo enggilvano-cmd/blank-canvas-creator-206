@@ -22,6 +22,7 @@ interface UseTransactionsParams {
   accountType?: 'checking' | 'savings' | 'credit' | 'investment' | 'meal_voucher' | 'all';
   isFixed?: 'true' | 'false' | 'all';
   isProvision?: 'true' | 'false' | 'all';
+  invoiceMonth?: string; // "all" ou "YYYY-MM"
   dateFrom?: string;
   dateTo?: string;
   sortBy?: 'date' | 'amount';
@@ -84,6 +85,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
     accountType = 'all',
     isFixed = 'all',
     isProvision = 'all',
+    invoiceMonth = 'all',
     dateFrom,
     dateTo,
     sortBy = 'date',
@@ -144,6 +146,11 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         if (!!t.is_provision !== isProvisionBool) return false;
       }
 
+      // Invoice Month
+      if (invoiceMonth !== 'all') {
+        if (t.invoice_month !== invoiceMonth) return false;
+      }
+
       // Date Range
       if (dateFrom && t.date < dateFrom) return false;
       if (dateTo && t.date > dateTo) return false;
@@ -166,7 +173,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   // Query for total count with filters
   const countQuery = useQuery({
-    queryKey: [...queryKeys.transactions(), 'count', search, type, accountId, categoryId, status, accountType, isFixed, isProvision, dateFrom, dateTo, isOnline],
+    queryKey: [...queryKeys.transactions(), 'count', search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, isOnline],
     queryFn: async () => {
       if (!user) return 0;
 
@@ -219,6 +226,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         query = query.eq('is_provision', isProvision === 'true');
       }
 
+      if (invoiceMonth !== 'all') {
+        query = query.eq('invoice_month', invoiceMonth);
+      }
+
       if (dateFrom) {
         query = query.gte('date', dateFrom);
       }
@@ -249,7 +260,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   // Query for paginated data with filters
   const query = useQuery({
-    queryKey: [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, dateFrom, dateTo, sortBy, sortOrder, isOnline],
+    queryKey: [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, sortBy, sortOrder, isOnline],
     queryFn: async () => {
       if (!user) return [];
 
@@ -380,6 +391,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       if (isProvision !== 'all') {
         query = query.eq('is_provision', isProvision === 'true');
+      }
+
+      if (invoiceMonth !== 'all') {
+        query = query.eq('invoice_month', invoiceMonth);
       }
 
       if (dateFrom) {

@@ -60,6 +60,7 @@ interface TransactionsFilters {
   filterAccountType: "all" | "checking" | "savings" | "credit" | "investment" | "meal_voucher";
   filterIsFixed: "all" | "true" | "false";
   filterIsProvision: "all" | "true" | "false";
+  filterInvoiceMonth: string; // "all" ou "YYYY-MM"
   dateFrom?: string;
   dateTo?: string;
   sortBy: "date" | "amount";
@@ -129,6 +130,7 @@ const PlaniFlowApp = () => {
       filterAccountType: "all",
       filterIsFixed: "all",
       filterIsProvision: "all",
+      filterInvoiceMonth: "all",
       dateFrom: undefined,
       dateTo: undefined,
       sortBy: "date",
@@ -154,6 +156,7 @@ const PlaniFlowApp = () => {
   const setTransactionsFilterAccountType = (filterAccountType: typeof transactionsFilters.filterAccountType) => updateTransactionsFilter({ filterAccountType });
   const setTransactionsFilterIsFixed = (filterIsFixed: typeof transactionsFilters.filterIsFixed) => updateTransactionsFilter({ filterIsFixed });
   const setTransactionsFilterIsProvision = (filterIsProvision: typeof transactionsFilters.filterIsProvision) => updateTransactionsFilter({ filterIsProvision });
+  const setTransactionsFilterInvoiceMonth = (filterInvoiceMonth: string) => updateTransactionsFilter({ filterInvoiceMonth });
   const setTransactionsDateFrom = (dateFrom: string | undefined) => updateTransactionsFilter({ dateFrom });
   const setTransactionsDateTo = (dateTo: string | undefined) => updateTransactionsFilter({ dateTo });
   const setTransactionsSortBy = (sortBy: typeof transactionsFilters.sortBy) => updateTransactionsFilter({ sortBy });
@@ -172,6 +175,7 @@ const PlaniFlowApp = () => {
   const transactionsFilterAccountType = transactionsFilters.filterAccountType;
   const transactionsFilterIsFixed = transactionsFilters.filterIsFixed;
   const transactionsFilterIsProvision = transactionsFilters.filterIsProvision;
+  const transactionsFilterInvoiceMonth = transactionsFilters.filterInvoiceMonth;
   const transactionsDateFrom = transactionsFilters.dateFrom;
   const transactionsDateTo = transactionsFilters.dateTo;
   const transactionsSortBy = transactionsFilters.sortBy;
@@ -209,6 +213,7 @@ const PlaniFlowApp = () => {
     accountType: transactionsFilters.filterAccountType,
     isFixed: transactionsFilters.filterIsFixed,
     isProvision: transactionsFilters.filterIsProvision,
+    invoiceMonth: transactionsFilters.filterInvoiceMonth,
     dateFrom: transactionsFilters.dateFrom,
     dateTo: transactionsFilters.dateTo,
     sortBy: transactionsFilters.sortBy,
@@ -555,6 +560,8 @@ const PlaniFlowApp = () => {
             onFilterIsFixedChange={(value: string) => setTransactionsFilterIsFixed(value as "all" | "true" | "false")}
             filterIsProvision={transactionsFilterIsProvision}
             onFilterIsProvisionChange={(value: string) => setTransactionsFilterIsProvision(value as "all" | "true" | "false")}
+            filterInvoiceMonth={transactionsFilterInvoiceMonth}
+            onFilterInvoiceMonthChange={setTransactionsFilterInvoiceMonth}
             dateFrom={transactionsDateFrom}
             dateTo={transactionsDateTo}
             onDateFromChange={setTransactionsDateFrom}
