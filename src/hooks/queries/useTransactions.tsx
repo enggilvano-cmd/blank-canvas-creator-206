@@ -9,7 +9,7 @@ import { addTransactionSchema, editTransactionSchema } from '@/lib/validationSch
 import { z } from 'zod';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
-import { performanceMonitor } from '@/lib/performanceMonitor';
+import { performanceMonitor, trackCachePerformance } from '@/lib/performanceMonitor';
 
 interface UseTransactionsParams {
   page?: number;
@@ -318,6 +318,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
           parent_transaction_id,
           linked_transaction_id,
           is_fixed,
+          is_provision,
           invoice_month,
           invoice_month_overridden,
           created_at,
@@ -388,7 +389,9 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         query = query.eq('is_fixed', isFixed === 'true');
       }
 
-      // Note: is_provision filter removed as column doesn't exist in current schema
+      if (isProvision !== 'all') {
+        query = query.eq('is_provision', isProvision === 'true');
+      }
 
       if (invoiceMonth !== 'all') {
         query = query.eq('invoice_month', invoiceMonth);
@@ -426,7 +429,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       if (error) throw error;
 
-      const results = (data || []).map((trans: any) => ({
+      const results = (data || []).map((trans) => ({
         ...trans,
         date: createDateFromString(trans.date),
         category: Array.isArray(trans.categories) ? trans.categories[0] : trans.categories,

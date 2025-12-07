@@ -35,7 +35,6 @@ interface LayoutProps {
     onAddIncome: () => void;
     onAddCreditExpense: () => void;
   };
-  pageHeaderButtons?: React.ReactNode;
 }
 
 const getFirstName = (fullName?: string | null) => {

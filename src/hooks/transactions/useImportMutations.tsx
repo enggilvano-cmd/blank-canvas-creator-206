@@ -15,9 +15,6 @@ type DetectedTransferPair = {
 
 /**
  * Detecta pares de transferência no array de transações
- * IMPORTANTE: Só detecta pares quando:
- * 1. A transação tem tipo 'transfer' explicitamente
- * 2. E tem uma conta destino (to_account_id) válida
  */
 function detectTransferPairs(transactions: ImportTransactionData[]) {
   const pairs: DetectedTransferPair[] = [];
@@ -26,12 +23,11 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
   transactions.forEach((expenseData, expenseIndex) => {
     if (usedIndexes.has(expenseIndex)) return;
 
-    // Só considera transferência REAL (tipo explicitamente 'transfer' E com conta destino)
-    const isRealTransfer = expenseData.type === 'transfer' && Boolean(expenseData.to_account_id);
+    const isTransferOutgoing = Boolean(expenseData.to_account_id) && 
+                              (expenseData.type === 'transfer' || expenseData.type === 'expense');
     
-    if (!isRealTransfer) return;
+    if (!isTransferOutgoing) return;
 
-    // Busca a transação de entrada correspondente (deve existir no arquivo)
     const incomeIndex = transactions.findIndex((incomeData, index) => {
       if (usedIndexes.has(index) || index === expenseIndex) return false;
       if (incomeData.type !== 'income') return false;
@@ -44,18 +40,23 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
       );
     });
 
-    // Só cria par se encontrou a transação de entrada correspondente
-    // Caso contrário, deixa como transação normal para ser processada individualmente
+    usedIndexes.add(expenseIndex);
     if (incomeIndex !== -1) {
-      usedIndexes.add(expenseIndex);
       usedIndexes.add(incomeIndex);
-      
-      pairs.push({ 
-        expense: expenseData, 
-        income: transactions[incomeIndex]
-      });
     }
-    // Se não encontrou par, a transação será tratada individualmente como transação normal
+    
+    pairs.push({ 
+      expense: expenseData, 
+      income: incomeIndex !== -1 ? transactions[incomeIndex] : {
+        description: expenseData.description,
+        amount: expenseData.amount,
+        date: expenseData.date,
+        type: 'income',
+        account_id: expenseData.to_account_id!,
+        status: expenseData.status,
+        category: 'Transferência'
+      } as ImportTransactionData
+    });
   });
 
   const remaining = transactions.filter((_, index) => !usedIndexes.has(index));
@@ -266,16 +267,9 @@ export function useImportMutations() {
     const startTime = Date.now();
     
     try {
-      // Log detalhado para debug de invoice_month
-      const transactionsWithInvoiceMonth = transactionsData.filter(t => t.invoice_month);
       logger.info('[Import] 🚀 Iniciando importação:', {
         totalTransactions: transactionsData.length,
-        transactionsToReplace: transactionsToReplace.length,
-        transactionsWithInvoiceMonth: transactionsWithInvoiceMonth.length,
-        invoiceMonthSamples: transactionsWithInvoiceMonth.slice(0, 5).map(t => ({
-          description: t.description,
-          invoice_month: t.invoice_month
-        }))
+        transactionsToReplace: transactionsToReplace.length
       });
 
       // 1. Batch lookup de categorias
@@ -357,18 +351,7 @@ export function useImportMutations() {
         const { pairs: inferredTransferPairs, remaining: transactionsToProcess } = 
           detectTransferPairs(nonInstallmentTransactions);
 
-        const bulkTransactions: {
-          description: string;
-          amount: number;
-          date: string;
-          type: 'income' | 'expense';
-          category_id: string | null;
-          account_id: string;
-          status: 'pending' | 'completed';
-          invoice_month: string | null;
-          installments: number | null;
-          current_installment: number | null;
-        }[] = transactionsToProcess
+        const bulkTransactions = transactionsToProcess
           .filter(data => {
             const type = data.type === 'transfer' ? 'expense' : data.type;
             return type === 'income' || type === 'expense';
@@ -382,8 +365,8 @@ export function useImportMutations() {
             account_id: data.account_id,
             status: data.status || 'completed',
             invoice_month: data.invoice_month || null,
-            installments: null as number | null,
-            current_installment: null as number | null,
+            installments: null,
+            current_installment: null,
           }));
 
         for (const [, group] of installmentGroups) {

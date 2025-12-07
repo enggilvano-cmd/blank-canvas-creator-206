@@ -106,7 +106,7 @@ export function ImportTransactionsModal({
     amount: ['Valor', 'Amount', 'Valor', 'Valor (R$)', 'Value'],
     status: ['Status', 'Status', 'Estado'],
     installments: ['Parcelas', 'Installments', 'Cuotas'],
-    invoiceMonth: ['Mês Fatura', 'Mes Fatura', 'Invoice Month', 'Mes Factura', 'Mês da Fatura', 'Mes da Fatura', 'InvoiceMonth', 'MesFatura']
+    invoiceMonth: ['Mês Fatura', 'Invoice Month', 'Mes Factura']
   } as const;
 
   const pick = (row: Record<string, unknown>, keys: readonly string[]) => {
@@ -449,15 +449,6 @@ export function ImportTransactionsModal({
     const invoiceMonthRaw = pick(row, HEADERS.invoiceMonth);
     const invoiceMonth = parseInvoiceMonth(invoiceMonthRaw);
 
-    // Log para debug do mês da fatura
-    if (invoiceMonthRaw) {
-      logger.debug('[ImportTx] Mês da fatura detectado:', {
-        raw: invoiceMonthRaw,
-        tipo: typeof invoiceMonthRaw,
-        parsed: invoiceMonth
-      });
-    }
-
     if (invoiceMonthRaw && !invoiceMonth) {
       logger.debug('[ImportTx] Falha ao parsear mês da fatura:', {
         raw: invoiceMonthRaw,
@@ -679,16 +670,9 @@ export function ImportTransactionsModal({
       })
       .map(t => t.existingTransactionId!);
 
-    // Log detalhado com mês da fatura
-    const transactionsWithInvoiceMonth = transactionsToAdd.filter(t => t.invoice_month);
     logger.debug('[ImportTransactions] Processando importação:', {
       total: importedData.length,
       transactionsToAdd: transactionsToAdd.length,
-      transactionsWithInvoiceMonth: transactionsWithInvoiceMonth.length,
-      invoiceMonthSamples: transactionsWithInvoiceMonth.slice(0, 3).map(t => ({
-        description: t.description,
-        invoice_month: t.invoice_month
-      })),
       transactionsToReplaceIds: transactionsToReplaceIds.length,
       transactionsToReplaceDetails: transactionsToReplaceIds,
       excluded: excludedIndexes.size
