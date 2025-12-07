@@ -196,27 +196,54 @@ export function calculateBillDetails(
   
   // ✅ BUGFIX P0: Usar timezone do usuário
   const today = toUserTimezone(new Date());
-  const closingDate = account.closing_date || 1; 
+  const closingDate = account.closing_date || 1;
+  const dueDay = account.due_date || 10;
 
   // Aplica o offset de meses à data de referência
   const referenceDate = addMonths(today, monthOffset);
   
   // ✅ BUGFIX P0: Usar timezone do usuário para normalização
   const todayNormalized = toUserTimezone(referenceDate);
+  const dayOfMonth = todayNormalized.getDate();
 
   // --- Lógica de data usando timezone do usuário ---
-  let currentBillEnd = new Date(
-    todayNormalized.getFullYear(),
-    todayNormalized.getMonth(),
-    closingDate, 12, 0, 0
-  );
+  // ✅ BUGFIX: Considera o período de vencimento para determinar a fatura "atual"
+  // Se estamos após fechamento mas ainda dentro do período de vencimento,
+  // a fatura "atual" é a que acabou de fechar (que está vencendo), não a próxima
+  let currentBillEnd: Date;
 
-  if (todayNormalized.getDate() > closingDate) {
-    currentBillEnd = new Date(
-      todayNormalized.getFullYear(),
-      todayNormalized.getMonth() + 1,
-      closingDate, 12, 0, 0
-    );
+  if (closingDate < dueDay) {
+    // Caso típico: fechamento antes do vencimento (ex: fecha dia 3, vence dia 10)
+    if (dayOfMonth <= dueDay) {
+      // Ainda dentro do período de vencimento - fatura atual é deste mês
+      currentBillEnd = new Date(
+        todayNormalized.getFullYear(),
+        todayNormalized.getMonth(),
+        closingDate, 12, 0, 0
+      );
+    } else {
+      // Passou do vencimento - fatura atual é do próximo mês
+      currentBillEnd = new Date(
+        todayNormalized.getFullYear(),
+        todayNormalized.getMonth() + 1,
+        closingDate, 12, 0, 0
+      );
+    }
+  } else {
+    // Caso onde fechamento é depois do vencimento (ex: fecha dia 27, vence dia 10)
+    if (dayOfMonth > closingDate) {
+      currentBillEnd = new Date(
+        todayNormalized.getFullYear(),
+        todayNormalized.getMonth() + 1,
+        closingDate, 12, 0, 0
+      );
+    } else {
+      currentBillEnd = new Date(
+        todayNormalized.getFullYear(),
+        todayNormalized.getMonth(),
+        closingDate, 12, 0, 0
+      );
+    }
   }
 
   const nextBillStart = new Date(currentBillEnd.getTime() + 24 * 60 * 60 * 1000);
