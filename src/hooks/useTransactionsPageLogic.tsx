@@ -19,6 +19,8 @@ interface UseTransactionsPageLogicProps {
   onFilterIsFixedChange: (value: string) => void;
   filterIsProvision: string;
   onFilterIsProvisionChange: (value: string) => void;
+  filterInvoiceMonth: string;
+  onFilterInvoiceMonthChange: (value: string) => void;
   filterAccountType: string;
   onFilterAccountTypeChange: (type: string) => void;
   filterAccount: string;
@@ -51,6 +53,8 @@ export function useTransactionsPageLogic({
   onFilterIsFixedChange,
   filterIsProvision,
   onFilterIsProvisionChange,
+  filterInvoiceMonth,
+  onFilterInvoiceMonthChange,
   filterAccountType,
   onFilterAccountTypeChange,
   filterAccount,
@@ -169,6 +173,18 @@ export function useTransactionsPageLogic({
       });
     }
 
+    if (filterInvoiceMonth !== "all") {
+      const [year, month] = filterInvoiceMonth.split("-");
+      const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const label = `Fatura: ${monthNames[parseInt(month, 10) - 1]}/${year}`;
+      chips.push({
+        id: "invoiceMonth",
+        label,
+        value: filterInvoiceMonth,
+        onRemove: () => onFilterInvoiceMonthChange("all"),
+      });
+    }
+
     if (filterAccountType !== "all") {
       const accountTypeLabels = {
         checking: "Conta Corrente",
@@ -244,6 +260,7 @@ export function useTransactionsPageLogic({
     filterStatus,
     filterIsFixed,
     filterIsProvision,
+    filterInvoiceMonth,
     filterAccountType,
     filterAccount,
     filterCategory,
@@ -257,6 +274,7 @@ export function useTransactionsPageLogic({
     onFilterStatusChange,
     onFilterIsFixedChange,
     onFilterIsProvisionChange,
+    onFilterInvoiceMonthChange,
     onFilterAccountTypeChange,
     onFilterAccountChange,
     onFilterCategoryChange,
@@ -268,6 +286,7 @@ export function useTransactionsPageLogic({
     onFilterStatusChange("all");
     onFilterIsFixedChange("all");
     onFilterIsProvisionChange("all");
+    onFilterInvoiceMonthChange("all");
     onFilterAccountTypeChange("all");
     onFilterAccountChange("all");
     onFilterCategoryChange("all");

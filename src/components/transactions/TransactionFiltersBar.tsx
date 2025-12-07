@@ -29,6 +29,8 @@ interface TransactionFiltersBarProps {
   onFilterIsFixedChange: (value: string) => void;
   filterIsProvision: string;
   onFilterIsProvisionChange: (value: string) => void;
+  filterInvoiceMonth: string;
+  onFilterInvoiceMonthChange: (value: string) => void;
   filterAccountType: string;
   onFilterAccountTypeChange: (type: string) => void;
   filterAccount: string;
@@ -66,6 +68,8 @@ export function TransactionFiltersBar({
   onFilterIsFixedChange,
   filterIsProvision,
   onFilterIsProvisionChange,
+  filterInvoiceMonth,
+  onFilterInvoiceMonthChange,
   filterAccountType,
   onFilterAccountTypeChange,
   filterAccount,
@@ -120,6 +124,8 @@ export function TransactionFiltersBar({
               onFilterIsFixedChange={onFilterIsFixedChange}
               filterIsProvision={filterIsProvision}
               onFilterIsProvisionChange={onFilterIsProvisionChange}
+              filterInvoiceMonth={filterInvoiceMonth}
+              onFilterInvoiceMonthChange={onFilterInvoiceMonthChange}
               filterAccountType={filterAccountType}
               onFilterAccountTypeChange={onFilterAccountTypeChange}
               filterAccount={filterAccount}

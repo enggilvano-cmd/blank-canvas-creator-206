@@ -32,6 +32,8 @@ interface TransactionFilterDialogProps {
   onFilterIsFixedChange: (value: string) => void;
   filterIsProvision: string;
   onFilterIsProvisionChange: (value: string) => void;
+  filterInvoiceMonth: string;
+  onFilterInvoiceMonthChange: (value: string) => void;
   filterAccountType: string;
   onFilterAccountTypeChange: (value: string) => void;
   filterAccount: string;
@@ -62,6 +64,8 @@ export function TransactionFilterDialog({
   onFilterIsFixedChange,
   filterIsProvision,
   onFilterIsProvisionChange,
+  filterInvoiceMonth,
+  onFilterInvoiceMonthChange,
   filterAccountType,
   onFilterAccountTypeChange,
   filterAccount,
@@ -163,6 +167,34 @@ export function TransactionFilterDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Mês da Fatura */}
+          <div>
+            <Label htmlFor="filterInvoiceMonth">Mês da Fatura</Label>
+            <Select value={filterInvoiceMonth} onValueChange={onFilterInvoiceMonthChange}>
+              <SelectTrigger id="filterInvoiceMonth" className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {(() => {
+                  const months = [];
+                  const now = new Date();
+                  const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                  // Gerar 24 meses: 12 anteriores + mês atual + 11 próximos
+                  for (let i = -12; i <= 11; i++) {
+                    const date = addMonths(now, i);
+                    const value = format(date, "yyyy-MM");
+                    const label = `${monthNames[date.getMonth()]}/${date.getFullYear()}`;
+                    months.push({ value, label });
+                  }
+                  return months.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ));
+                })()}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Tipo de Conta e Conta */}
