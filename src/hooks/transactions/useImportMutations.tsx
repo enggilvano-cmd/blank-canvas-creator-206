@@ -267,9 +267,16 @@ export function useImportMutations() {
     const startTime = Date.now();
     
     try {
+      // Log detalhado para debug de invoice_month
+      const transactionsWithInvoiceMonth = transactionsData.filter(t => t.invoice_month);
       logger.info('[Import] 🚀 Iniciando importação:', {
         totalTransactions: transactionsData.length,
-        transactionsToReplace: transactionsToReplace.length
+        transactionsToReplace: transactionsToReplace.length,
+        transactionsWithInvoiceMonth: transactionsWithInvoiceMonth.length,
+        invoiceMonthSamples: transactionsWithInvoiceMonth.slice(0, 5).map(t => ({
+          description: t.description,
+          invoice_month: t.invoice_month
+        }))
       });
 
       // 1. Batch lookup de categorias
