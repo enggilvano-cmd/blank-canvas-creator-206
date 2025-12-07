@@ -50,6 +50,7 @@ interface TransactionFilterDialogProps {
   onCustomEndDateChange: (date?: Date) => void;
   accounts: Array<{ id: string; name: string; type: string; color?: string }>;
   categories: Array<{ id: string; name: string; color: string; type: string }>;
+  availableInvoiceMonths: string[]; // Meses disponíveis no formato "YYYY-MM"
   activeFiltersCount: number;
 }
 
@@ -82,6 +83,7 @@ export function TransactionFilterDialog({
   onCustomEndDateChange,
   accounts,
   categories,
+  availableInvoiceMonths,
   activeFiltersCount,
 }: TransactionFilterDialogProps) {
   return (
@@ -169,33 +171,28 @@ export function TransactionFilterDialog({
             </div>
           </div>
 
-          {/* Mês da Fatura */}
-          <div>
-            <Label htmlFor="filterInvoiceMonth">Mês da Fatura</Label>
-            <Select value={filterInvoiceMonth} onValueChange={onFilterInvoiceMonthChange}>
-              <SelectTrigger id="filterInvoiceMonth" className="mt-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {(() => {
-                  const months = [];
-                  const now = new Date();
-                  const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-                  // Gerar 24 meses: 12 anteriores + mês atual + 11 próximos
-                  for (let i = -12; i <= 11; i++) {
-                    const date = addMonths(now, i);
-                    const value = format(date, "yyyy-MM");
-                    const label = `${monthNames[date.getMonth()]}/${date.getFullYear()}`;
-                    months.push({ value, label });
-                  }
-                  return months.map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ));
-                })()}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Mês da Fatura - só exibe se houver meses disponíveis */}
+          {availableInvoiceMonths.length > 0 && (
+            <div>
+              <Label htmlFor="filterInvoiceMonth">Mês da Fatura</Label>
+              <Select value={filterInvoiceMonth} onValueChange={onFilterInvoiceMonthChange}>
+                <SelectTrigger id="filterInvoiceMonth" className="mt-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {availableInvoiceMonths.map(monthValue => {
+                    const [year, month] = monthValue.split("-");
+                    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                    const label = `${monthNames[parseInt(month, 10) - 1]}/${year}`;
+                    return (
+                      <SelectItem key={monthValue} value={monthValue}>{label}</SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Tipo de Conta e Conta */}
           <div className="grid grid-cols-2 gap-4">

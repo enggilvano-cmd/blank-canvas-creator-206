@@ -49,6 +49,7 @@ interface TransactionFiltersBarProps {
   // Data
   accountsByType: Account[];
   categories: Category[];
+  availableInvoiceMonths: string[];
   filterChips: FilterChip[];
   onClearAllFilters: () => void;
 }
@@ -86,6 +87,7 @@ export function TransactionFiltersBar({
   onCustomEndDateChange,
   accountsByType,
   categories,
+  availableInvoiceMonths,
   filterChips,
   onClearAllFilters,
 }: TransactionFiltersBarProps) {
@@ -142,6 +144,7 @@ export function TransactionFiltersBar({
               onCustomEndDateChange={onCustomEndDateChange}
               accounts={accountsByType}
               categories={categories}
+              availableInvoiceMonths={availableInvoiceMonths}
               activeFiltersCount={filterChips.length}
             />
             
