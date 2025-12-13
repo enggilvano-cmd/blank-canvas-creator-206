@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import React, { ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAccounts } from '@/hooks/queries/useAccounts';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactNode } from 'react';
 import type { Account } from '@/types';
 
 // ✅ Criar wrapper para React Query
@@ -14,9 +14,10 @@ const createWrapper = () => {
       mutations: { retry: false },
     },
   });
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+  const Wrapper = ({ children }: { children: ReactNode }) => {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+  return Wrapper;
 };
 
 vi.mock('@/integrations/supabase/client', () => ({

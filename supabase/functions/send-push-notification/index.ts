@@ -31,10 +31,10 @@ async function sendWebPush(
     throw new Error('VAPID keys not configured');
   }
 
-  // Import web-push functionality
-  const webpush = await import('npm:web-push@3.6.7');
+  // Use native Web Push API instead of npm package
+  const webpush = await import('https://esm.sh/web-push@3.6.7');
   
-  webpush.setVapidDetails(
+  webpush.default.setVapidDetails(
     VAPID_SUBJECT,
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY
@@ -49,7 +49,7 @@ async function sendWebPush(
   };
 
   try {
-    await webpush.sendNotification(
+    await webpush.default.sendNotification(
       pushSubscription,
       JSON.stringify(payload),
       {

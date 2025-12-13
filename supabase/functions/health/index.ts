@@ -122,8 +122,7 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase
         .from('accounts')
         .select('id')
-        .limit(1)
-        .timeout(5000); // 5s timeout
+        .limit(1);
 
       const dbLatency = Math.round(performance.now() - dbStartTime);
 
@@ -156,9 +155,8 @@ Deno.serve(async (req) => {
 
       const { error: cacheError } = await supabase
         .from('system_settings')
-        .select('key')
-        .limit(1)
-        .timeout(2000);
+        .select('setting_key')
+        .limit(1);
 
       if (cacheError) {
         healthCheck.checks.cache = {

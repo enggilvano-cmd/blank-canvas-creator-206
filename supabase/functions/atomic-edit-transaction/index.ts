@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.info('Updated', record.updated_count, 'transaction(s)');
+    logger.info(`Updated ${record.updated_count} transaction(s)`);
 
     return new Response(
       JSON.stringify({

@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.info('Deleted', record.deleted_count, 'transaction(s)');
+    logger.info(`Deleted ${record.deleted_count} transaction(s)`);
 
     return new Response(
       JSON.stringify({

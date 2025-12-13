@@ -125,7 +125,8 @@ Deno.serve(async (req) => {
             })
           )
           results.push({ userId: notification.userId, status: 'sent' })
-        } catch (error) {
+        } catch (err) {
+          const error = err as { statusCode?: number; message?: string };
           console.error(`Error sending to user ${notification.userId}:`, error)
           
           // If 410 Gone, remove subscription
@@ -136,7 +137,7 @@ Deno.serve(async (req) => {
               .eq('id', sub.id)
           }
           
-          results.push({ userId: notification.userId, status: 'error', error: error.message })
+          results.push({ userId: notification.userId, status: 'error', error: error.message || 'Unknown error' })
         }
       }
     }
@@ -146,10 +147,11 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
+  } catch (err) {
+    const error = err as { message?: string };
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

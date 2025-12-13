@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
 
     for (let batch = 0; batch < batches; batch++) {
       const currentBatchSize = Math.min(batchSize, transactionCount - totalCreated);
-      const transactions = [];
+      const transactions: Record<string, unknown>[] = [];
 
       for (let i = 0; i < currentBatchSize; i++) {
         const transactionIndex = batch * batchSize + i;
