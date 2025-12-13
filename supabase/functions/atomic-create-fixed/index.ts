@@ -1,12 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-import { corsHeaders } from '../_shared/cors.ts';
-import { 
-  FixedTransactionInputSchema,
-  validateWithZod, 
-  validationErrorResponse 
-} from '../_shared/validation.ts';
-import { rateLimiters } from '../_shared/rate-limiter.ts';
-import { withRetry } from '../_shared/retry.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,6 +11,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('atomic-create-fixed: Starting request processing');
+    
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,49 +31,44 @@ Deno.serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
+      console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Apply rate limiting (increased limit for bulk imports)
-    const rateLimiter = new (await import('../_shared/upstash-rate-limiter.ts')).UpstashRateLimiter({
-      windowMs: 5 * 60 * 1000, // 5 minutos
-      maxRequests: 200, // 200 requests por 5 minutos para permitir importações em massa
-    });
-    const rateLimitResult = await rateLimiter.middleware(req, user.id);
-    if (rateLimitResult) {
-      return rateLimitResult;
-    }
+    console.log('atomic-create-fixed: User authenticated:', user.id);
 
-    // Parse and validate request body
+    // Parse request body
     const body = await req.json();
-    const validation = validateWithZod(FixedTransactionInputSchema, body);
+    console.log('atomic-create-fixed: Request body:', JSON.stringify(body));
 
-    if (!validation.success) {
-      return validationErrorResponse(validation.errors, corsHeaders);
+    // Basic validation
+    if (!body.description || !body.amount || !body.date || !body.type || !body.account_id) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: description, amount, date, type, account_id' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const validatedData = validation.data;
-
-    // Call atomic SQL function with retry
-    const { data, error } = await withRetry(
-      async () => supabaseClient.rpc(
-        'atomic_create_fixed_transaction',
-        {
-          p_user_id: user.id,
-          p_description: validatedData.description,
-          p_amount: validatedData.amount,
-          p_date: validatedData.date,
-          p_type: validatedData.type,
-          p_category_id: validatedData.category_id,
-          p_account_id: validatedData.account_id,
-          p_status: validatedData.status,
-          p_is_provision: validatedData.is_provision || false,
-        }
-      )
+    // Call atomic SQL function
+    const { data, error } = await supabaseClient.rpc(
+      'atomic_create_fixed_transaction',
+      {
+        p_user_id: user.id,
+        p_description: body.description,
+        p_amount: Math.round(body.amount), // Ensure integer (centavos)
+        p_date: body.date,
+        p_type: body.type,
+        p_category_id: body.category_id || null,
+        p_account_id: body.account_id,
+        p_status: body.status || 'pending',
+        p_is_provision: body.is_provision || false,
+      }
     );
+
+    console.log('atomic-create-fixed: RPC result:', JSON.stringify({ data, error }));
 
     if (error) {
       console.error('RPC error:', error);
@@ -93,10 +87,11 @@ Deno.serve(async (req) => {
     // Extract result from array (RPC returns array)
     const result = Array.isArray(data) ? data[0] : data;
 
-    if (!result.success) {
+    if (!result || !result.success) {
+      console.error('Operation failed:', result?.error_message);
       return new Response(
         JSON.stringify({ 
-          error: result.error_message || 'Transaction creation failed' 
+          error: result?.error_message || 'Transaction creation failed' 
         }),
         { 
           status: 400, 
@@ -104,6 +99,8 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    console.log('atomic-create-fixed: Success! Created', result.created_count, 'transactions');
 
     return new Response(
       JSON.stringify({
@@ -118,7 +115,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
-      details: (error as Error)?.message || 'Unknown error'
+        details: (error as Error)?.message || 'Unknown error'
       }),
       { 
         status: 500, 
