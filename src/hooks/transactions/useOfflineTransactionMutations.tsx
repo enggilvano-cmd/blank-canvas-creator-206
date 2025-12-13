@@ -70,7 +70,7 @@ export function useOfflineTransactionMutations() {
 
         const optimisticTxForUI = {
           ...optimisticTx,
-          date: new Date(optimisticTx.date), // UI espera Date object
+          date: new Date(optimisticTx.date || new Date()), // UI espera Date object
           category: category,
           account: account,
           to_account: null, // Default para não quebrar UI
@@ -95,7 +95,7 @@ export function useOfflineTransactionMutations() {
             if (!oldAccounts) return oldAccounts;
             return oldAccounts.map(acc => {
               if (acc.id === account.id) {
-                const newBalance = acc.balance + optimisticTx.amount;
+                const newBalance = acc.balance + (optimisticTx.amount || 0);
                 return { ...acc, balance: newBalance };
               }
               return acc;

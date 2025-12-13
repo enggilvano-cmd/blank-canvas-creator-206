@@ -192,7 +192,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
         category: Array.isArray(trans.categories) ? trans.categories[0] : trans.categories,
         account: Array.isArray(trans.accounts) ? trans.accounts[0] : trans.accounts,
         to_account: Array.isArray(trans.to_accounts) ? trans.to_accounts[0] : trans.to_accounts,
-      })) as TransactionWithRelations[];
+      })) as unknown as TransactionWithRelations[];
 
       // Determine next cursor
       const nextCursor = transactions.length === pageSize ? pageParam + 1 : undefined;

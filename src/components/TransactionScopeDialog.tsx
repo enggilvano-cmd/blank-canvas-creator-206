@@ -10,6 +10,7 @@ interface TransactionScopeDialogProps {
   currentInstallment?: number;
   totalInstallments?: number;
   isFixed?: boolean;
+  isRecurring?: boolean;
   mode?: "edit" | "delete";
   hasCompleted?: boolean;
   pendingCount?: number;
@@ -22,6 +23,7 @@ export function TransactionScopeDialog({
   currentInstallment = 1,
   totalInstallments = 1,
   isFixed = false,
+  isRecurring: _isRecurring = false,
   mode = "edit",
   hasCompleted: _hasCompleted = false,
   pendingCount = 0,

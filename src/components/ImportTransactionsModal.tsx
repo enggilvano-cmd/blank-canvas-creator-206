@@ -632,10 +632,10 @@ export function ImportTransactionsModal({
         console.group('❌ Transações inválidas encontradas:');
         invalidTransactions.forEach((t, idx) => {
           logger.debug(`[${idx + 1}/${invalidTransactions.length}] Linha ${validatedData.indexOf(t) + 2}:`, {
-            descrição: t.description,
-            tipo: t.type,
-            conta: t.accountName,
-            contaDestino: t.toAccountName || 'N/A',
+            descrição: t.descricao,
+            tipo: t.tipo,
+            conta: t.conta,
+            contaDestino: t.contaDestino || 'N/A',
             erros: t.errors
           });
         });

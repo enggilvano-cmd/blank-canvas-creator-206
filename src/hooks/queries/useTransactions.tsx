@@ -9,7 +9,7 @@ import { addTransactionSchema, editTransactionSchema } from '@/lib/validationSch
 import { z } from 'zod';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
-import { performanceMonitor, trackCachePerformance } from '@/lib/performanceMonitor';
+import { performanceMonitor } from '@/lib/performanceMonitor';
 
 interface UseTransactionsParams {
   page?: number;
@@ -431,7 +431,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         category: Array.isArray(trans.categories) ? trans.categories[0] : trans.categories,
         account: Array.isArray(trans.accounts) ? trans.accounts[0] : trans.accounts,
         to_account: Array.isArray(trans.to_accounts) ? trans.to_accounts[0] : trans.to_accounts,
-      })) as TransactionWithRelations[];
+      })) as unknown as TransactionWithRelations[];
 
       return results;
     },
