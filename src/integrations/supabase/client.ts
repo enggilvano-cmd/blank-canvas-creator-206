@@ -3,9 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { logger } from '@/lib/logger';
 
-// ✅ CRITICAL FIX #1: Remover credenciais hardcoded - OBRIGATÓRIO usar .env.local
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Validação rigorosa - FALHAR EM STARTUP se credenciais não configuradas
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
