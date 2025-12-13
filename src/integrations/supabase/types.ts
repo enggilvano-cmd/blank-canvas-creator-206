@@ -36,15 +36,7 @@ export type Database = {
           updated_at?: string
           version?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "account_locks_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: true
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       accounts: {
         Row: {
@@ -189,7 +181,6 @@ export type Database = {
       }
       categories: {
         Row: {
-          chart_account_id: string | null
           color: string
           created_at: string
           id: string
@@ -199,7 +190,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          chart_account_id?: string | null
           color?: string
           created_at?: string
           id?: string
@@ -209,7 +199,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          chart_account_id?: string | null
           color?: string
           created_at?: string
           id?: string
@@ -218,15 +207,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "categories_chart_account_id_fkey"
-            columns: ["chart_account_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       chart_of_accounts: {
         Row: {
@@ -585,6 +566,9 @@ export type Database = {
           is_recurring: boolean | null
           linked_transaction_id: string | null
           parent_transaction_id: string | null
+          reconciled: boolean | null
+          reconciled_at: string | null
+          reconciled_by: string | null
           recurrence_end_date: string | null
           recurrence_type: Database["public"]["Enums"]["recurrence_type"] | null
           status: Database["public"]["Enums"]["transaction_status"]
@@ -611,6 +595,9 @@ export type Database = {
           is_recurring?: boolean | null
           linked_transaction_id?: string | null
           parent_transaction_id?: string | null
+          reconciled?: boolean | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
           recurrence_end_date?: string | null
           recurrence_type?:
             | Database["public"]["Enums"]["recurrence_type"]
@@ -639,6 +626,9 @@ export type Database = {
           is_recurring?: boolean | null
           linked_transaction_id?: string | null
           parent_transaction_id?: string | null
+          reconciled?: boolean | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
           recurrence_end_date?: string | null
           recurrence_type?:
             | Database["public"]["Enums"]["recurrence_type"]
@@ -749,84 +739,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      atomic_create_fixed_transaction: {
-        Args: {
-          p_account_id: string
-          p_amount: number
-          p_category_id: string
-          p_date: string
-          p_description: string
-          p_status: Database["public"]["Enums"]["transaction_status"]
-          p_type: Database["public"]["Enums"]["transaction_type"]
-          p_user_id: string
-        }
-        Returns: {
-          created_count: number
-          error_message: string
-          parent_id: string
-          success: boolean
-        }[]
-      }
-      atomic_create_recurring_transaction: {
-        Args: {
-          p_account_id: string
-          p_amount: number
-          p_category_id: string
-          p_date: string
-          p_description: string
-          p_recurrence_end_date?: string
-          p_recurrence_type: Database["public"]["Enums"]["recurrence_type"]
-          p_status: Database["public"]["Enums"]["transaction_status"]
-          p_type: Database["public"]["Enums"]["transaction_type"]
-          p_user_id: string
-        }
-        Returns: {
-          created_count: number
-          error_message: string
-          parent_id: string
-          success: boolean
-        }[]
-      }
-      atomic_create_transaction: {
-        Args: {
-          p_account_id: string
-          p_amount: number
-          p_category_id: string
-          p_date: string
-          p_description: string
-          p_invoice_month?: string
-          p_invoice_month_overridden?: boolean
-          p_status: Database["public"]["Enums"]["transaction_status"]
-          p_type: Database["public"]["Enums"]["transaction_type"]
-          p_user_id: string
-        }
-        Returns: {
-          error_message: string
-          new_balance: number
-          success: boolean
-          transaction_id: string
-        }[]
-      }
-      atomic_create_transfer: {
-        Args: {
-          p_amount: number
-          p_date: string
-          p_from_account_id: string
-          p_incoming_description: string
-          p_outgoing_description: string
-          p_status: Database["public"]["Enums"]["transaction_status"]
-          p_to_account_id: string
-          p_user_id: string
-        }
-        Returns: {
-          error_message: string
-          from_balance: number
-          incoming_transaction_id: string
-          outgoing_transaction_id: string
-          success: boolean
-          to_balance: number
-        }[]
-      }
       atomic_delete_transaction: {
         Args: { p_scope?: string; p_transaction_id: string; p_user_id: string }
         Returns: {
@@ -850,77 +762,90 @@ export type Database = {
           updated_count: number
         }[]
       }
-      calculate_opening_balance: {
-        Args: {
-          p_account_id: string
-          p_nature: Database["public"]["Enums"]["account_nature"]
-          p_start_date: string
-        }
-        Returns: number
+      bulk_create_transactions: {
+        Args: { p_transactions: Json; p_user_id: string }
+        Returns: {
+          error_message: string
+          idx: number
+          success: boolean
+          transaction_id: string
+        }[]
+      }
+      bulk_create_transfers: {
+        Args: { p_transfers: Json; p_user_id: string }
+        Returns: {
+          error_message: string
+          idx: number
+          incoming_id: string
+          outgoing_id: string
+          success: boolean
+        }[]
+      }
+      cleanup_duplicate_initial_balance: {
+        Args: never
+        Returns: {
+          account_id: string
+          duplicates_removed: number
+        }[]
+      }
+      cleanup_expired_provisions: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       cleanup_orphan_journal_entries: { Args: never; Returns: number }
+      create_journal_entries_for_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: undefined
+      }
       deactivate_expired_subscriptions: { Args: never; Returns: undefined }
       deactivate_expired_trials: { Args: never; Returns: undefined }
       get_system_setting: { Args: { p_setting_key: string }; Returns: string }
-      get_transactions_paginated: {
-        Args: {
-          p_account_id?: string
-          p_account_type?: string
-          p_category_id?: string
-          p_date_from?: string
-          p_date_to?: string
-          p_page?: number
-          p_page_size?: number
-          p_search?: string
-          p_sort_by?: string
-          p_sort_order?: string
-          p_status?: string
-          p_type?: string
-          p_user_id: string
-        }
-        Returns: {
-          account_id: string
-          amount: number
-          category_id: string
-          created_at: string
-          current_installment: number
-          date: string
-          description: string
-          id: string
-          installments: number
-          invoice_month: string
-          invoice_month_overridden: boolean
-          is_fixed: boolean
-          is_recurring: boolean
-          linked_transaction_id: string
-          parent_transaction_id: string
-          recurrence_end_date: string
-          recurrence_type: Database["public"]["Enums"]["recurrence_type"]
-          status: Database["public"]["Enums"]["transaction_status"]
-          to_account_id: string
-          total_count: number
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at: string
-        }[]
-      }
-      get_transactions_totals: {
-        Args: {
-          p_account_id?: string
-          p_account_type?: string
-          p_category_id?: string
-          p_date_from?: string
-          p_date_to?: string
-          p_search?: string
-          p_status?: string
-          p_type?: string
-          p_user_id: string
-        }
-        Returns: {
-          balance: number
-          total_expenses: number
-          total_income: number
-        }[]
-      }
+      get_transactions_totals:
+        | {
+            Args: {
+              p_account_id?: string
+              p_account_type?: string
+              p_category_id?: string
+              p_date_from?: string
+              p_date_to?: string
+              p_invoice_month?: string
+              p_is_fixed?: string
+              p_is_provision?: string
+              p_status?: string
+              p_type?: string
+              p_user_id: string
+            }
+            Returns: {
+              balance: number
+              completed_expense: number
+              completed_income: number
+              pending_expense: number
+              pending_income: number
+              total_expense: number
+              total_income: number
+            }[]
+          }
+        | {
+            Args: {
+              p_account_id?: string
+              p_account_type?: string
+              p_category_id?: string
+              p_date_from?: string
+              p_date_to?: string
+              p_invoice_month?: string
+              p_is_fixed?: boolean
+              p_is_provision?: boolean
+              p_search?: string
+              p_status?: string
+              p_type?: string
+              p_user_id: string
+            }
+            Returns: {
+              balance: number
+              total_expenses: number
+              total_income: number
+            }[]
+          }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -975,7 +900,6 @@ export type Database = {
         Args: never
         Returns: {
           error_count: number
-          error_details: Json
           processed_count: number
         }[]
       }
@@ -1010,6 +934,7 @@ export type Database = {
           unbalanced_count: number
         }[]
       }
+      validate_user_access: { Args: { p_user_id: string }; Returns: boolean }
       verify_journal_entries_balance: {
         Args: { p_transaction_id: string }
         Returns: boolean
@@ -1025,7 +950,7 @@ export type Database = {
         | "contra_asset"
         | "contra_liability"
       account_nature: "debit" | "credit"
-      account_type: "checking" | "savings" | "credit" | "investment" | "meal_voucher"
+      account_type: "checking" | "savings" | "credit" | "investment"
       category_type: "income" | "expense" | "both"
       recurrence_type: "daily" | "weekly" | "monthly" | "yearly"
       transaction_status: "pending" | "completed"
@@ -1168,7 +1093,7 @@ export const Constants = {
         "contra_liability",
       ],
       account_nature: ["debit", "credit"],
-      account_type: ["checking", "savings", "credit", "investment", "meal_voucher"],
+      account_type: ["checking", "savings", "credit", "investment"],
       category_type: ["income", "expense", "both"],
       recurrence_type: ["daily", "weekly", "monthly", "yearly"],
       transaction_status: ["pending", "completed"],
