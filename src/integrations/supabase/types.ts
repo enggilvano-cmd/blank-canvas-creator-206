@@ -964,7 +964,12 @@ export type Database = {
         | "contra_asset"
         | "contra_liability"
       account_nature: "debit" | "credit"
-      account_type: "checking" | "savings" | "credit" | "investment"
+      account_type:
+        | "checking"
+        | "savings"
+        | "credit"
+        | "investment"
+        | "meal_voucher"
       category_type: "income" | "expense" | "both"
       recurrence_type: "daily" | "weekly" | "monthly" | "yearly"
       transaction_status: "pending" | "completed"
@@ -1107,7 +1112,13 @@ export const Constants = {
         "contra_liability",
       ],
       account_nature: ["debit", "credit"],
-      account_type: ["checking", "savings", "credit", "investment"],
+      account_type: [
+        "checking",
+        "savings",
+        "credit",
+        "investment",
+        "meal_voucher",
+      ],
       category_type: ["income", "expense", "both"],
       recurrence_type: ["daily", "weekly", "monthly", "yearly"],
       transaction_status: ["pending", "completed"],
