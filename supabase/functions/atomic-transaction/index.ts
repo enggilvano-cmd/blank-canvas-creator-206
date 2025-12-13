@@ -1,87 +1,23 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { rateLimiters } from '../_shared/rate-limiter.ts';
-import { TransactionInputSchema, validateWithZod, validationErrorResponse } from '../_shared/validation.ts';
-import { withRetry } from '../_shared/retry.ts';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-/**
- * ✅ BUG FIX #21: API Documentation with JSDoc
- * 
- * @description Edge Function para criar transações atômicas com suporte a rate limiting e retry
- * @endpoint POST /functions/v1/atomic-transaction
- * @authentication Requer Bearer token no header Authorization
- * 
- * @requestBody
- * {
- *   description: string;      // Descrição da transação
- *   amount: number;           // Valor em centavos (ex: 10000 = R$ 100,00)
- *   date: string;             // Data no formato YYYY-MM-DD
- *   type: 'income' | 'expense' | 'transfer'; // Tipo da transação
- *   category_id: string;      // UUID da categoria
- *   account_id: string;       // UUID da conta
- *   status: 'pending' | 'completed'; // Status da transação
- *   invoice_month?: string;   // Mês da fatura (YYYY-MM) para cartões de crédito
- *   is_fixed?: boolean;       // Se é transação recorrente
- * }
- * 
- * @response 201 Created
- * {
- *   transaction: Transaction; // Objeto da transação criada
- * }
- * 
- * @response 400 Bad Request - Dados inválidos
- * @response 401 Unauthorized - Token inválido ou expirado
- * @response 429 Too Many Requests - Rate limit excedido
- * @response 500 Internal Server Error - Erro no servidor
- * 
- * @rateLimit 30 requests por minuto por usuário
- * @retry Até 3 tentativas com backoff exponencial
- * 
- * @example
- * ```typescript
- * const response = await fetch('https://your-project.supabase.co/functions/v1/atomic-transaction', {
- *   method: 'POST',
- *   headers: {
- *     'Authorization': 'Bearer YOUR_TOKEN',
- *     'Content-Type': 'application/json'
- *   },
- *   body: JSON.stringify({
- *     description: 'Salário',
- *     amount: 500000, // R$ 5.000,00
- *     date: '2024-01-15',
- *     type: 'income',
- *     category_id: 'uuid-categoria',
- *     account_id: 'uuid-conta',
- *     status: 'completed'
- *   })
- * });
- * ```
- */
-
-/**
- * Structured logging para edge functions
- * Em produção, isso seria enviado para um serviço de logging centralizado (Sentry, DataDog, etc)
- */
-function logEvent(level: 'info' | 'warn' | 'error', message: string, context?: Record<string, any>) {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    level,
-    function: 'atomic-transaction',
-    message,
-    context: context || {}
-  };
-  // Em desenvolvimento, logar no console
-  if (Deno.env.get('ENVIRONMENT') === 'development') {
-    console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log'](JSON.stringify(logEntry));
-  }
-  // Em produção, isso seria enviado para Sentry ou outro serviço
-  return logEntry;
-}
+// Simplified transaction schema inline
+const TransactionInputSchema = z.object({
+  description: z.string().min(1).max(200),
+  amount: z.number().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  type: z.enum(['income', 'expense']),
+  category_id: z.string().uuid().nullable().optional(),
+  account_id: z.string().uuid(),
+  status: z.enum(['pending', 'completed']),
+  invoice_month: z.string().regex(/^\d{4}-\d{2}$/).nullable().optional(),
+  invoice_month_overridden: z.boolean().optional(),
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -89,6 +25,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Starting atomic-transaction request');
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -106,71 +44,56 @@ Deno.serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
-      logEvent('error', 'Auth failed', { userError });
+      console.error('Auth failed:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Rate limiting - Moderado para criação de transações
-    const rateLimitResponse = await rateLimiters.moderate.middleware(req, user.id);
-    if (rateLimitResponse) {
-      logEvent('warn', 'Rate limit exceeded', { userId: user.id });
-      return rateLimitResponse;
-    }
+    console.log('User authenticated:', user.id);
 
     const body = await req.json();
+    console.log('Request body:', JSON.stringify(body));
 
     // Validação Zod
-    const validation = validateWithZod(TransactionInputSchema, body.transaction);
+    const validation = TransactionInputSchema.safeParse(body.transaction);
     if (!validation.success) {
-      logEvent('error', 'Validation failed', { errors: validation.errors });
-      return validationErrorResponse(validation.errors, corsHeaders);
+      console.error('Validation failed:', validation.error.issues);
+      return new Response(
+        JSON.stringify({ error: 'Validation failed', details: validation.error.issues }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const transaction = validation.data;
+    console.log('Validated transaction:', JSON.stringify(transaction));
 
-    // Verificar se usuário tem plano de contas inicializado
-    const { data: chartAccounts } = await supabaseClient
-      .from('chart_of_accounts')
-      .select('id')
-      .eq('user_id', user.id)
-      .limit(1);
-
-    // Se não tem plano de contas, inicializar
-    if (!chartAccounts || chartAccounts.length === 0) {
-      logEvent('info', 'Initializing chart of accounts for user', { userId: user.id });
-      await supabaseClient.rpc('initialize_chart_of_accounts', {
-        p_user_id: user.id
-      });
-    }
-
-    // Usar função PL/pgSQL atômica com retry
-    const { data: result, error: functionError } = await withRetry(
-      () => supabaseClient.rpc('atomic_create_transaction', {
-        p_user_id: user.id,
-        p_description: transaction.description,
-        p_amount: transaction.amount,
-        p_date: transaction.date,
-        p_type: transaction.type,
-        p_category_id: transaction.category_id,
-        p_account_id: transaction.account_id,
-        p_status: transaction.status,
-        p_invoice_month: transaction.invoice_month || null,
-        p_invoice_month_overridden: transaction.invoice_month_overridden || false,
-      })
-    );
+    // Usar função PL/pgSQL atômica
+    const { data: result, error: functionError } = await supabaseClient.rpc('atomic_create_transaction', {
+      p_user_id: user.id,
+      p_description: transaction.description,
+      p_amount: transaction.amount,
+      p_date: transaction.date,
+      p_type: transaction.type,
+      p_category_id: transaction.category_id || null,
+      p_account_id: transaction.account_id,
+      p_status: transaction.status,
+      p_invoice_month: transaction.invoice_month || null,
+      p_invoice_month_overridden: transaction.invoice_month_overridden || false,
+    });
 
     if (functionError) {
-      logEvent('error', 'Function call failed', { functionError });
+      console.error('RPC function call failed:', functionError);
       throw functionError;
     }
+
+    console.log('RPC result:', JSON.stringify(result));
 
     const record = result[0];
     
     if (!record.success) {
-      logEvent('error', 'Transaction creation failed', { errorMessage: record.error_message });
+      console.error('Transaction creation failed:', record.error_message);
       return new Response(
         JSON.stringify({ 
           error: record.error_message,
@@ -180,7 +103,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    logEvent('info', 'Transaction created successfully', { transactionId: record.transaction_id, userId: user.id });
+    console.log('Transaction created successfully:', record.transaction_id);
 
     return new Response(
       JSON.stringify({
@@ -195,7 +118,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    logEvent('error', 'Unhandled exception', { error: error instanceof Error ? error.message : String(error) });
+    console.error('Unhandled exception:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
