@@ -13,12 +13,9 @@ import {
   PiggyBank,
   Wallet,
   MoreVertical,
-  ArrowRight,
   DollarSign,
   TrendingUp,
   TrendingDown,
-  FileDown,
-  Upload,
   Utensils,
 } from "lucide-react";
 import {
@@ -61,7 +58,7 @@ export function AccountsPage({
   onEditAccount,
   onDeleteAccount,
   onPayCreditCard,
-  onTransfer,
+  onTransfer: _onTransfer,
   onImportAccounts,
   initialFilterType = "all",
   importModalOpen: externalImportModalOpen,
@@ -491,7 +488,7 @@ export function AccountsPage({
                                 <div className="flex items-center justify-between">
                                   <span className="text-caption text-muted-foreground">Limite</span>
                                   <span className="text-caption font-medium">
-                                    {formatCurrency(account.limit_amount)}
+                                    {formatCurrency(account.limit_amount ?? 0)}
                                   </span>
                                 </div>
                               <div className="flex items-center gap-2">
@@ -533,7 +530,7 @@ export function AccountsPage({
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-muted-foreground">Limite</span>
                               <span className="text-xs font-medium">
-                                {formatCurrency(account.limit_amount)}
+                                {formatCurrency(account.limit_amount ?? 0)}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">

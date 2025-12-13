@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './Dashboard';
-import { Account, Transaction, Category, FixedTransaction } from '@/types';
+import { Account, Transaction, Category } from '@/types';
 
 const mockQueryClient = new QueryClient({
   defaultOptions: {
@@ -16,13 +16,8 @@ const mockAccounts: Account[] = [
     id: '1',
     name: 'Conta Corrente',
     type: 'checking',
-    bank_name: 'Banco A',
     balance: 10000,
-    currency: 'BRL',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    is_active: true,
-    user_id: 'user-1',
+    color: '#3b82f6',
   },
 ];
 
@@ -36,18 +31,9 @@ const mockTransactions: Transaction[] = [
     category_id: '1',
     account_id: '1',
     status: 'completed',
-    invoice_month: null,
     invoice_month_overridden: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    user_id: 'user-1',
-    category: { id: '1', name: 'Alimentação', type: 'expense', user_id: 'user-1', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    account: mockAccounts[0],
-    to_account: null,
-    installments: 1,
-    current_installment: 1,
-    is_recurring: false,
-    is_fixed: false,
+    category: { id: '1', name: 'Alimentação', type: 'expense', color: '#ef4444' },
+    account: { id: '1', name: 'Conta Corrente', type: 'checking', color: '#3b82f6' },
   },
 ];
 
@@ -56,13 +42,9 @@ const mockCategories: Category[] = [
     id: '1',
     name: 'Alimentação',
     type: 'expense',
-    user_id: 'user-1',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    color: '#ef4444',
   },
 ];
-
-const mockFixedTransactions: FixedTransaction[] = [];
 
 describe('Dashboard Component', () => {
   beforeEach(() => {
@@ -76,7 +58,7 @@ describe('Dashboard Component', () => {
           accounts={mockAccounts}
           transactions={mockTransactions}
           categories={mockCategories}
-          fixedTransactions={mockFixedTransactions}
+          fixedTransactions={[]}
           onAddAccount={() => {}}
           onAddTransaction={() => {}}
           onNavigateToAccounts={() => {}}
@@ -93,7 +75,6 @@ describe('Dashboard Component', () => {
 
   it('should display account balance information', () => {
     renderDashboard();
-    // Check for balance display (may be formatted as currency)
     expect(screen.queryByText(/saldo|balance/i) || screen.getByRole('heading')).toBeTruthy();
   });
 
@@ -104,7 +85,7 @@ describe('Dashboard Component', () => {
           accounts={mockAccounts}
           transactions={[]}
           categories={mockCategories}
-          fixedTransactions={mockFixedTransactions}
+          fixedTransactions={[]}
           onAddAccount={() => {}}
           onAddTransaction={() => {}}
           onNavigateToAccounts={() => {}}
@@ -122,7 +103,7 @@ describe('Dashboard Component', () => {
           accounts={mockAccounts}
           transactions={[]}
           categories={mockCategories}
-          fixedTransactions={mockFixedTransactions}
+          fixedTransactions={[]}
           onAddAccount={() => {}}
           onAddTransaction={() => {}}
           onNavigateToAccounts={() => {}}
@@ -137,7 +118,7 @@ describe('Dashboard Component', () => {
           accounts={mockAccounts}
           transactions={mockTransactions}
           categories={mockCategories}
-          fixedTransactions={mockFixedTransactions}
+          fixedTransactions={[]}
           onAddAccount={() => {}}
           onAddTransaction={() => {}}
           onNavigateToAccounts={() => {}}
@@ -146,7 +127,6 @@ describe('Dashboard Component', () => {
       </QueryClientProvider>
     );
 
-    // Component should re-render with new data
     expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 
@@ -158,7 +138,7 @@ describe('Dashboard Component', () => {
           accounts={mockAccounts}
           transactions={mockTransactions}
           categories={mockCategories}
-          fixedTransactions={mockFixedTransactions}
+          fixedTransactions={[]}
           onAddAccount={() => {}}
           onAddTransaction={onAddTransaction}
           onNavigateToAccounts={() => {}}
@@ -167,7 +147,6 @@ describe('Dashboard Component', () => {
       </QueryClientProvider>
     );
 
-    // Verify component is rendered
     expect(screen.getByRole('heading')).toBeInTheDocument();
   });
 
@@ -188,7 +167,7 @@ describe('Dashboard Component', () => {
           accounts={multipleAccounts}
           transactions={mockTransactions}
           categories={mockCategories}
-          fixedTransactions={mockFixedTransactions}
+          fixedTransactions={[]}
           onAddAccount={() => {}}
           onAddTransaction={() => {}}
           onNavigateToAccounts={() => {}}

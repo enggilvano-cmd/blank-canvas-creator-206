@@ -20,7 +20,6 @@ const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BybitPage = lazy(() => import("./pages/BybitPage"));
-const PWADebug = lazy(() => import("@/components/PWADebug").then(module => ({ default: module.PWADebug })));
 
 // Loading component for Suspense
 const PageLoader = () => (
@@ -74,14 +73,6 @@ const App = () => {
                             </RouteErrorBoundary>
                           </ProtectedRoute>
                         }
-                      />
-                      <Route 
-                        path="/debug-pwa" 
-                        element={
-                          <RouteErrorBoundary routeName="PWA Debug">
-                            <PWADebug />
-                          </RouteErrorBoundary>
-                        } 
                       />
                       <Route 
                         path="*" 
