@@ -12,6 +12,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -84,7 +91,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Found ${notificationsToSend.length} users to notify`)
+    logger.info(`Found ${notificationsToSend.length} users to notify`)
 
     // Send notifications
     const results = []

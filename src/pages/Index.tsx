@@ -1,23 +1,48 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { Layout } from "@/components/Layout";
 import { Dashboard } from "@/components/Dashboard";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { TransactionHeader } from "@/components/transactions/TransactionHeader";
 import { AccountsHeader } from "@/components/accounts/AccountsHeader";
 import { CategoriesHeader } from "@/components/categories/CategoriesHeader";
 import { FixedTransactionsHeader } from "@/components/fixedtransactions/FixedTransactionsHeader";
 import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
-import { AccountsPage } from "@/components/AccountsPage";
-import { CreditBillsPage } from "@/components/CreditBillsPage";
-import { TransactionsPage } from "@/components/TransactionsPage";
-import { CategoriesPage } from "@/components/CategoriesPage";
-import AnalyticsPage from "@/components/AnalyticsPage";
-import SystemSettings from "@/components/SystemSettings";
-import { UserManagement } from "@/components/UserManagement";
-import { FixedTransactionsPage } from "@/components/FixedTransactionsPage";
-import { UserProfile } from "@/components/UserProfile";
-import { SettingsPage } from "@/components/SettingsPage";
-import BybitPage from "@/pages/BybitPage";
+
+// Lazy load componentes pesados para otimizar bundle
+const AccountsPage = lazy(() => 
+  import("@/components/AccountsPage").then(m => ({ default: m.AccountsPage }))
+);
+const CreditBillsPage = lazy(() => 
+  import("@/components/CreditBillsPage").then(m => ({ default: m.CreditBillsPage }))
+);
+const TransactionsPage = lazy(() => 
+  import("@/components/TransactionsPage").then(m => ({ default: m.TransactionsPage }))
+);
+const CategoriesPage = lazy(() => 
+  import("@/components/CategoriesPage").then(m => ({ default: m.CategoriesPage }))
+);
+const AnalyticsPage = lazy(() => 
+  import("@/components/AnalyticsPage")
+);
+const SystemSettings = lazy(() => 
+  import("@/components/SystemSettings")
+);
+const UserManagement = lazy(() => 
+  import("@/components/UserManagement").then(m => ({ default: m.UserManagement }))
+);
+const FixedTransactionsPage = lazy(() => 
+  import("@/components/FixedTransactionsPage").then(m => ({ default: m.FixedTransactionsPage }))
+);
+const UserProfile = lazy(() => 
+  import("@/components/UserProfile").then(m => ({ default: m.UserProfile }))
+);
+const SettingsPage = lazy(() => 
+  import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage }))
+);
+const BybitPage = lazy(() => 
+  import("@/pages/BybitPage")
+);
 import { useSettings } from "@/context/SettingsContext";
 import { AddAccountModal } from "@/components/AddAccountModal";
 import { AddCategoryModal } from "@/components/AddCategoryModal";
@@ -33,9 +58,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { MigrationWarning } from "@/components/MigrationWarning";
 import { Account, Transaction } from "@/types";
 import { logger } from "@/lib/logger";
+import { normalizeFormDate } from "@/lib/timezone";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { useTransactions } from "@/hooks/queries/useTransactions";
 import { useCategories } from "@/hooks/useCategories";
+import { useFixedTransactions } from "@/hooks/useFixedTransactions";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
 import { useAccountHandlers } from "@/hooks/useAccountHandlers";
@@ -60,6 +87,7 @@ interface TransactionsFilters {
   filterAccountType: "all" | "checking" | "savings" | "credit" | "investment" | "meal_voucher";
   filterIsFixed: "all" | "true" | "false";
   filterIsProvision: "all" | "true" | "false";
+  filterInvoiceMonth: string;
   dateFrom?: string;
   dateTo?: string;
   sortBy: "date" | "amount";
@@ -129,6 +157,7 @@ const PlaniFlowApp = () => {
       filterAccountType: "all",
       filterIsFixed: "all",
       filterIsProvision: "all",
+      filterInvoiceMonth: "all",
       dateFrom: undefined,
       dateTo: undefined,
       sortBy: "date",
@@ -154,6 +183,7 @@ const PlaniFlowApp = () => {
   const setTransactionsFilterAccountType = (filterAccountType: typeof transactionsFilters.filterAccountType) => updateTransactionsFilter({ filterAccountType });
   const setTransactionsFilterIsFixed = (filterIsFixed: typeof transactionsFilters.filterIsFixed) => updateTransactionsFilter({ filterIsFixed });
   const setTransactionsFilterIsProvision = (filterIsProvision: typeof transactionsFilters.filterIsProvision) => updateTransactionsFilter({ filterIsProvision });
+  const setTransactionsFilterInvoiceMonth = (filterInvoiceMonth: string) => updateTransactionsFilter({ filterInvoiceMonth });
   const setTransactionsDateFrom = (dateFrom: string | undefined) => updateTransactionsFilter({ dateFrom });
   const setTransactionsDateTo = (dateTo: string | undefined) => updateTransactionsFilter({ dateTo });
   const setTransactionsSortBy = (sortBy: typeof transactionsFilters.sortBy) => updateTransactionsFilter({ sortBy });
@@ -172,6 +202,7 @@ const PlaniFlowApp = () => {
   const transactionsFilterAccountType = transactionsFilters.filterAccountType;
   const transactionsFilterIsFixed = transactionsFilters.filterIsFixed;
   const transactionsFilterIsProvision = transactionsFilters.filterIsProvision;
+  const transactionsFilterInvoiceMonth = transactionsFilters.filterInvoiceMonth;
   const transactionsDateFrom = transactionsFilters.dateFrom;
   const transactionsDateTo = transactionsFilters.dateTo;
   const transactionsSortBy = transactionsFilters.sortBy;
@@ -209,6 +240,7 @@ const PlaniFlowApp = () => {
     accountType: transactionsFilters.filterAccountType,
     isFixed: transactionsFilters.filterIsFixed,
     isProvision: transactionsFilters.filterIsProvision,
+    invoiceMonth: transactionsFilters.filterInvoiceMonth,
     dateFrom: transactionsFilters.dateFrom,
     dateTo: transactionsFilters.dateTo,
     sortBy: transactionsFilters.sortBy,
@@ -227,6 +259,12 @@ const PlaniFlowApp = () => {
   });
 
   const { categories, loading: loadingCategories } = useCategories();
+
+  // 3. Transações Fixas para a página de Planejamento
+  const {
+    data: fixedTransactions,
+    isLoading: loadingFixedTransactions,
+  } = useFixedTransactions();
 
   // Computed loading state otimizado com useMemo
   const loadingData = useMemo(() => 
@@ -265,6 +303,7 @@ const PlaniFlowApp = () => {
   const [currentInvoiceValue, setCurrentInvoiceValue] = useState(0);
   const [nextInvoiceValue, setNextInvoiceValue] = useState(0);
   const [payingTotalDebt, setPayingTotalDebt] = useState(0);
+  const [payingInvoiceMonth, setPayingInvoiceMonth] = useState<string | undefined>(undefined);
 
   // Use hooks customizados para handlers
   const { handleEditAccount, handleDeleteAccount, handleImportAccounts } = useAccountHandlers();
@@ -348,12 +387,14 @@ const PlaniFlowApp = () => {
     account: Account,
     currentBill: number,
     nextBill: number,
-    totalBalance: number
+    totalBalance: number,
+    invoiceMonth?: string
   ) => {
     setPayingCreditAccount(account);
     setCurrentInvoiceValue(currentBill);
     setNextInvoiceValue(nextBill);
     setPayingTotalDebt(totalBalance);
+    setPayingInvoiceMonth(invoiceMonth);
     setCreditPaymentModalOpen(true);
   };
 
@@ -386,7 +427,7 @@ const PlaniFlowApp = () => {
         {
           ...transaction,
           status: 'completed',
-          date: updatedData.date.toISOString().split('T')[0],
+          date: normalizeFormDate(updatedData.date),
           amount: updatedData.amount,
           account_id: updatedData.accountId,
         },
@@ -424,6 +465,7 @@ const PlaniFlowApp = () => {
     <Dashboard
       accounts={accounts}
       transactions={allTransactions}
+      fixedTransactions={fixedTransactions || []}
       categories={categories}
       onTransfer={() => setTransferModalOpen(true)}
       onAddAccount={() => setAddAccountModalOpen(true)}
@@ -505,114 +547,159 @@ const PlaniFlowApp = () => {
     switch (currentPage) {
       case "accounts":
         return (
-          <AccountsPage
-            onAddAccount={() => setAddAccountModalOpen(true)}
-            onEditAccount={openEditAccount}
-            onDeleteAccount={handleDeleteAccount}
-            onPayCreditCard={(account) => openCreditPayment(account, 0, 0, account.balance < 0 ? Math.abs(account.balance) : 0)} 
-            onTransfer={() => setTransferModalOpen(true)}
-            onImportAccounts={handleImportAccounts}
-            initialFilterType={accountFilterType}
-            importModalOpen={importAccountsModalOpen}
-            onImportModalOpenChange={setImportAccountsModalOpen}
-          />
+          <RouteErrorBoundary routeName="Accounts Page">
+            <AccountsPage
+              onAddAccount={() => setAddAccountModalOpen(true)}
+              onEditAccount={openEditAccount}
+              onDeleteAccount={handleDeleteAccount}
+              onPayCreditCard={(account) => openCreditPayment(account, 0, 0, account.balance < 0 ? Math.abs(account.balance) : 0)} 
+              onTransfer={() => setTransferModalOpen(true)}
+              onImportAccounts={handleImportAccounts}
+              initialFilterType={accountFilterType}
+              importModalOpen={importAccountsModalOpen}
+              onImportModalOpenChange={setImportAccountsModalOpen}
+            />
+          </RouteErrorBoundary>
         );
       case "credit-bills":
-        return <CreditBillsPage 
-                  onPayCreditCard={openCreditPayment} 
-                  onReversePayment={handleReversePayment} 
-               />;
+        return (
+          <RouteErrorBoundary routeName="Credit Bills Page">
+            <CreditBillsPage 
+              onPayCreditCard={openCreditPayment} 
+              onReversePayment={handleReversePayment} 
+            />
+          </RouteErrorBoundary>
+        );
       case "transactions":
         return (
-          <TransactionsPage
-            transactions={filteredTransactions}
-            accounts={accounts}
-            categories={categories}
-            onAddTransaction={() => setAddTransactionModalOpen(true)}
-            onEditTransaction={openEditTransaction}
-            onDeleteTransaction={handleDeleteTransaction}
-            onImportTransactions={handleImportTransactions}
-            onMarkAsPaid={handleMarkAsPaid}
-            totalCount={totalCount}
-            pageCount={pageCount}
-            currentPage={transactionsPage}
-            pageSize={transactionsPageSize}
-            onPageChange={setTransactionsPage}
-            onPageSizeChange={setTransactionsPageSize}
-            search={transactionsSearch}
-            onSearchChange={setTransactionsSearch}
-            filterType={transactionsFilterType}
-            onFilterTypeChange={setTransactionsFilterType}
-            filterAccount={transactionsFilterAccount}
-            onFilterAccountChange={setTransactionsFilterAccount}
-            filterCategory={transactionsFilterCategory}
-            onFilterCategoryChange={setTransactionsFilterCategory}
-            filterStatus={transactionsFilterStatus}
-            onFilterStatusChange={setTransactionsFilterStatus}
-            filterAccountType={transactionsFilterAccountType}
-            onFilterAccountTypeChange={(value: string) => setTransactionsFilterAccountType(value as "all" | "checking" | "savings" | "credit" | "investment" | "meal_voucher")}
-            filterIsFixed={transactionsFilterIsFixed}
-            onFilterIsFixedChange={(value: string) => setTransactionsFilterIsFixed(value as "all" | "true" | "false")}
-            filterIsProvision={transactionsFilterIsProvision}
-            onFilterIsProvisionChange={(value: string) => setTransactionsFilterIsProvision(value as "all" | "true" | "false")}
-            dateFrom={transactionsDateFrom}
-            dateTo={transactionsDateTo}
-            onDateFromChange={setTransactionsDateFrom}
-            onDateToChange={setTransactionsDateTo}
-            sortBy={transactionsSortBy}
-            onSortByChange={setTransactionsSortBy}
-            sortOrder={transactionsSortOrder}
-            onSortOrderChange={setTransactionsSortOrder}
-            isLoading={loadingFilteredTransactions}
-            periodFilter={transactionsPeriodFilter}
-            onPeriodFilterChange={setTransactionsPeriodFilter}
-            selectedMonth={transactionsSelectedMonth}
-            onSelectedMonthChange={setTransactionsSelectedMonth}
-            customStartDate={transactionsCustomStartDate}
-            onCustomStartDateChange={setTransactionsCustomStartDate}
-            customEndDate={transactionsCustomEndDate}
-            onCustomEndDateChange={setTransactionsCustomEndDate}
-            allTransactions={allTransactions}
-          />
+          <RouteErrorBoundary routeName="Transactions Page">
+            <TransactionsPage
+              transactions={filteredTransactions}
+              accounts={accounts}
+              categories={categories}
+              onAddTransaction={() => {
+                setTransactionInitialType("");
+                setTransactionInitialAccountType("");
+                setTransactionLockType(false);
+                setAddTransactionModalOpen(true);
+              }}
+              onEditTransaction={openEditTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
+              onImportTransactions={handleImportTransactions}
+              onMarkAsPaid={handleMarkAsPaid}
+              totalCount={totalCount}
+              pageCount={pageCount}
+              currentPage={transactionsPage}
+              pageSize={transactionsPageSize}
+              onPageChange={setTransactionsPage}
+              onPageSizeChange={setTransactionsPageSize}
+              search={transactionsSearch}
+              onSearchChange={setTransactionsSearch}
+              filterType={transactionsFilterType}
+              onFilterTypeChange={setTransactionsFilterType}
+              filterAccount={transactionsFilterAccount}
+              onFilterAccountChange={setTransactionsFilterAccount}
+              filterCategory={transactionsFilterCategory}
+              onFilterCategoryChange={setTransactionsFilterCategory}
+              filterStatus={transactionsFilterStatus}
+              onFilterStatusChange={setTransactionsFilterStatus}
+              filterAccountType={transactionsFilterAccountType}
+              onFilterAccountTypeChange={(value: string) => setTransactionsFilterAccountType(value as "all" | "checking" | "savings" | "credit" | "investment" | "meal_voucher")}
+              filterIsFixed={transactionsFilterIsFixed}
+              onFilterIsFixedChange={(value: string) => setTransactionsFilterIsFixed(value as "all" | "true" | "false")}
+              filterIsProvision={transactionsFilterIsProvision}
+              onFilterIsProvisionChange={(value: string) => setTransactionsFilterIsProvision(value as "all" | "true" | "false")}
+              filterInvoiceMonth={transactionsFilterInvoiceMonth}
+              onFilterInvoiceMonthChange={setTransactionsFilterInvoiceMonth}
+              dateFrom={transactionsDateFrom}
+              dateTo={transactionsDateTo}
+              onDateFromChange={setTransactionsDateFrom}
+              onDateToChange={setTransactionsDateTo}
+              sortBy={transactionsSortBy}
+              onSortByChange={setTransactionsSortBy}
+              sortOrder={transactionsSortOrder}
+              onSortOrderChange={setTransactionsSortOrder}
+              isLoading={loadingFilteredTransactions}
+              periodFilter={transactionsPeriodFilter}
+              onPeriodFilterChange={setTransactionsPeriodFilter}
+              selectedMonth={transactionsSelectedMonth}
+              onSelectedMonthChange={setTransactionsSelectedMonth}
+              customStartDate={transactionsCustomStartDate}
+              onCustomStartDateChange={setTransactionsCustomStartDate}
+              customEndDate={transactionsCustomEndDate}
+              onCustomEndDateChange={setTransactionsCustomEndDate}
+              allTransactions={allTransactions}
+            />
+          </RouteErrorBoundary>
         );
       case "fixed":
-        return <FixedTransactionsPage 
-          importModalOpen={importFixedTransactionsModalOpen}
-          onImportModalOpenChange={setImportFixedTransactionsModalOpen}
-          addModalOpen={addFixedTransactionModalOpen}
-          onAddModalOpenChange={setAddFixedTransactionModalOpen}
-        />;
+        return (
+          <RouteErrorBoundary routeName="Fixed Transactions Page">
+            <FixedTransactionsPage 
+              importModalOpen={importFixedTransactionsModalOpen}
+              onImportModalOpenChange={setImportFixedTransactionsModalOpen}
+              addModalOpen={addFixedTransactionModalOpen}
+              onAddModalOpenChange={setAddFixedTransactionModalOpen}
+            />
+          </RouteErrorBoundary>
+        );
       case "categories":
-        return <CategoriesPage 
-          importModalOpen={importCategoriesModalOpen}
-          onImportModalOpenChange={setImportCategoriesModalOpen}
-          initialCategories={categories}
-        />;
+        return (
+          <RouteErrorBoundary routeName="Categories Page">
+            <CategoriesPage 
+              importModalOpen={importCategoriesModalOpen}
+              onImportModalOpenChange={setImportCategoriesModalOpen}
+              initialCategories={categories}
+            />
+          </RouteErrorBoundary>
+        );
       case "analytics":
         return (
-          <AnalyticsPage 
-            transactions={analyticsTransactions} 
-            accounts={accounts}
-            initialDateFilter={transactionsPeriodFilter}
-            initialSelectedMonth={transactionsSelectedMonth}
-            initialCustomStartDate={transactionsCustomStartDate}
-            initialCustomEndDate={transactionsCustomEndDate}
-          />
+          <RouteErrorBoundary routeName="Analytics Page">
+            <AnalyticsPage 
+              transactions={analyticsTransactions} 
+              accounts={accounts}
+              initialDateFilter={transactionsPeriodFilter}
+              initialSelectedMonth={transactionsSelectedMonth}
+              initialCustomStartDate={transactionsCustomStartDate}
+              initialCustomEndDate={transactionsCustomEndDate}
+            />
+          </RouteErrorBoundary>
         );
       case "users":
-        return isAdmin() ? <UserManagement /> : renderDashboard();
+        return isAdmin() ? (
+          <RouteErrorBoundary routeName="User Management">
+            <UserManagement />
+          </RouteErrorBoundary>
+        ) : renderDashboard();
       case "system-settings":
-        return isAdmin() ? <SystemSettings /> : renderDashboard();
+        return isAdmin() ? (
+          <RouteErrorBoundary routeName="System Settings">
+            <SystemSettings />
+          </RouteErrorBoundary>
+        ) : renderDashboard();
       case "profile":
-        return <UserProfile />;
+        return (
+          <RouteErrorBoundary routeName="User Profile">
+            <UserProfile />
+          </RouteErrorBoundary>
+        );
       case "settings":
-        return <SettingsPage 
-          settings={settings}
-          onUpdateSettings={updateSettings}
-          onClearAllData={handleClearAllData}
-        />;
+        return (
+          <RouteErrorBoundary routeName="Settings Page">
+            <SettingsPage 
+              settings={settings}
+              onUpdateSettings={updateSettings}
+              onClearAllData={handleClearAllData}
+            />
+          </RouteErrorBoundary>
+        );
       case "bybit":
-        return <BybitPage />;
+        return (
+          <RouteErrorBoundary routeName="Bybit Page">
+            <BybitPage />
+          </RouteErrorBoundary>
+        );
       default:
         return renderDashboard();
     }
@@ -652,11 +739,12 @@ const PlaniFlowApp = () => {
         ) : currentPage === 'transactions' ? (
           <TransactionHeader
             onAddTransaction={() => {
-              setTransactionInitialType("expense");
-              setTransactionInitialAccountType("checking");
-              setTransactionLockType(true);
+              setTransactionInitialType("");
+              setTransactionInitialAccountType("");
+              setTransactionLockType(false);
               setAddTransactionModalOpen(true);
             }}
+            hasTransactions={filteredTransactions.length > 0}
             onExport={() => {
               const handleExport = async () => {
                 try {
@@ -703,12 +791,13 @@ const PlaniFlowApp = () => {
           <FixedTransactionsHeader
             onAddFixedTransaction={() => setAddFixedTransactionModalOpen(true)}
             onImport={() => setImportFixedTransactionsModalOpen(true)}
-            transactions={allTransactions}
+            transactions={fixedTransactions || []}
             accounts={accounts}
             isHeaderVersion={true}
           />
         ) : currentPage === 'analytics' ? (
           <AnalyticsHeader
+            hasData={analyticsTransactions.length > 0}
             onExportPDF={() => {
               // Será chamado da página
               const button = document.querySelector('[data-action="export-pdf"]') as HTMLButtonElement;
@@ -741,7 +830,9 @@ const PlaniFlowApp = () => {
     >
       <MigrationWarning />
 
-      {renderCurrentPage()}
+      <Suspense fallback={<div className="flex items-center justify-center p-8">Carregando...</div>}>
+        {renderCurrentPage()}
+      </Suspense>
 
       {/* Modals com Error Boundaries */}
       <FormErrorBoundary fallbackMessage="Erro ao abrir formulário de conta">
@@ -765,6 +856,17 @@ const PlaniFlowApp = () => {
           onOpenChange={setAddTransactionModalOpen}
           onAddTransaction={handleAddTransaction}
           onAddInstallmentTransactions={handleAddInstallmentTransactions}
+          onSuccess={() => {
+            // Invalidar e forçar refetch imediato de queries ativas
+            queryClient.invalidateQueries({ 
+              queryKey: queryKeys.transactionsBase,
+              refetchType: 'active'
+            });
+            queryClient.invalidateQueries({ 
+              queryKey: queryKeys.accounts,
+              refetchType: 'active'
+            });
+          }}
           accounts={accounts}
           initialType={transactionInitialType}
           initialAccountType={transactionInitialAccountType}
@@ -826,6 +928,7 @@ const PlaniFlowApp = () => {
         invoiceValueInCents={currentInvoiceValue}
         nextInvoiceValueInCents={nextInvoiceValue}
         totalDebtInCents={payingTotalDebt}
+        invoiceMonth={payingInvoiceMonth}
         />
       </FormErrorBoundary>
 

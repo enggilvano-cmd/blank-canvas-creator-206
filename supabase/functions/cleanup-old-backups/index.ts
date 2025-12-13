@@ -12,12 +12,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     // Verify CRON_SECRET for scheduled job authentication
     const cronSecret = Deno.env.get('CRON_SECRET');
     const providedSecret = req.headers.get('X-Cron-Secret');
     
     if (cronSecret && providedSecret !== cronSecret) {
-      console.warn('[cleanup-old-backups] WARN: Unauthorized access attempt - invalid CRON_SECRET');
+      logger.warn('Unauthorized access attempt - invalid CRON_SECRET');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,14 +35,14 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting backup cleanup...');
+    logger.info('Starting backup cleanup...');
 
     // Calcular data limite (30 dias atrás)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const cutoffDate = thirtyDaysAgo.toISOString();
 
-    console.log(`Deleting backups older than: ${cutoffDate}`);
+    logger.info(`Deleting backups older than: ${cutoffDate}`);
 
     // Buscar backups antigos com retry
     const { data: oldBackups, error: fetchError } = await withRetry(
@@ -52,7 +59,7 @@ Deno.serve(async (req) => {
     }
 
     if (!oldBackups || oldBackups.length === 0) {
-      console.log('No old backups found to delete');
+      logger.info('No old backups found to delete');
       return new Response(
         JSON.stringify({
           success: true,
@@ -65,7 +72,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Found ${oldBackups.length} backups to delete`);
+    logger.info(`Found ${oldBackups.length} backups to delete`);
 
     let deletedFiles = 0;
     let deletedRecords = 0;
@@ -106,7 +113,7 @@ Deno.serve(async (req) => {
 
         deletedRecords++;
 
-        console.log(`Successfully deleted backup: ${backup.file_path}`);
+        logger.info(`Successfully deleted backup: ${backup.file_path}`);
       } catch (error) {
         console.error(`Error processing backup ${backup.file_path}:`, error);
         errors.push({
@@ -119,8 +126,8 @@ Deno.serve(async (req) => {
     // Calcular tamanho total liberado
     const totalSizeFreed = oldBackups.reduce((sum, backup) => sum + (backup.file_size || 0), 0);
 
-    console.log(`Cleanup completed. Deleted ${deletedFiles} files and ${deletedRecords} records`);
-    console.log(`Total space freed: ${(totalSizeFreed / 1024 / 1024).toFixed(2)} MB`);
+    logger.info(`Cleanup completed. Deleted ${deletedFiles} files and ${deletedRecords} records`);
+    logger.info(`Total space freed: ${(totalSizeFreed / 1024 / 1024).toFixed(2)} MB`);
 
     return new Response(
       JSON.stringify({

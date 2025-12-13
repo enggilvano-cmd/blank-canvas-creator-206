@@ -14,6 +14,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -39,18 +46,18 @@ Deno.serve(async (req) => {
     // Rate limiting - Strict para transferências (operação sensível)
     const rateLimitResponse = await rateLimiters.strict.middleware(req, user.id);
     if (rateLimitResponse) {
-      console.warn('[atomic-transfer] WARN: Rate limit exceeded for user:', user.id);
+      logger.warn('Rate limit exceeded for user:', user.id);
       return rateLimitResponse;
     }
 
     const body = await req.json();
 
-    console.log('[atomic-transfer] INFO: Processing transfer for user:', user.id);
+    logger.info('Processing transfer for user:', user.id);
 
     // Validação Zod
     const validation = validateWithZod(TransferInputSchema, body.transfer || body);
     if (!validation.success) {
-      console.error('[atomic-transfer] ERROR: Validation failed:', validation.errors);
+      logger.error('Validation failed:', validation.errors);
       return validationErrorResponse(validation.errors, corsHeaders);
     }
 
@@ -103,7 +110,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[atomic-transfer] INFO: Transfer created successfully');
+    logger.info('Transfer created successfully');
 
     return new Response(
       JSON.stringify({

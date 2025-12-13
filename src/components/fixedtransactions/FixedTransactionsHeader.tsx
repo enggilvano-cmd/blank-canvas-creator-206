@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Download } from "lucide-react";
+import { Plus, Upload, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -103,7 +103,7 @@ export function FixedTransactionsHeader({
         disabled={transactions.length === 0}
         title="Exportar"
       >
-        <Download className="h-3.5 w-3.5" />
+        <FileDown className="h-3.5 w-3.5" />
         <span className="hidden md:inline">Exportar</span>
       </Button>
       <Button

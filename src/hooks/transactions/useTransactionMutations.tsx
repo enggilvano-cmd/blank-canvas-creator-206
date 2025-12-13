@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
 import { EditScope } from '@/components/TransactionScopeDialog';
 import { getErrorMessage } from '@/lib/errorUtils';
+import { generateUUID } from '@/lib/utils';
 
 export function useTransactionMutations() {
   const { user } = useAuth();
@@ -44,7 +45,7 @@ export function useTransactionMutations() {
       }
 
       // 2. Optimistic Update: Transactions List
-      const tempId = crypto.randomUUID();
+      const tempId = generateUUID();
       const categories = queryClient.getQueryData<Category[]>(queryKeys.categories) || [];
       const accounts = queryClient.getQueryData<Account[]>(queryKeys.accounts) || [];
       
@@ -86,23 +87,34 @@ export function useTransactionMutations() {
         return oldData;
       });
 
-      const { error } = await supabase.functions.invoke('atomic-transaction', {
-        body: {
-          transaction: {
-            description: transactionData.description,
-            amount: transactionData.amount,
-            date: transactionData.date.toISOString().split('T')[0],
-            type: transactionData.type,
-            category_id: transactionData.category_id,
-            account_id: transactionData.account_id,
-            status: transactionData.status,
-            invoice_month: transactionData.invoiceMonth || null,
-            invoice_month_overridden: !!transactionData.invoiceMonth,
-          }
+      const payload = {
+        transaction: {
+          description: transactionData.description,
+          amount: transactionData.amount,
+          date: transactionData.date.toISOString().split('T')[0],
+          type: transactionData.type,
+          category_id: transactionData.category_id,
+          account_id: transactionData.account_id,
+          status: transactionData.status,
+          invoice_month: transactionData.invoiceMonth || null,
+          invoice_month_overridden: !!transactionData.invoiceMonth,
         }
+      };
+
+      const { data: responseData, error } = await supabase.functions.invoke('atomic-transaction', {
+        body: payload
       });
 
-      if (error) {
+      const response = { data: responseData, error };
+
+      if (response.error) {
+        logger.error('🚨 ERRO 400 - Detalhes:', JSON.stringify({
+          message: response.error.message,
+          context: response.error.context,
+          details: response.error,
+          responseData: response.data
+        }, null, 2));
+        const { error } = response;
         const errorMessage = getErrorMessage(error);
         if (errorMessage.includes('Credit limit exceeded')) {
           // ... existing error handling ...
@@ -281,6 +293,9 @@ export function useTransactionMutations() {
       }
       if (updatedTransaction.invoice_month !== undefined) {
         updates.invoice_month = updatedTransaction.invoice_month || null;
+      }
+      if (updatedTransaction.invoice_month_overridden !== undefined) {
+        updates.invoice_month_overridden = updatedTransaction.invoice_month_overridden;
       }
 
       const { error } = await supabase.functions.invoke('atomic-edit-transaction', {

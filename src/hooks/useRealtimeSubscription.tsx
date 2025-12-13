@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { queryKeys } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
+import { globalResourceManager } from '@/lib/globalResourceManager';
 
 export function useRealtimeSubscription() {
   const queryClient = useQueryClient();
@@ -14,9 +15,9 @@ export function useRealtimeSubscription() {
 
     logger.info('Setting up realtime subscriptions for user:', user.id);
     
-    // ✅ BUG FIX #2: Track resources for proper cleanup
-    const eventListeners: Array<{ target: any; event: string; handler: any }> = [];
-    const timers: NodeJS.Timeout[] = [];
+    // ✅ BUG FIX #2: Track resources for proper cleanup with global manager
+    const timerIds: string[] = [];
+    const listenerIds: string[] = [];
 
     // Função auxiliar para invalidar transações de forma robusta
     const invalidateTransactions = () => {
@@ -70,7 +71,8 @@ export function useRealtimeSubscription() {
             invalidateTransactions();
             invalidateAccounts();
           }, 500);
-          timers.push(timer1);
+          const timer1Id = globalResourceManager.registerTimeout(timer1, 'Realtime transactions retry');
+          timerIds.push(timer1Id);
         }
       )
       .on(
@@ -89,7 +91,8 @@ export function useRealtimeSubscription() {
             invalidateAccounts();
             invalidateTransactions();
           }, 500);
-          timers.push(timer2);
+          const timer2Id = globalResourceManager.registerTimeout(timer2, 'Realtime accounts retry');
+          timerIds.push(timer2Id);
         }
       )
       .on(
@@ -128,21 +131,15 @@ export function useRealtimeSubscription() {
     return () => {
       logger.info('Cleaning up realtime subscriptions');
       
-      // ✅ BUG FIX #2: Complete cleanup to prevent memory leaks
-      // Clear all timers
-      timers.forEach(timer => clearTimeout(timer));
+      // ✅ BUG FIX #2: Complete cleanup to prevent memory leaks using global manager
+      // Clear all registered timers
+      timerIds.forEach(id => globalResourceManager.unregister(id));
+      
+      // Clear all registered listeners
+      listenerIds.forEach(id => globalResourceManager.unregister(id));
       
       // Remove channel and all its listeners
       supabase.removeChannel(channel);
-      
-      // Clear event listeners array
-      eventListeners.forEach(({ target, event, handler }) => {
-        try {
-          target.removeEventListener(event, handler);
-        } catch (error) {
-          logger.warn('Failed to remove event listener:', error);
-        }
-      });
       
       logger.info('Realtime subscription cleanup complete');
     };

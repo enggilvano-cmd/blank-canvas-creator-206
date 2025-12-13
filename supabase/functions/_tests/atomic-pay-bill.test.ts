@@ -66,7 +66,7 @@ Deno.test('atomic-pay-bill: should create payment transaction and update balance
 
     assertEquals(transactions?.length, 2, 'Should create 2 transactions (expense + income)');
 
-    console.log('✓ atomic-pay-bill test passed');
+    console.log('[TEST PASSED] ✓ atomic-pay-bill test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -110,7 +110,7 @@ Deno.test('atomic-pay-bill: should validate insufficient balance', async () => {
       'Error should mention insufficient balance'
     );
 
-    console.log('✓ atomic-pay-bill validation test passed');
+    console.log('[TEST PASSED] ✓ atomic-pay-bill validation test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -160,7 +160,7 @@ Deno.test('atomic-pay-bill: should validate period locking', async () => {
 
     assertTrue(response.data?.success === false, 'Should fail for locked period');
 
-    console.log('✓ atomic-pay-bill period locking test passed');
+    console.log('[TEST PASSED] ✓ atomic-pay-bill period locking test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);

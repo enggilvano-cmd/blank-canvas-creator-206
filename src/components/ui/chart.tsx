@@ -109,35 +109,54 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  // Sanitizar ID para prevenir CSS injection
+  // ✅ SEGURANÇA: Sanitizar ID rigorosamente para prevenir CSS injection
   const sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '');
+  
+  // ✅ SEGURANÇA: Validar que ID não está vazio após sanitização
+  if (!sanitizedId) {
+    logger.error('[Chart] Invalid chart ID after sanitization');
+    return null;
+  }
 
-  const cssContent = Object.entries(THEMES)
-    .map(
-      ([theme, prefix]) => `
-${prefix} [data-chart=${sanitizedId}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    const sanitized = sanitizeColorValue(color || '');
-    return sanitized ? `  --color-${key}: ${sanitized};` : null
-  })
-  .filter(Boolean)
-  .join("\n")}
-}
-`
-    )
-    .join("\n");
+  // ✅ SEGURANÇA: Criar stylesheet programaticamente ao invés de dangerouslySetInnerHTML
+  React.useEffect(() => {
+    const styleId = `chart-style-${sanitizedId}`;
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement | null;
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
+    }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: cssContent,
-      }}
-    />
-  )
+    const cssRules = Object.entries(THEMES)
+      .map(([theme, prefix]) => {
+        const rules = colorConfig
+          .map(([key, itemConfig]) => {
+            const color =
+              itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+              itemConfig.color;
+            const sanitized = sanitizeColorValue(color || '');
+            // ✅ SEGURANÇA: Sanitizar também a key para prevenir injection
+            const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
+            return sanitized ? `  --color-${sanitizedKey}: ${sanitized};` : null;
+          })
+          .filter(Boolean)
+          .join('\n');
+        
+        return `${prefix} [data-chart="${sanitizedId}"] {\n${rules}\n}`;
+      })
+      .join('\n');
+
+    styleElement.textContent = cssRules;
+
+    return () => {
+      // Cleanup: remover style element quando componente desmontar
+      styleElement?.remove();
+    };
+  }, [sanitizedId, colorConfig]);
+
+  return null;
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip

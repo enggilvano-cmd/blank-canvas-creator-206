@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+# ✅ SECURITY: Nunca fazer commit de arquivos .env com secrets!
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -20,11 +20,13 @@ export function useOfflineCreditPaymentMutations() {
     debitAccountId,
     amount,
     paymentDate,
+    invoiceMonth,
   }: {
     creditCardAccountId: string;
     debitAccountId: string;
     amount: number;
     paymentDate: string;
+    invoiceMonth?: string;
   }): Promise<{ creditAccount: Account; bankAccount: Account }> => {
     const enqueueOfflinePayment = async () => {
       try {
@@ -35,6 +37,7 @@ export function useOfflineCreditPaymentMutations() {
             debit_account_id: debitAccountId,
             amount: Math.abs(amount),
             payment_date: paymentDate,
+            invoice_month: invoiceMonth,
           }
         });
 
@@ -70,6 +73,7 @@ export function useOfflineCreditPaymentMutations() {
           debitAccountId,
           amount,
           paymentDate,
+          invoiceMonth,
         });
       } catch (error) {
         const message = getErrorMessage(error);

@@ -25,6 +25,8 @@ interface UseTransactionsPageLogicProps {
   onFilterAccountChange: (accountId: string) => void;
   filterCategory: string;
   onFilterCategoryChange: (categoryId: string) => void;
+  filterInvoiceMonth: string;
+  onFilterInvoiceMonthChange: (month: string) => void;
   periodFilter: "all" | "current_month" | "month_picker" | "custom";
   onPeriodFilterChange: (value: "all" | "current_month" | "month_picker" | "custom") => void;
   selectedMonth: Date;
@@ -57,6 +59,8 @@ export function useTransactionsPageLogic({
   onFilterAccountChange,
   filterCategory,
   onFilterCategoryChange,
+  filterInvoiceMonth,
+  onFilterInvoiceMonthChange,
   periodFilter,
   onPeriodFilterChange,
   selectedMonth,
@@ -211,6 +215,15 @@ export function useTransactionsPageLogic({
       }
     }
 
+    if (filterInvoiceMonth !== "all") {
+      chips.push({
+        id: "invoiceMonth",
+        label: `Fatura: ${filterInvoiceMonth}`,
+        value: filterInvoiceMonth,
+        onRemove: () => onFilterInvoiceMonthChange("all"),
+      });
+    }
+
     if (periodFilter !== "all") {
       let periodLabel = "";
       if (periodFilter === "current_month") {
@@ -247,6 +260,7 @@ export function useTransactionsPageLogic({
     filterAccountType,
     filterAccount,
     filterCategory,
+    filterInvoiceMonth,
     periodFilter,
     selectedMonth,
     customStartDate,
@@ -260,6 +274,7 @@ export function useTransactionsPageLogic({
     onFilterAccountTypeChange,
     onFilterAccountChange,
     onFilterCategoryChange,
+    onFilterInvoiceMonthChange,
     handleDateFilterChange,
   ]);
 
@@ -271,6 +286,7 @@ export function useTransactionsPageLogic({
     onFilterAccountTypeChange("all");
     onFilterAccountChange("all");
     onFilterCategoryChange("all");
+    onFilterInvoiceMonthChange("all");
     handleDateFilterChange("all");
   };
 
@@ -281,7 +297,7 @@ export function useTransactionsPageLogic({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const { data, error } = await supabase.rpc('get_transactions_totals', {
+        const params = {
           p_user_id: user.id,
           p_type: filterType,
           p_status: filterStatus,
@@ -293,19 +309,43 @@ export function useTransactionsPageLogic({
           p_date_from: dateFrom || undefined,
           p_date_to: dateTo || undefined,
           p_search: search || undefined,
-        });
+          p_invoice_month: filterInvoiceMonth !== 'all' ? filterInvoiceMonth : 'all',
+        };
 
-        if (error) throw error;
+        logger.info("Fetching aggregated totals with params:", params);
+
+        const { data, error } = await supabase.rpc('get_transactions_totals', params);
+
+        if (error) {
+          logger.error("RPC Error fetching aggregated totals:", error);
+          throw error;
+        }
         
         if (data && data.length > 0) {
+          logger.info("Aggregated totals received:", data[0]);
           setAggregatedTotals({
             income: data[0].total_income,
             expenses: data[0].total_expenses,
             balance: data[0].balance,
           });
+        } else {
+          logger.warn("No data returned from get_transactions_totals");
         }
       } catch (error) {
         logger.error("Error fetching aggregated totals:", error);
+        // Em caso de erro, tenta calcular localmente
+        const localIncome = transactions
+          .filter(t => t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0);
+        const localExpenses = transactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        setAggregatedTotals({
+          income: localIncome,
+          expenses: localExpenses,
+          balance: localIncome - localExpenses,
+        });
+        logger.info("Using local calculation for totals:", { localIncome, localExpenses });
       }
     };
 
@@ -318,6 +358,7 @@ export function useTransactionsPageLogic({
     filterAccountType,
     filterIsFixed,
     filterIsProvision,
+    filterInvoiceMonth,
     dateFrom,
     dateTo,
     search,

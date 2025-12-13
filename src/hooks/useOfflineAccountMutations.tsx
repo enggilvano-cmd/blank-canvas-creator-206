@@ -11,13 +11,24 @@ import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/types/errors';
 import { Account } from '@/types';
 
+// Interface para dados de criação de conta
+interface AccountCreateData {
+  name: string;
+  type: 'checking' | 'savings' | 'credit' | 'investment' | 'meal_voucher';
+  balance?: number;
+  color?: string;
+  limit_amount?: number;
+  due_date?: number;
+  closing_date?: number;
+}
+
 export function useOfflineAccountMutations() {
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const processOfflineAdd = useCallback(async (accountData: any) => {
+  const processOfflineAdd = useCallback(async (accountData: AccountCreateData) => {
     try {
       const tempId = `temp-${Date.now()}`;
       const newAccount: Account = {
@@ -82,9 +93,10 @@ export function useOfflineAccountMutations() {
               updated_at: new Date().toISOString(),
           };
           
-          await offlineDatabase.saveTransactions([optimisticTx as any]);
+          // Type assertion with proper validation
+          await offlineDatabase.saveTransactions([optimisticTx as Transaction]);
           
-          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
               if (!oldData) return [optimisticTx];
               if (Array.isArray(oldData)) {
                   return [optimisticTx, ...oldData];

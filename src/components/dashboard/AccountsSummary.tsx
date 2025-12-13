@@ -1,8 +1,9 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, EyeOff, Eye } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { Account } from '@/types';
+import { memo, useMemo, useState, useEffect } from 'react';
 
 interface AccountsSummaryProps {
   accounts: Account[];
@@ -13,7 +14,7 @@ interface AccountsSummaryProps {
   onAddAccount?: () => void;
 }
 
-export function AccountsSummary({
+export const AccountsSummary = memo(function AccountsSummary({
   accounts,
   accountTypes,
   title = 'Suas Contas',
@@ -22,14 +23,41 @@ export function AccountsSummary({
   onAddAccount,
 }: AccountsSummaryProps) {
   const { formatCurrency } = useSettings();
+  
+  // Persistir estado no localStorage usando o title como chave
+  const storageKey = `hideZeroBalances_${title}`;
+  const [hideZeroBalances, setHideZeroBalances] = useState(() => {
+    const stored = localStorage.getItem(storageKey);
+    return stored ? JSON.parse(stored) : false;
+  });
 
-  const filteredAccounts = accountTypes
-    ? accounts.filter((account) => accountTypes.includes(account.type))
-    : accounts;
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(hideZeroBalances));
+  }, [hideZeroBalances, storageKey]);
 
-  const totalBalance = filteredAccounts.reduce(
-    (sum, account) => sum + account.balance,
-    0
+  // ✅ Memoização para evitar recalcular em cada render
+  const filteredAccounts = useMemo(
+    () => {
+      let filtered = accountTypes
+        ? accounts.filter((account) => accountTypes.includes(account.type))
+        : accounts;
+      
+      // Filtra contas com saldo zero se a opção estiver ativada
+      if (hideZeroBalances) {
+        filtered = filtered.filter((account) => account.balance !== 0);
+      }
+      
+      return filtered;
+    },
+    [accounts, accountTypes, hideZeroBalances]
+  );
+
+  const totalBalance = useMemo(
+    () => filteredAccounts.reduce(
+      (sum, account) => sum + account.balance,
+      0
+    ),
+    [filteredAccounts]
   );
 
   return (
@@ -40,9 +68,27 @@ export function AccountsSummary({
       tabIndex={0}
     >
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <CreditCard className="h-4 w-4" />
-          {title} ({filteredAccounts.length})
+        <CardTitle className="text-sm flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            {title} ({filteredAccounts.length})
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setHideZeroBalances(!hideZeroBalances);
+            }}
+            className="h-7 w-7 p-0 hover:bg-muted"
+            title={hideZeroBalances ? "Mostrar contas zeradas" : "Ocultar contas zeradas"}
+          >
+            {hideZeroBalances ? (
+              <Eye className="h-3.5 w-3.5" />
+            ) : (
+              <EyeOff className="h-3.5 w-3.5" />
+            )}
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-0">
@@ -123,4 +169,4 @@ export function AccountsSummary({
       </CardContent>
     </Card>
   );
-}
+});

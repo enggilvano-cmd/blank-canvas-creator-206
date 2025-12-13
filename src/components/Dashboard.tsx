@@ -8,20 +8,20 @@ import { BalanceCards } from './dashboard/BalanceCards';
 import { FinancialEvolutionChart } from './dashboard/FinancialEvolutionChart';
 import { AccountsSummary } from './dashboard/AccountsSummary';
 import { RecentTransactions } from './dashboard/RecentTransactions';
+import { ProvisionedTransactionsByCategory } from './dashboard/ProvisionedTransactionsByCategory';
 
 import { CardErrorBoundary } from '@/components/ui/card-error-boundary';
 import { ListErrorBoundary } from '@/components/ui/list-error-boundary';
+import { useMemo } from 'react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 interface DashboardProps {
   accounts: Account[];
   transactions: Transaction[];
+  fixedTransactions: Transaction[];
   categories: Category[];
-  onTransfer: () => void;
   onAddTransaction: () => void;
   onAddAccount?: () => void;
-  onAddExpense?: () => void;
-  onAddIncome?: () => void;
-  onAddCreditExpense?: () => void;
   onNavigateToAccounts?: (filterType?: 'credit' | 'checking' | 'savings' | 'investment' | 'meal_voucher') => void;
   onNavigateToTransactions?: (
     filterType?: TransactionFilterType,
@@ -37,12 +37,10 @@ interface DashboardProps {
 export function Dashboard({
   accounts,
   transactions,
-  onTransfer,
+  fixedTransactions,
+  categories,
   onAddTransaction,
   onAddAccount,
-  onAddExpense,
-  onAddIncome,
-  onAddCreditExpense,
   onNavigateToAccounts,
   onNavigateToTransactions,
 }: DashboardProps) {
@@ -67,6 +65,7 @@ export function Dashboard({
   const {
     totalBalance,
     creditAvailable,
+    creditLimitUsed,
     periodIncome,
     periodExpenses,
     creditCardExpenses,
@@ -82,6 +81,30 @@ export function Dashboard({
     customStartDate,
     customEndDate
   );
+
+  // Calcular intervalo de datas para os cards de provisões
+  const dateRange = useMemo(() => {
+    if (dateFilter === 'all') {
+      return { dateFrom: undefined, dateTo: undefined };
+    } else if (dateFilter === 'current_month') {
+      const now = new Date();
+      return {
+        dateFrom: format(startOfMonth(now), 'yyyy-MM-dd'),
+        dateTo: format(endOfMonth(now), 'yyyy-MM-dd'),
+      };
+    } else if (dateFilter === 'month_picker') {
+      return {
+        dateFrom: format(startOfMonth(selectedMonth), 'yyyy-MM-dd'),
+        dateTo: format(endOfMonth(selectedMonth), 'yyyy-MM-dd'),
+      };
+    } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
+      return {
+        dateFrom: format(customStartDate, 'yyyy-MM-dd'),
+        dateTo: format(customEndDate, 'yyyy-MM-dd'),
+      };
+    }
+    return { dateFrom: undefined, dateTo: undefined };
+  }, [dateFilter, selectedMonth, customStartDate, customEndDate]);
 
   return (
     <div className="space-y-3 sm:space-y-4 fade-in max-w-screen-2xl mx-auto px-2 sm:px-0 pb-6 sm:pb-8 spacing-responsive-md">
@@ -108,6 +131,7 @@ export function Dashboard({
               periodIncome={periodIncome}
               periodExpenses={periodExpenses}
               creditAvailable={creditAvailable}
+              creditLimitUsed={creditLimitUsed}
               creditCardExpenses={creditCardExpenses}
               pendingIncome={pendingIncome}
               pendingExpenses={pendingExpenses}
@@ -133,7 +157,7 @@ export function Dashboard({
           />
         </CardErrorBoundary>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           <CardErrorBoundary fallbackMessage="Erro ao carregar contas">
             <AccountsSummary
               accounts={accounts}
@@ -155,11 +179,38 @@ export function Dashboard({
               onAddAccount={onAddAccount}
             />
           </CardErrorBoundary>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          <CardErrorBoundary fallbackMessage="Erro ao carregar receitas provisionadas">
+            <ProvisionedTransactionsByCategory
+              transactions={transactions}
+              fixedTransactions={fixedTransactions}
+              categories={categories}
+              type="income"
+              dateFrom={dateRange.dateFrom}
+              dateTo={dateRange.dateTo}
+            />
+          </CardErrorBoundary>
+
+          <CardErrorBoundary fallbackMessage="Erro ao carregar despesas provisionadas">
+            <ProvisionedTransactionsByCategory
+              transactions={transactions}
+              fixedTransactions={fixedTransactions}
+              categories={categories}
+              type="expense"
+              dateFrom={dateRange.dateFrom}
+              dateTo={dateRange.dateTo}
+            />
+          </CardErrorBoundary>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:gap-4">
           <ListErrorBoundary fallbackMessage="Erro ao carregar transações recentes">
             <RecentTransactions
+              key={`recent-transactions-${transactions.length}-${transactions[0]?.id || 'empty'}`}
               transactions={transactions}
-              maxItems={Math.max(accounts.length, 3)}
+              maxItems={Math.max(accounts.length, 10)}
               onNavigateToTransactions={onNavigateToTransactions}
               onAddTransaction={onAddTransaction}
             />

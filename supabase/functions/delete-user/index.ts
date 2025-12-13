@@ -15,6 +15,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -63,7 +70,7 @@ Deno.serve(async (req) => {
     // Rate limiting - Strict para operações críticas de admin
     const rateLimitResponse = await rateLimiters.strict.middleware(req, user.id);
     if (rateLimitResponse) {
-      console.warn('[delete-user] WARN: Rate limit exceeded for user:', user.id);
+      logger.warn('Rate limit exceeded for user:', user.id);
       return rateLimitResponse;
     }
 
@@ -72,7 +79,7 @@ Deno.serve(async (req) => {
 
     const validation = validateWithZod(DeleteUserInputSchema, body);
     if (!validation.success) {
-      console.error('[delete-user] ERROR: Validation failed:', validation.errors);
+      logger.error('Validation failed:', validation.errors);
       return validationErrorResponse(validation.errors, corsHeaders);
     }
 
@@ -89,7 +96,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('[delete-user] INFO: Deleting user:', userId);
+    logger.info('Deleting user:', userId);
 
     // Delete user from auth.users (this will cascade to profiles due to ON DELETE CASCADE) with retry
     const { error: deleteError } = await withRetry(
@@ -109,7 +116,7 @@ Deno.serve(async (req) => {
       p_resource_id: userId
     })
 
-    console.log('[delete-user] INFO: User deleted successfully');
+    logger.info('User deleted successfully');
 
     return new Response(
       JSON.stringify({ success: true, message: 'User deleted successfully' }),

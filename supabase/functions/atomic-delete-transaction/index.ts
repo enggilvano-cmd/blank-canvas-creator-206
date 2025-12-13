@@ -19,6 +19,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -44,18 +51,18 @@ Deno.serve(async (req) => {
     // Apply moderate rate limiting for deletion operations (allows bulk deletes)
     const rateLimitResponse = await rateLimiters.moderate.middleware(req, user.id);
     if (rateLimitResponse) {
-      console.warn('[atomic-delete] WARN: Rate limit exceeded for user:', user.id);
+      logger.warn('Rate limit exceeded for user:', user.id);
       return rateLimitResponse;
     }
 
     const body = await req.json();
 
-    console.log('[atomic-delete] INFO: Deleting transaction for user:', user.id);
+    logger.info('Deleting transaction for user:', user.id);
 
     // Validação Zod
     const validation = validateWithZod(DeleteTransactionInputSchema, body);
     if (!validation.success) {
-      console.error('[atomic-delete] ERROR: Validation failed:', validation.errors);
+      logger.error('Validation failed:', validation.errors);
       return validationErrorResponse(validation.errors, corsHeaders);
     }
 
@@ -113,7 +120,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[atomic-delete-transaction] INFO: Deleted', record.deleted_count, 'transaction(s)');
+    logger.info('Deleted', record.deleted_count, 'transaction(s)');
 
     return new Response(
       JSON.stringify({

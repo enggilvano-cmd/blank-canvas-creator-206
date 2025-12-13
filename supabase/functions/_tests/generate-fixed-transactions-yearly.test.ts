@@ -82,7 +82,7 @@ Deno.test('generate-fixed-transactions-yearly: should generate fixed transaction
       'Should generate 12 transactions for current year'
     );
 
-    console.log('✓ generate-fixed-transactions-yearly test passed');
+    console.log('[TEST PASSED] ✓ generate-fixed-transactions-yearly test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -138,7 +138,7 @@ Deno.test('generate-fixed-transactions-yearly: should not duplicate existing tra
     // Should only have the parent transaction, no duplicates
     assertEquals(transactions?.length, 1, 'Should not create duplicate transactions');
 
-    console.log('✓ generate-fixed-transactions-yearly duplicate prevention test passed');
+    console.log('[TEST PASSED] ✓ generate-fixed-transactions-yearly duplicate prevention test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -204,7 +204,7 @@ Deno.test('generate-fixed-transactions-yearly: should handle multiple parent tra
       'Should generate transactions for multiple parents'
     );
 
-    console.log('✓ generate-fixed-transactions-yearly multiple parents test passed');
+    console.log('[TEST PASSED] ✓ generate-fixed-transactions-yearly multiple parents test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);

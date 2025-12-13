@@ -2,6 +2,7 @@
 import { logger } from '@/lib/logger';
 import type { NotificationAccount } from '@/types/export';
 import { getTodayInUserTimezone, toUserTimezone } from '@/lib/timezone';
+import { formatCurrency } from '@/lib/formatters';
 
 export interface NotificationSettings {
   billReminders: boolean;
@@ -105,7 +106,7 @@ export function getDueDateReminders(
         reminders.push({
           id: `due_${account.id}_${dueDate.getTime()}`,
           title: "Vencimento de Fatura",
-          message: `A fatura do ${account.name} vence em ${daysUntilDue} dia(s). Valor: R$ ${amount.toFixed(2)}`,
+          message: `A fatura do ${account.name} vence em ${daysUntilDue} dia(s). Valor: ${formatCurrency(amount)}`,
           type: "reminder",
           date: today,
           read: false,
@@ -116,6 +117,64 @@ export function getDueDateReminders(
     });
   
   return reminders;
+}
+
+// Get overdue bill alerts for credit cards
+export function getOverdueBillAlerts(
+  accounts: NotificationAccount[],
+  billAmounts?: Record<string, number>
+): Notification[] {
+  const alerts: Notification[] = [];
+  const todayStr = getTodayInUserTimezone();
+  const today = new Date(todayStr);
+  
+  accounts
+    .filter(acc => acc.type === "credit" && acc.due_date)
+    .forEach(account => {
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      
+      // Calculate due date for current month
+      let dueDate = new Date(currentYear, currentMonth, account.due_date!);
+      
+      // If due date hasn't passed yet this month, check previous month
+      if (dueDate >= today) {
+        dueDate.setMonth(dueDate.getMonth() - 1);
+      }
+      
+      // Calculate days overdue
+      const daysOverdue = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Only show if actually overdue (positive days)
+      if (daysOverdue <= 0) return;
+      
+      // Determine the amount
+      let amount = 0;
+      if (billAmounts && billAmounts[account.id] !== undefined) {
+        amount = billAmounts[account.id];
+      } else {
+        // Fallback: use balance if negative (debt)
+        if (account.balance < 0) {
+          amount = Math.abs(account.balance);
+        }
+      }
+      
+      // Only alert if there's an amount to pay
+      if (amount > 0) {
+        alerts.push({
+          id: `overdue_${account.id}_${dueDate.getTime()}`,
+          title: "Fatura Vencida",
+          message: `A fatura do ${account.name} está vencida há ${daysOverdue} dia(s). Valor: ${formatCurrency(amount)}`,
+          type: "alert",
+          date: today,
+          read: false,
+          actionType: "bill_payment",
+          actionData: { accountId: account.id, overdue: true }
+        });
+      }
+    });
+  
+  return alerts;
 }
 
 // Get low balance alerts
@@ -180,6 +239,7 @@ export function getAllNotifications(accounts: NotificationAccount[], settings: N
   
   if (settings.billReminders) {
     notifications.push(...getDueDateReminders(accounts, settings));
+    notifications.push(...getOverdueBillAlerts(accounts));
   }
   
   if (settings.transactionAlerts) {

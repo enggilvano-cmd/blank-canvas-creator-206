@@ -282,13 +282,14 @@ export async function validateCreditLimitForAdd(
       };
     }
 
-    // BUG FIX: Para cartões de crédito, buscar transações PENDING e COMPLETED
+    // BUG FIX: Para cartões de crédito, buscar APENAS transações PENDING
+    // (completed já estão refletidas no account.balance)
     const { data: pendingTransactions, error: pendingError } = await supabase
       .from('transactions')
       .select('amount')
       .eq('account_id', account.id)
       .eq('type', 'expense')
-      .in('status', ['completed', 'pending']); // Inclui ambos completed e pending
+      .eq('status', 'pending'); // Apenas pending para evitar duplicação
 
     if (pendingError) throw pendingError;
 
@@ -296,7 +297,7 @@ export async function validateCreditLimitForAdd(
     const limit = account.limit_amount || 0;
     const currentDebt = Math.abs(Math.min(account.balance, 0)); // Dívida atual (completed)
     const pendingExpenses = pendingTransactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
-    const totalUsed = currentDebt + pendingExpenses;
+    const totalUsed = currentDebt + pendingExpenses; // Agora sem duplicação
     const available = limit - totalUsed;
 
     // Validar se excede o limite
@@ -517,13 +518,14 @@ export async function validateCreditLimitForEdit(
       };
     }
 
-    // BUG FIX: Buscar transações PENDING e COMPLETED deste cartão (excluindo a atual)
+    // BUG FIX: Buscar APENAS transações PENDING (excluindo a atual)
+    // Completed já estão no account.balance, buscar completed causaria duplicação
     const { data: pendingTransactions, error } = await supabase
       .from('transactions')
       .select('amount')
       .eq('account_id', account.id)
       .eq('type', 'expense')
-      .in('status', ['completed', 'pending']) // Inclui ambos completed e pending
+      .eq('status', 'pending') // Apenas pending
       .neq('id', transactionId);
 
     if (error) throw error;
@@ -534,6 +536,7 @@ export async function validateCreditLimitForEdit(
     const pendingExpenses = pendingTransactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
     
     // Remover o valor antigo da transação se ela era completed e expense
+    // (pois ela está incluída no currentDebt via account.balance)
     let adjustedDebt = currentDebt;
     if (transactionStatus === 'completed' && oldType === 'expense') {
       adjustedDebt = Math.max(0, adjustedDebt - oldAmount);

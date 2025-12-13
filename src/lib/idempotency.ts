@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { globalResourceManager } from './globalResourceManager';
 
 /**
  * Idempotency key manager for critical operations
@@ -182,9 +183,10 @@ export const idempotencyManager = new IdempotencyManager();
 
 // Run cleanup every minute
 if (typeof window !== 'undefined') {
-  setInterval(() => {
+  const cleanupInterval = setInterval(() => {
     idempotencyManager.cleanup();
   }, 60 * 1000);
+  globalResourceManager.registerInterval(cleanupInterval, 'Idempotency cache cleanup');
 }
 
 /**

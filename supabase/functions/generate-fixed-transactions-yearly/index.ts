@@ -26,13 +26,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('[generate-fixed] INFO: Starting yearly fixed transactions generation...');
+    // Logger estruturado ao invés de console.log
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+    
+    logger.info('Starting yearly fixed transactions generation');
 
     // Rate limiting - Lenient para jobs automatizados
     const identifier = req.headers.get('x-job-id') || 'fixed-job';
     const rateLimitResponse = await rateLimiters.lenient.middleware(req, identifier);
     if (rateLimitResponse) {
-      console.warn('[generate-fixed] WARN: Rate limit exceeded');
+      logger.warn('Rate limit exceeded');
       return rateLimitResponse;
     }
 
@@ -57,19 +64,19 @@ Deno.serve(async (req) => {
     )
 
     if (fetchError) {
-      console.error('[generate-fixed] ERROR: Failed to fetch fixed transactions:', fetchError);
+      logger.error('Failed to fetch fixed transactions:', fetchError);
       throw fetchError;
     }
 
     if (!fixedTransactions || fixedTransactions.length === 0) {
-      console.log('[generate-fixed] INFO: No fixed transactions found');
+      logger.info('No fixed transactions found');
       return new Response(
         JSON.stringify({ message: 'No fixed transactions found', generated: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`[generate-fixed] INFO: Found ${fixedTransactions.length} fixed transactions`);
+    logger.info(`Found ${fixedTransactions.length} fixed transactions`);
 
     let totalGenerated = 0
 
@@ -129,10 +136,10 @@ Deno.serve(async (req) => {
       }
 
       totalGenerated += futureTransactions.length;
-      console.log(`[generate-fixed] INFO: Generated ${futureTransactions.length} transactions for ${fixedTx.description}`);
+      logger.info(`Generated ${futureTransactions.length} transactions for ${fixedTx.description}`);
     }
 
-    console.log(`[generate-fixed] INFO: Total transactions generated: ${totalGenerated}`);
+    logger.info(`Total transactions generated: ${totalGenerated}`);
 
     return new Response(
       JSON.stringify({

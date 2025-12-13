@@ -20,6 +20,7 @@ interface EditFixedTransactionModalProps {
   onEditTransaction: (transaction: Transaction) => void;
   transaction: Transaction;
   accounts: Account[];
+  hideStatusAndInvoice?: boolean;
 }
 
 export function EditFixedTransactionModal({
@@ -28,6 +29,7 @@ export function EditFixedTransactionModal({
   onEditTransaction,
   transaction,
   accounts,
+  hideStatusAndInvoice = false,
 }: EditFixedTransactionModalProps) {
   const [formData, setFormData] = useState({
     description: "",
@@ -56,17 +58,18 @@ export function EditFixedTransactionModal({
         category_id: transaction.category_id || "",
         account_id: transaction.account_id,
         status: "pending", // Fixed transactions don't have status in definition, default to pending
-        invoiceMonth: "",
+        invoiceMonth: transaction.invoice_month || "",
       });
     }
   }, [open, transaction]);
 
   const filteredCategories = useMemo(() => {
     if (!formData.type) return [];
-    return categories.filter(
+    const filtered = categories.filter(
       (cat) => cat.type === formData.type || cat.type === "both"
     );
-  }, [categories, formData.type]);
+    return filtered;
+  }, [categories, formData.type, formData.category_id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,14 +112,15 @@ export function EditFixedTransactionModal({
     const dateString = `${year}-${month}-${day}`;
 
     // Ensure amount has correct sign based on type
-    let finalAmount = formData.amountInCents / 100;
+    // Valor já vem em centavos do formulário
+    let finalAmount = formData.amountInCents;
     if (formData.type === "expense") {
       finalAmount = -Math.abs(finalAmount);
     } else {
       finalAmount = Math.abs(finalAmount);
     }
 
-    onEditTransaction({
+    const transactionUpdate = {
       ...transaction, // Keep other fields
       description: formData.description,
       amount: finalAmount,
@@ -125,7 +129,18 @@ export function EditFixedTransactionModal({
       category_id: formData.category_id || "",
       account_id: formData.account_id,
       is_fixed: true,
-    });
+    };
+
+    // Só adiciona invoice_month se tiver valor (não vazio)
+    if (formData.invoiceMonth && formData.invoiceMonth.trim() !== '') {
+      transactionUpdate.invoice_month = formData.invoiceMonth;
+      transactionUpdate.invoice_month_overridden = true;
+    } else {
+      transactionUpdate.invoice_month = undefined;
+      transactionUpdate.invoice_month_overridden = false;
+    }
+    
+    onEditTransaction(transactionUpdate);
   };
 
   return (
@@ -147,6 +162,7 @@ export function EditFixedTransactionModal({
             accounts={accounts}
             filteredCategories={filteredCategories}
             isTransfer={false}
+            hideStatusAndInvoice={hideStatusAndInvoice}
           />
 
           <div className="flex gap-3 pt-4">

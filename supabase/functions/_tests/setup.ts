@@ -57,7 +57,8 @@ export const getSupabaseClient = () => {
 export const createTestUser = async (): Promise<TestUser> => {
   const supabase = getSupabaseClient();
   const email = `test-${Date.now()}@example.com`;
-  const password = 'Test123!@#';
+  // ✅ SEGURANÇA: Usar variável de ambiente ao invés de senha hardcoded
+  const password = Deno.env.get('TEST_USER_PASSWORD') || `Test-${crypto.randomUUID().slice(0, 8)}!`;
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,

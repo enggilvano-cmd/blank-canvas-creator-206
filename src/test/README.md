@@ -25,8 +25,9 @@ Adicione ao `package.json`:
 Execute: `npm run test`
 
 ## Próximos Testes
-- [ ] Stores (AccountStore, TransactionStore)
-- [ ] Hooks (useAuth, useCategories)
+- [ ] React Query Hooks (useAccounts migrado ✅, useTransactions, useCategories)
+- [ ] Mutation Hooks (useOfflineAccountMutations, useOfflineTransactionMutations)
+- [ ] Auth Hooks (useAuth)
 - [ ] Componentes (modais, páginas)
 - [ ] Edge functions
 
@@ -207,7 +208,7 @@ npm run test:ui
 npm run test:coverage
 
 # Executar testes específicos
-npm run test src/test/stores/AccountStore.test.ts
+npm run test src/test/integration/accounts.test.ts
 
 # Modo watch (reexecuta ao salvar)
 npm run test -- --watch
@@ -217,24 +218,24 @@ npm run test -- --watch
 
 ### ✅ Testes Implementados
 
-#### Stores (Estado Global)
-- ✅ **AccountStore** (100% cobertura)
-  - setAccounts
-  - addAccount
-  - updateAccount
-  - updateAccounts
-  - removeAccount
-  - Operações com cartão de crédito
+#### React Query Hooks (Queries & Mutations)
+- ✅ **useAccounts Hook** (100% cobertura - migrado de AccountStore deprecado)
+  - Query: Carregamento de contas do Supabase
+  - Validação de dados retornados
+  - Atualização de saldo após transações
+  - Múltiplas atualizações concorrentes
+  - Transferências entre contas
+  - Pagamento de fatura de cartão de crédito
+  - Remoção de contas
 
-- ✅ **TransactionStore** (100% cobertura)
-  - setTransactions
-  - addTransactions
-  - updateTransaction
-  - updateTransactions
-  - removeTransaction
-  - removeTransactions
-  - Transações parceladas
-  - Transações recorrentes
+- ⏳ **useOfflineAccountMutations** (0% cobertura)
+  - Criação de contas (online/offline)
+  - Atualização de contas
+  - Deleção de contas
+  - Fila offline
+  - Sincronização
+
+- ⏳ **TransactionStore** (Deprecado - migrar para useTransactions)
 
 #### Utilitários
 - ✅ **Logger** (100% cobertura)

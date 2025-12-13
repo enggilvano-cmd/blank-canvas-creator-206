@@ -69,14 +69,31 @@ export function useAddTransactionForm({
   const [manualStatusChange, setManualStatusChange] = useState(false);
   const [manualInvoiceMonthChange, setManualInvoiceMonthChange] = useState(false);
 
-  // Reset form quando o modal abre
+  // Reset form quando o modal abre ou fecha
   useEffect(() => {
     if (open) {
-      setFormData({ ...initialFormState, type: (initialType || "") as "" | "income" | "expense" });
+      // Reseta o formulário ao abrir, preservando initialType
+      const typeToSet = initialType ? (initialType as "income" | "expense") : "";
+      setFormData({ 
+        ...initialFormState, 
+        type: typeToSet as "" | "income" | "expense"
+      });
       setCustomInstallments("");
       setValidationErrors({});
       setManualStatusChange(false);
       setManualInvoiceMonthChange(false);
+    } else {
+      // Cleanup: Reseta o formulário APÓS modal fechar (evita flash visual)
+      const timer = setTimeout(() => {
+        const typeToSet = initialType ? (initialType as "income" | "expense") : "";
+        setFormData({ 
+          ...initialFormState, 
+          type: typeToSet as "" | "income" | "expense"
+        });
+        setCustomInstallments("");
+        setValidationErrors({});
+      }, 200); // Aguarda animação de fechamento
+      return () => clearTimeout(timer);
     }
   }, [open, initialType]);
 
@@ -156,7 +173,7 @@ export function useAddTransactionForm({
         description: formData.description,
         amount: formData.amount,
         date: formData.date,
-        type: formData.type || undefined,
+        type: formData.type,
         category_id: formData.category_id,
         account_id: formData.account_id,
         status: formData.status,
@@ -242,9 +259,7 @@ export function useAddTransactionForm({
         installmentCount: isInstallment ? installments : undefined,
       });
 
-      // Reset form e fechar modal
-      setFormData(initialFormState);
-      setCustomInstallments("");
+      // Fechar modal (reset será feito pelo useEffect após animação)
       onClose();
     } catch (error: unknown) {
       logger.error("Error creating transaction(s):", error);
@@ -273,6 +288,13 @@ export function useAddTransactionForm({
       const baseInstallmentCents = Math.floor(formData.amount / installments);
       const remainderCents = formData.amount % installments;
 
+      // Se o usuário escolheu manualmente o mês da fatura, usar esse mês como base
+      let baseInvoiceMonth: string | undefined = undefined;
+      if (manualInvoiceMonthChange && formData.invoiceMonth) {
+        baseInvoiceMonth = formData.invoiceMonth;
+        logger.debug('Usando mês da fatura escolhido manualmente:', baseInvoiceMonth);
+      }
+
       for (let i = 0; i < installments; i++) {
         const installmentAmount = i === 0 
           ? baseInstallmentCents + remainderCents 
@@ -286,9 +308,19 @@ export function useAddTransactionForm({
         });
 
         const installmentStatus: "completed" | "pending" = "completed";
-        const invoiceMonth = (selectedAccount!.closing_date && selectedAccount!.due_date)
-          ? calculateInvoiceMonthByDue(installmentDate, selectedAccount!.closing_date, selectedAccount!.due_date)
-          : undefined;
+        
+        // Determinar o mês da fatura para esta parcela
+        let invoiceMonth: string | undefined;
+        if (baseInvoiceMonth) {
+          // Se foi escolhido manualmente, adicionar os meses à escolha manual
+          const [year, month] = baseInvoiceMonth.split('-').map(Number);
+          const invoiceDate = new Date(year, month - 1 + i, 1);
+          invoiceMonth = `${invoiceDate.getFullYear()}-${String(invoiceDate.getMonth() + 1).padStart(2, '0')}`;
+          logger.debug(`Parcela ${i + 1}: mês da fatura baseado na escolha manual: ${invoiceMonth}`);
+        } else if (selectedAccount!.closing_date && selectedAccount!.due_date) {
+          // Calcular automaticamente baseado na data da parcela
+          invoiceMonth = calculateInvoiceMonthByDue(installmentDate, selectedAccount!.closing_date, selectedAccount!.due_date);
+        }
 
         transactionsToCreate.push({
           description: formData.description,
@@ -300,6 +332,7 @@ export function useAddTransactionForm({
           status: installmentStatus,
           currentInstallment: i + 1,
           invoiceMonth: invoiceMonth,
+          invoiceMonthOverridden: Boolean(baseInvoiceMonth),
         });
       }
     } else {
@@ -331,6 +364,12 @@ export function useAddTransactionForm({
     }
 
     await onAddInstallmentTransactions(transactionsToCreate);
+    
+    // Invalidar queries para atualizar Dashboard e listas
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+    queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+    onSuccess?.();
+    
     toast({
       title: "Sucesso",
       description: `${installments} parcelas criadas com sucesso`,
@@ -407,6 +446,11 @@ export function useAddTransactionForm({
     };
 
     await onAddTransaction(transactionPayload);
+
+    // Invalidar queries para atualizar Dashboard e listas
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+    queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+    onSuccess?.();
 
     toast({
       title: "Sucesso",

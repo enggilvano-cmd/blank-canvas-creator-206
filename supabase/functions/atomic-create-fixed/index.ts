@@ -38,8 +38,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Apply rate limiting
-    const rateLimitResult = await rateLimiters.moderate.middleware(req, user.id);
+    // Apply rate limiting (increased limit for bulk imports)
+    const rateLimiter = new (await import('../_shared/upstash-rate-limiter.ts')).UpstashRateLimiter({
+      windowMs: 5 * 60 * 1000, // 5 minutos
+      maxRequests: 200, // 200 requests por 5 minutos para permitir importações em massa
+    });
+    const rateLimitResult = await rateLimiter.middleware(req, user.id);
     if (rateLimitResult) {
       return rateLimitResult;
     }

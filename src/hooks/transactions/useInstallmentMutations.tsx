@@ -38,7 +38,7 @@ export function useInstallmentMutations() {
             p_account_id: data.account_id,
             p_status: data.status,
             p_invoice_month: data.invoiceMonth ?? undefined,
-            p_invoice_month_overridden: !!data.invoiceMonth,
+            p_invoice_month_overridden: data.invoiceMonthOverridden ?? false,
           });
 
           if (error) {

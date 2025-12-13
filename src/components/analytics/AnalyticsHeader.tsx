@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { FileDown } from "lucide-react";
 import { useRef, useEffect } from "react";
 
 interface AnalyticsHeaderProps {
   onExportPDF?: () => void;
+  hasData?: boolean;
 }
 
-export function AnalyticsHeader({ onExportPDF }: AnalyticsHeaderProps) {
+export function AnalyticsHeader({ onExportPDF, hasData = true }: AnalyticsHeaderProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Permite que AnalyticsPage chame a função via ref
@@ -31,8 +32,9 @@ export function AnalyticsHeader({ onExportPDF }: AnalyticsHeaderProps) {
         variant="outline"
         onClick={handleClick}
         className="gap-1.5 apple-interaction h-8 text-xs"
+        disabled={!hasData}
       >
-        <Download className="h-3.5 w-3.5 flex-shrink-0" />
+        <FileDown className="h-3.5 w-3.5 flex-shrink-0" />
         <span className="hidden md:inline">Exportar PDF</span>
       </Button>
     </div>

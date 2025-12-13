@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { safeStorage } from '@/lib/safeStorage';
 import type { Notification, NotificationSettings } from '@/lib/notifications';
 import { differenceInDays, parseISO } from 'date-fns';
 import {
   getDueDateReminders,
+  getOverdueBillAlerts,
   getLowBalanceAlerts,
   requestNotificationPermission,
   showSystemNotification,
@@ -15,7 +17,10 @@ import {
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   isPushSubscribed,
+  cleanupPushNotifications,
+  getPushNotificationResourceStats,
 } from '@/lib/pushNotifications';
+import { globalResourceManager } from '@/lib/globalResourceManager';
 import { calculateBillDetails } from '@/lib/dateUtils';
 import type { AppTransaction } from '@/types';
 
@@ -31,8 +36,7 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('dismissed_notifications');
-    return saved ? JSON.parse(saved) : [];
+    return safeStorage.getJSON<string[]>('dismissed_notifications') || [];
   });
 
   // Load notification settings
@@ -105,6 +109,10 @@ export function useNotifications() {
       if (settings.billReminders) {
         const reminders = getDueDateReminders(accounts, settings, billAmounts);
         newNotifications.push(...reminders);
+        
+        // Get overdue bill alerts
+        const overdueAlerts = getOverdueBillAlerts(accounts, billAmounts);
+        newNotifications.push(...overdueAlerts);
       }
 
       // Get low balance alerts
@@ -193,8 +201,11 @@ export function useNotifications() {
     
     // Check every 5 minutes
     const interval = setInterval(checkNotifications, 5 * 60 * 1000);
+    const intervalId = globalResourceManager.registerInterval(interval, 'Notifications check interval');
     
-    return () => clearInterval(interval);
+    return () => {
+      globalResourceManager.unregister(intervalId);
+    };
   }, [checkNotifications]);
 
   // Check push subscription status
@@ -246,9 +257,10 @@ export function useNotifications() {
       }
       
       return { success: false, error: 'Falha ao obter subscrição. Verifique se o app está instalado na tela inicial (iOS) ou se o navegador suporta notificações.' };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao ativar notificações';
       logger.error('Error enabling push notifications:', error);
-      return { success: false, error: error.message || 'Erro desconhecido ao ativar notificações' };
+      return { success: false, error: errorMessage };
     }
   }, [user]);
 

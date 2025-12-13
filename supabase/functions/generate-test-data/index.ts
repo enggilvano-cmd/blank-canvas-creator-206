@@ -59,11 +59,17 @@ Deno.serve(async (req) => {
     const endDate = validation.data.endDate || formatDateString(nowInUserTz);
     const clearExisting = validation.data.clearExisting || false;
 
-    console.log(`Generating ${transactionCount} test transactions for user ${user.id}`);
+    // Logger estruturado
+    const logger = {
+      info: (msg: string) => console.log(`[INFO] ${msg}`),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+    };
+    
+    logger.info(`Generating ${transactionCount} test transactions for user ${user.id}`);
 
     // 1. Limpar dados existentes se solicitado com retry
     if (clearExisting) {
-      console.log('Clearing existing test data...');
+      logger.info('Clearing existing test data...');
       const { error: deleteError } = await withRetry(
         () => supabase
           .from('transactions')
@@ -195,14 +201,14 @@ Deno.serve(async (req) => {
       }
 
       // Log progresso
-      console.log(`Progress: ${totalCreated}/${transactionCount} transactions created`);
+      logger.info(`Progress: ${totalCreated}/${transactionCount} transactions created`);
     }
 
     const endTime = Date.now();
     const duration = (endTime - startTime) / 1000;
 
     // 4. Atualizar estatísticas do PostgreSQL
-    console.log('Running ANALYZE on transactions table...');
+    logger.info('Running ANALYZE on transactions table...');
     // Nota: ANALYZE precisa ser executado via RPC ou SQL direto
     // Para Edge Functions, o usuário pode executar manualmente
 

@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { safeJSONParse, safeJSONStringify } from './safeJSON';
 
 /**
  * SafeStorage - Wrapper robusto para localStorage com error handling
@@ -171,17 +172,10 @@ export const safeStorage = {
    * Retorna null se o item não existir, for inválido ou houver erro
    */
   getJSON<T>(key: string): T | null {
-    try {
-      const item = this.getItem(key);
-      if (!item) return null;
-      
-      return JSON.parse(item) as T;
-    } catch (error) {
-      logger.error(`SafeStorage.getJSON parse error for key "${key}":`, error);
-      // Remover item corrompido
-      this.removeItem(key);
-      return null;
-    }
+    const item = this.getItem(key);
+    if (!item) return null;
+    
+    return safeJSONParse<T>(item);
   },
 
   /**
@@ -189,13 +183,12 @@ export const safeStorage = {
    * Retorna true se sucesso, false se erro
    */
   setJSON<T>(key: string, value: T): boolean {
-    try {
-      const serialized = JSON.stringify(value);
-      return this.setItem(key, serialized);
-    } catch (error) {
-      logger.error(`SafeStorage.setJSON stringify error for key "${key}":`, error);
+    const serialized = safeJSONStringify(value);
+    if (!serialized) {
+      logger.error(`SafeStorage.setJSON stringify error for key "${key}"`);
       return false;
     }
+    return this.setItem(key, serialized);
   },
 
   /**

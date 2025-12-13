@@ -16,16 +16,16 @@ export function useDashboardCalculations(
 ) {
   const isOnline = useOnlineStatus();
   
-  // Saldo total das contas (excluindo credit e investment)
+  // Saldo total das contas (APENAS checking, savings e meal_voucher)
+  // Exclui cartões de crédito e investimentos
   const totalBalance = useMemo(() => 
     accounts
-      .filter((acc) => acc.type !== 'investment')
-      .reduce((sum, acc) => {
-        if (acc.type === 'credit') {
-          return sum + (acc.balance > 0 ? acc.balance : 0);
-        }
-        return sum + acc.balance;
-      }, 0),
+      .filter((acc) => 
+        acc.type === 'checking' || 
+        acc.type === 'savings' || 
+        acc.type === 'meal_voucher'
+      )
+      .reduce((sum, acc) => sum + acc.balance, 0),
     [accounts]
   );
 
@@ -34,8 +34,29 @@ export function useDashboardCalculations(
       .filter((acc) => acc.type === 'credit')
       .reduce((sum, acc) => {
         const limit = acc.limit_amount || 0;
-        const used = Math.abs(acc.balance);
-        return sum + (limit - used);
+        // Se balance é negativo: dívida = abs(balance), disponível = limit - dívida
+        // Se balance é positivo: crédito a favor, disponível = limit + crédito
+        if (acc.balance < 0) {
+          const debt = Math.abs(acc.balance);
+          return sum + (limit - debt);
+        } else {
+          // Tem crédito a favor do cliente
+          return sum + (limit + acc.balance);
+        }
+      }, 0),
+    [accounts]
+  );
+
+  // Limite utilizado total dos cartões de crédito (soma das dívidas)
+  const creditLimitUsed = useMemo(() => 
+    accounts
+      .filter((acc) => acc.type === 'credit')
+      .reduce((sum, acc) => {
+        // Balance negativo = dívida (limite utilizado)
+        if (acc.balance < 0) {
+          return sum + Math.abs(acc.balance);
+        }
+        return sum;
       }, 0),
     [accounts]
   );
@@ -100,8 +121,9 @@ export function useDashboardCalculations(
               // Excluir transações de Saldo Inicial
               if (t.description === 'Saldo Inicial') return false;
 
-              // Excluir provisões estouradas (saldo positivo) pois o valor real já está nos lançamentos
-              if (t.is_provision && t.amount > 0) return false;
+              // Excluir APENAS provisões de DESPESA estouradas (saldo positivo indica estouro)
+              // Provisões de receita são naturalmente positivas e devem ser incluídas
+              if (t.is_provision && t.type === 'expense' && t.amount > 0) return false;
               
               // Date Range
               if (dateRange.dateFrom && t.date < dateRange.dateFrom) return false;
@@ -319,6 +341,7 @@ export function useDashboardCalculations(
   return {
     totalBalance,
     creditAvailable,
+    creditLimitUsed,
     periodIncome: aggregatedTotals.periodIncome,
     periodExpenses: aggregatedTotals.periodExpenses,
     creditCardExpenses: aggregatedTotals.creditCardExpenses,

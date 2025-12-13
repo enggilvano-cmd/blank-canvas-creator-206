@@ -4,6 +4,7 @@
  */
 
 import { logger } from './logger';
+import { globalResourceManager } from './globalResourceManager';
 
 interface BundleMetrics {
   initialBundle: number;
@@ -105,7 +106,7 @@ class BundleAnalyzer {
           
           if (resource.name.includes('chunk') || resource.name.includes('lazy')) {
             const loadTime = resource.responseEnd - resource.startTime;
-            console.log(`⚡ Lazy chunk loaded: ${resource.name.split('/').pop()} in ${loadTime.toFixed(1)}ms`);
+            logger.debug(`⚡ Lazy chunk loaded: ${resource.name.split('/').pop()} in ${loadTime.toFixed(1)}ms`);
           }
         }
       });
@@ -123,7 +124,7 @@ class BundleAnalyzer {
     
     // Check for Vite build info
     if (typeof window !== 'undefined' && (window as any).__VITE_IS_MODERN__) {
-      console.log('🔧 Modern build detected - optimized bundle');
+      logger.debug('🔧 Modern build detected - optimized bundle');
     }
   }
 
@@ -132,17 +133,18 @@ class BundleAnalyzer {
    */
   private startContinuousMonitoring(): void {
     // Monitor every 30 seconds
-    setInterval(() => {
+    const monitoringInterval = setInterval(() => {
       this.updatePerformanceScore();
       
       if (this.metrics.loadedModules > 0) {
-        console.log('📈 Bundle Status:', {
+        logger.debug('📈 Bundle Status:', {
           'Loaded Modules': `${this.metrics.loadedModules}/${this.metrics.totalModules}`,
           'Performance Score': `${this.metrics.performanceScore.toFixed(1)}%`,
           'Memory': this.getMemoryUsage()
         });
       }
     }, 30000);
+    globalResourceManager.registerInterval(monitoringInterval, 'Bundle analyzer continuous monitoring');
   }
 
   /**

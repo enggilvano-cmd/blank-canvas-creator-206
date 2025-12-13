@@ -29,6 +29,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -54,7 +61,7 @@ Deno.serve(async (req) => {
     // Rate limiting - moderado para permitir múltiplas edições (ex: marcar como pago)
     const rateLimitResponse = await rateLimiters.moderate.middleware(req, user.id);
     if (rateLimitResponse) {
-      console.warn('[atomic-edit] WARN: Rate limit exceeded for user:', user.id);
+      logger.warn('Rate limit exceeded for user:', user.id);
       return rateLimitResponse;
     }
 
@@ -71,12 +78,12 @@ Deno.serve(async (req) => {
       body.updates.amount = Math.abs(body.updates.amount);
     }
 
-    console.log('[atomic-edit] INFO: Editing transaction for user:', user.id);
+    logger.info('Editing transaction for user:', user.id);
 
     // Validação Zod
     const validation = validateWithZod(EditTransactionInputSchema, body);
     if (!validation.success) {
-      console.error('[atomic-edit] ERROR: Validation failed:', validation.errors);
+      logger.error('Validation failed:', validation.errors);
       return validationErrorResponse(validation.errors, corsHeaders);
     }
 
@@ -110,7 +117,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[atomic-edit-transaction] INFO: Updated', record.updated_count, 'transaction(s)');
+    logger.info('Updated', record.updated_count, 'transaction(s)');
 
     return new Response(
       JSON.stringify({

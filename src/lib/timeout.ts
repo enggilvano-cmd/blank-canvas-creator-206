@@ -1,13 +1,48 @@
 /**
- * Utilitário para adicionar timeout em promises
- * Previne requisições travadas indefinidamente
+ * Utilitário para adicionar timeout em promises e AbortController
+ * ✅ BUG FIX #3: Previne requisições HTTP travadas indefinidamente
  */
+
+import { logger } from './logger';
 
 export class TimeoutError extends Error {
   constructor(message: string = 'Operation timed out') {
     super(message);
     this.name = 'TimeoutError';
   }
+}
+
+/**
+ * Cria AbortController com timeout automático
+ * @param timeoutMs - Tempo máximo em milissegundos (padrão: 30s)
+ * @returns {controller, cleanup} - Controller e função para cleanup
+ * 
+ * Uso:
+ * ```tsx
+ * const { controller, cleanup } = createAbortController(30000);
+ * try {
+ *   const response = await fetch('/api/data', { 
+ *     signal: controller.signal 
+ *   });
+ * } finally {
+ *   cleanup();
+ * }
+ * ```
+ */
+export function createAbortController(timeoutMs: number = 30000): {
+  controller: AbortController;
+  cleanup: () => void;
+} {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    logger.warn(`⏱️ Aborting operation after ${timeoutMs}ms timeout`);
+    controller.abort();
+  }, timeoutMs);
+
+  return {
+    controller,
+    cleanup: () => clearTimeout(timeoutId),
+  };
 }
 
 /**
@@ -40,6 +75,7 @@ export async function withTimeout<T>(
   
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
+      logger.warn(`⏱️ ${message}`);
       reject(new TimeoutError(message));
     }, timeoutMs);
   });

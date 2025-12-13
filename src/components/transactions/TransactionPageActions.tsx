@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Download } from "lucide-react";
+import { Plus, Upload, FileDown } from "lucide-react";
 
 interface TransactionPageActionsProps {
   onImport: () => void;
@@ -31,7 +31,7 @@ export function TransactionPageActions({
           className="gap-1.5 apple-interaction h-9 text-body px-3"
           disabled={!hasTransactions}
         >
-          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+          <FileDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
           <span className="truncate">Exportar</span>
         </Button>
         <Button

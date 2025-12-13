@@ -51,15 +51,6 @@ export function TransactionScopeDialog({
               }
             </DialogDescription>
           </DialogHeader>
-          
-          {hasCompleted && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Algumas transações já foram concluídas e não poderão ser {isDelete ? "excluídas" : "editadas"} em alguns escopos.
-              </AlertDescription>
-            </Alert>
-          )}
 
           <div className="space-y-3 pt-4">
             <Button 

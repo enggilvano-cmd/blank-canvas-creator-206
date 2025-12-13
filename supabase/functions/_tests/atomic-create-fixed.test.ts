@@ -73,7 +73,7 @@ Deno.test('atomic-create-fixed: should create parent and 11 child fixed transact
     const finalBalance = await getAccountBalance(account.id);
     assertEquals(finalBalance, 0, 'Balance should remain 0 for pending transactions');
 
-    console.log('✓ atomic-create-fixed test passed');
+    console.log('[TEST PASSED] ✓ atomic-create-fixed test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -120,7 +120,7 @@ Deno.test('atomic-create-fixed: should validate period locking', async () => {
       'Error should mention locked period'
     );
 
-    console.log('✓ atomic-create-fixed period locking test passed');
+    console.log('[TEST PASSED] ✓ atomic-create-fixed period locking test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -158,7 +158,7 @@ Deno.test('atomic-create-fixed: should update account balance for completed tran
     const finalBalance = await getAccountBalance(account.id);
     assertEquals(finalBalance, 50000, 'Balance should be reduced by first transaction amount');
 
-    console.log('✓ atomic-create-fixed balance update test passed');
+    console.log('[TEST PASSED] ✓ atomic-create-fixed balance update test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);

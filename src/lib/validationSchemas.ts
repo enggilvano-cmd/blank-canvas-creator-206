@@ -172,10 +172,13 @@ export const addTransactionSchema = z.object({
       return !isNaN(date.getTime());
     }, { message: "Data inválida" }),
   
-  type: z.enum(["income", "expense", "transfer"], {
-    required_error: "Selecione o tipo da transação",
-    invalid_type_error: "Tipo de transação inválido",
-  }),
+  type: z
+    .string({ required_error: "Selecione o tipo da transação" })
+    .min(1, { message: "Selecione o tipo da transação" })
+    .refine(
+      (val) => ["income", "expense", "transfer"].includes(val),
+      { message: "Tipo de transação inválido" }
+    ),
   
   category_id: z
     .string()

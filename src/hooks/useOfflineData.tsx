@@ -35,14 +35,19 @@ export function useOfflineTransactions(): UseOfflineDataResult<Transaction[]> {
       setData(cachedData);
       setIsLoading(false);
 
-      // Se online, sincroniza em background
+      // Se online, sincroniza em background (silenciosamente)
       if (isOnline) {
-        // Dispara o sync (que vai atualizar o DB local)
-        await offlineSync.syncAll(); // Alterado para syncAll para processar fila + baixar dados
-        
-        // Recarrega do cache após o sync terminar
-        const freshData = await offlineDatabase.getTransactions(user.id, 6);
-        setData(freshData);
+        try {
+          // Dispara o sync (que vai atualizar o DB local)
+          await offlineSync.syncAll(); // Alterado para syncAll para processar fila + baixar dados
+          
+          // Recarrega do cache após o sync terminar
+          const freshData = await offlineDatabase.getTransactions(user.id, 6);
+          setData(freshData);
+        } catch (syncError) {
+          // Sync error não deve bloquear a UI - apenas logamos
+          logger.debug('Background sync failed (non-critical):', syncError);
+        }
       }
     } catch (err) {
       logger.error('Failed to load transactions:', err);
@@ -79,9 +84,13 @@ export function useOfflineAccounts(): UseOfflineDataResult<Account[]> {
       setIsLoading(false);
 
       if (isOnline) {
-        await offlineSync.syncAll();
-        const freshData = await offlineDatabase.getAccounts(user.id);
-        setData(freshData);
+        try {
+          await offlineSync.syncAll();
+          const freshData = await offlineDatabase.getAccounts(user.id);
+          setData(freshData);
+        } catch (syncError) {
+          logger.debug('Background sync failed (non-critical):', syncError);
+        }
       }
     } catch (err) {
       logger.error('Failed to load accounts:', err);
@@ -118,9 +127,13 @@ export function useOfflineCategories(): UseOfflineDataResult<Category[]> {
       setIsLoading(false);
 
       if (isOnline) {
-        await offlineSync.syncAll();
-        const freshData = await offlineDatabase.getCategories(user.id);
-        setData(freshData);
+        try {
+          await offlineSync.syncAll();
+          const freshData = await offlineDatabase.getCategories(user.id);
+          setData(freshData);
+        } catch (syncError) {
+          logger.debug('Background sync failed (non-critical):', syncError);
+        }
       }
     } catch (err) {
       logger.error('Failed to load categories:', err);

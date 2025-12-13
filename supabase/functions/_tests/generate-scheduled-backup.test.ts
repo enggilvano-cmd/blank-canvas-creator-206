@@ -49,7 +49,7 @@ Deno.test('generate-scheduled-backup: should create backup for users with active
     assertTrue(!!schedule?.last_backup_at, 'Should update last_backup_at');
     assertTrue(!!schedule?.next_backup_at, 'Should update next_backup_at');
 
-    console.log('✓ generate-scheduled-backup test passed');
+    console.log('[TEST PASSED] ✓ generate-scheduled-backup test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -85,7 +85,7 @@ Deno.test('generate-scheduled-backup: should skip inactive schedules', async () 
 
     assertTrue((backups?.length ?? 0) === 0, 'Should not create backup for inactive schedule');
 
-    console.log('✓ generate-scheduled-backup inactive schedule test passed');
+    console.log('[TEST PASSED] ✓ generate-scheduled-backup inactive schedule test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);
@@ -124,7 +124,7 @@ Deno.test('generate-scheduled-backup: should respect frequency intervals', async
 
     assertTrue((backups?.length ?? 0) === 0, 'Should not create backup before scheduled time');
 
-    console.log('✓ generate-scheduled-backup frequency test passed');
+    console.log('[TEST PASSED] ✓ generate-scheduled-backup frequency test passed');
   } finally {
     if (userId) {
       await cleanupTestUser(userId);

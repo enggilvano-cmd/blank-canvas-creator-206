@@ -6,6 +6,8 @@ import { formatCurrency } from "@/lib/formatters";
 import { TransactionActions } from "./TransactionActions";
 import { EditScope } from "../TransactionScopeDialog";
 import type { Transaction, Account, Category } from "@/types";
+import { memo, useMemo } from "react";
+import { useEntityMap } from "@/lib/performanceOptimizations";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -17,7 +19,7 @@ interface TransactionListProps {
   onMarkAsPaid?: (transaction: Transaction) => void;
 }
 
-export function TransactionList({
+export const TransactionList = memo(function TransactionList({
   transactions,
   accounts,
   categories,
@@ -26,16 +28,24 @@ export function TransactionList({
   onDelete,
   onMarkAsPaid,
 }: TransactionListProps) {
-  const getAccountName = (accountId: string) => {
-    const account = accounts.find((a) => a.id === accountId);
-    return account?.name || "Conta Desconhecida";
-  };
+  // ✅ Otimização: Criar Maps para O(1) lookup ao invés de O(n) find
+  const accountsMap = useEntityMap(accounts);
+  const categoriesMap = useEntityMap(categories);
 
-  const getCategoryName = (categoryId: string | null) => {
-    if (!categoryId) return "-";
-    const category = categories.find((c) => c.id === categoryId);
-    return category?.name || "-";
-  };
+  const getAccountName = useMemo(
+    () => (accountId: string) => {
+      return accountsMap.get(accountId)?.name || "Conta Desconhecida";
+    },
+    [accountsMap]
+  );
+
+  const getCategoryName = useMemo(
+    () => (categoryId: string | null) => {
+      if (!categoryId) return "-";
+      return categoriesMap.get(categoryId)?.name || "-";
+    },
+    [categoriesMap]
+  );
 
   const getTypeIcon = (transaction: Transaction) => {
     // Transferência de saída (tem to_account_id)
@@ -144,9 +154,12 @@ export function TransactionList({
                transaction.type === "income" ? "+" : 
                /* Despesa */
                transaction.type === "expense" ? 
-                 (transaction.is_provision && transaction.amount > 0 ? "+" : "-") 
+                 (transaction.is_provision && transaction.amount > 0 ? "" : "-") 
                  : ""}
-              {formatCurrency(Math.abs(transaction.amount), currency)}
+              {/* Quando provisão estoura (amount > 0), mostrar R$ 0,00 */}
+              {transaction.is_provision && transaction.type === "expense" && transaction.amount > 0
+                ? formatCurrency(0, currency)
+                : formatCurrency(Math.abs(transaction.amount), currency)}
             </span>
 
             <TransactionActions
@@ -160,4 +173,4 @@ export function TransactionList({
       ))}
     </div>
   );
-}
+});

@@ -194,9 +194,9 @@ export function FinancialEvolutionChart({
                   color: 'hsl(var(--primary))',
                 },
               }}
-              className="h-[300px] sm:h-[300px] lg:h-[350px] w-full"
+              className="h-[300px] sm:h-[300px] lg:h-[350px] w-full min-w-0"
             >
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={250}>
                 <ComposedChart
                   data={chartData}
                   margin={{

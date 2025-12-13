@@ -40,7 +40,8 @@ interface CreditBillsPageProps {
     account: Account,
     currentBillAmount: number,
     nextBillAmount: number,
-    totalBalance: number 
+    totalBalance: number,
+    invoiceMonth?: string
   ) => void;
   // Prop para o estorno (será adicionada no Index.tsx)
   onReversePayment: (paymentsToReverse: AppTransaction[]) => void;
@@ -303,16 +304,13 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
     );
   }, [billDetails]);
 
-  // Mês de fatura selecionado (baseado no mês da fatura, não no mês corrente do calendário)
+  // Mês de fatura selecionado (baseado no offset de navegação do usuário)
+  // BUGFIX: Não usar billDetails[0] pois cartões podem ter fechamentos diferentes
+  // e portanto meses de fatura diferentes. O label deve refletir o mês que o usuário
+  // está navegando, não a fatura de um cartão específico.
   const selectedInvoiceMonthDate = useMemo(() => {
-    const baseMonth = billDetails[0]?.currentInvoiceMonth;
-    if (!baseMonth) return selectedMonthDate;
-
-    const [year, month] = baseMonth.split("-").map(Number);
-    if (!year || !month) return selectedMonthDate;
-
-    return new Date(year, month - 1, 1);
-  }, [billDetails, selectedMonthDate]);
+    return selectedMonthDate;
+  }, [selectedMonthDate]);
 
   return (
     <div className="spacing-responsive-md fade-in pb-6 sm:pb-8">
@@ -495,7 +493,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                     details.account,
                     details.currentBillAmount,
                     details.nextBillAmount,
-                    totalDebt // Passa a dívida total correta (soma das faturas)
+                    totalDebt, // Passa a dívida total correta (soma das faturas)
+                    details.currentInvoiceMonth // Passa o mês da fatura
                   )
                 }
                 onReversePayment={() => onReversePayment(details.paymentTransactions)}

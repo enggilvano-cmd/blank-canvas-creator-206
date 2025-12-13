@@ -29,15 +29,22 @@ Deno.serve(async (req) => {
     const cronSecret = Deno.env.get('CRON_SECRET');
     const providedSecret = req.headers.get('X-Cron-Secret');
     
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     if (cronSecret && providedSecret !== cronSecret) {
-      console.warn('[renew-fixed-transactions] WARN: Unauthorized access attempt - invalid CRON_SECRET');
+      logger.warn('Unauthorized access attempt - invalid CRON_SECRET');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Starting fixed transactions renewal for next year...')
+    logger.info('Starting fixed transactions renewal for next year...')
 
     // Initialize Supabase client with service role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -63,7 +70,7 @@ Deno.serve(async (req) => {
     }
 
     if (!fixedTransactions || fixedTransactions.length === 0) {
-      console.log('No fixed transactions found to renew')
+      logger.info('No fixed transactions found to renew');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -77,7 +84,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log(`Found ${fixedTransactions.length} fixed transactions to renew`)
+    logger.info(`Found ${fixedTransactions.length} fixed transactions to renew`)
 
     let totalGenerated = 0
     const nowInUserTz = getNowInUserTimezone();
@@ -90,7 +97,7 @@ Deno.serve(async (req) => {
         const originalDate = new Date(transaction.date)
         const dayOfMonth = originalDate.getDate()
 
-        console.log(`Processing fixed transaction: ${transaction.description} (day ${dayOfMonth})`)
+        logger.info(`Processing fixed transaction: ${transaction.description} (day ${dayOfMonth})`);
 
         // Gerar transações para todos os 12 meses do próximo ano
         const transactionsToGenerate = []
@@ -134,7 +141,7 @@ Deno.serve(async (req) => {
         }
 
         totalGenerated += transactionsToGenerate.length
-        console.log(`Generated ${transactionsToGenerate.length} transactions for ${transaction.description}`)
+        logger.info(`Generated ${transactionsToGenerate.length} transactions for ${transaction.description}`);
 
       } catch (transactionError) {
         console.error(`Error processing transaction ${transaction.id}:`, transactionError)
@@ -142,7 +149,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Successfully generated ${totalGenerated} transactions for ${nextYear}`)
+    logger.info(`Successfully generated ${totalGenerated} transactions for ${nextYear}`)
 
     return new Response(
       JSON.stringify({ 

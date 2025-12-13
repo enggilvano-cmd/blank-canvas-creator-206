@@ -343,6 +343,11 @@ export function ImportTransactionsModal({
 
     if (typeof rawValorOriginal === 'number') {
       valor = Math.abs(Math.round(rawValorOriginal * 100));
+      logger.debug('[ImportTx] Valor numérico:', {
+        raw: rawValorOriginal,
+        convertido: valor,
+        emReais: valor / 100
+      });
     } else {
       const rawValor = String(rawValorOriginal || '0').trim();
       // Remove currency symbols and other non-numeric chars, keeping , . -
@@ -367,7 +372,17 @@ export function ImportTransactionsModal({
         }
       }
 
-      valor = Math.abs(Math.round(parseFloat(normalizedValue) * 100));
+      const parsed = parseFloat(normalizedValue);
+      valor = Math.abs(Math.round(parsed * 100));
+      
+      logger.debug('[ImportTx] Conversão de valor string:', {
+        raw: rawValor,
+        clean: cleanValor,
+        normalized: normalizedValue,
+        parsed: parsed,
+        valorFinal: valor,
+        emReais: valor / 100
+      });
     }
 
     if (!data) {
@@ -478,12 +493,28 @@ export function ImportTransactionsModal({
         const isSameAmount = Math.abs(tx.amount) === valorInCents;
         const isSameDescription = (tx.description || '').trim().toLowerCase() === String(descricao).trim().toLowerCase();
         const isSameAccount = tx.account_id === accountId;
+        
+        if (isSameAccount && isSameDate && isSameDescription && !isSameAmount) {
+          logger.debug('[ImportTx] Possível duplicata com valor diferente:', {
+            transacao: descricao,
+            valorImportado: valorInCents,
+            valorExistente: Math.abs(tx.amount),
+            diferenca: Math.abs(tx.amount) - valorInCents
+          });
+        }
+        
         return isSameAccount && isSameDate && isSameAmount && isSameDescription;
       });
 
       if (existingTx) {
         isDuplicate = true;
         existingTransactionId = existingTx.id;
+        logger.debug('[ImportTx] Duplicata detectada:', {
+          descricao,
+          valor: valorInCents,
+          data: parsedDate.toISOString().split('T')[0],
+          existingId: existingTx.id
+        });
       }
     }
 
@@ -600,7 +631,7 @@ export function ImportTransactionsModal({
       if (invalidTransactions.length > 0) {
         console.group('❌ Transações inválidas encontradas:');
         invalidTransactions.forEach((t, idx) => {
-          console.log(`\n[${idx + 1}/${invalidTransactions.length}] Linha ${validatedData.indexOf(t) + 2}:`, {
+          logger.debug(`[${idx + 1}/${invalidTransactions.length}] Linha ${validatedData.indexOf(t) + 2}:`, {
             descrição: t.description,
             tipo: t.type,
             conta: t.accountName,

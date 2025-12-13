@@ -25,6 +25,7 @@ import type { AppSettings } from "@/context/SettingsContext";
 import { useBackupSchedule } from "@/hooks/useBackupSchedule";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { offlineSync } from "@/lib/offlineSync";
 
 interface SettingsPageProps {
   settings: AppSettings;
@@ -274,15 +275,20 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
 
 
   const handleClearData = () => {
-    if (window.confirm(
-      'Tem certeza que deseja apagar todos os dados? Esta ação não pode ser desfeita.'
-    )) {
-      onClearAllData();
-      toast({
-        title: 'Dados apagados',
-        description: 'Todos os dados foram removidos com sucesso',
-        variant: "destructive"
-      });
+    // A confirmação já é feita pelo input "APAGAR TUDO" e pelo confirm em Index.tsx
+    onClearAllData();
+    
+    // Toast será mostrado pelo Index.tsx após limpeza bem-sucedida
+  };
+
+  const handleClearFailedSync = async () => {
+    try {
+      const count = await offlineSync.clearFailedOperations();
+      if (count > 0) {
+        logger.info(`Cleared ${count} failed sync operations`);
+      }
+    } catch (error) {
+      logger.error('Failed to clear sync errors:', error);
     }
   };
 
@@ -428,29 +434,49 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-body text-muted-foreground">
-                Para apagar todos os dados, digite "APAGAR TUDO" no campo abaixo e clique no botão.
-              </p>
               <div className="space-y-3">
-                <Input
-                  type="text"
-                  value={clearDataConfirmation}
-                  onChange={(e) => setClearDataConfirmation(e.target.value)}
-                  placeholder='Digite "APAGAR TUDO"'
-                  className="border-destructive"
-                />
-                <Button 
-                  onClick={handleClearData} 
-                  variant="destructive" 
-                  className="gap-2 w-full"
-                  disabled={clearDataConfirmation !== "APAGAR TUDO"}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Apagar Todos os Dados Permanentemente
-                </Button>
-                <p className="text-body text-muted-foreground">
-                  Esta ação irá remover permanentemente todas as suas contas, transações e configurações.
-                </p>
+                <div>
+                  <h4 className="text-body font-medium mb-2">Limpar Erros de Sincronização</h4>
+                  <p className="text-body text-muted-foreground mb-3">
+                    Remove operações com falha permanente que estão bloqueando a sincronização.
+                  </p>
+                  <Button 
+                    onClick={handleClearFailedSync} 
+                    variant="outline" 
+                    className="gap-2 w-full border-warning text-warning hover:bg-warning hover:text-warning-foreground"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Limpar Erros de Sincronização
+                  </Button>
+                </div>
+
+                <Separator className="my-4" />
+
+                <div>
+                  <h4 className="text-body font-medium mb-2">Apagar Todos os Dados</h4>
+                  <p className="text-body text-muted-foreground mb-3">
+                    Para apagar todos os dados, digite "APAGAR TUDO" no campo abaixo.
+                  </p>
+                  <Input
+                    type="text"
+                    value={clearDataConfirmation}
+                    onChange={(e) => setClearDataConfirmation(e.target.value)}
+                    placeholder='Digite "APAGAR TUDO"'
+                    className="border-destructive mb-3"
+                  />
+                  <Button 
+                    onClick={handleClearData} 
+                    variant="destructive" 
+                    className="gap-2 w-full"
+                    disabled={clearDataConfirmation !== "APAGAR TUDO"}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Apagar Todos os Dados Permanentemente
+                  </Button>
+                  <p className="text-body text-muted-foreground mt-2">
+                    Esta ação irá remover permanentemente todas as suas contas, transações e configurações.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

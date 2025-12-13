@@ -46,6 +46,17 @@ export default defineConfig(({ mode }) => ({
           }
           return 'assets/chunks/[name]-[hash].js';
         },
+        // ✅ PRIORITY 3: Asset naming for better caching
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name?.split('.') || [];
+          const ext = info[info.length - 1];
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext || '')) {
+            return 'assets/images/[name]-[hash][extname]';
+          } else if (/woff2?|eot|ttf|otf/i.test(ext || '')) {
+            return 'assets/fonts/[name]-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
       },
     },
     // Optimize build performance
@@ -53,15 +64,26 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     sourcemap: mode === 'development',
     
-    // ✅ BUG FIX #20: Performance budgets
-    // Enforce bundle size limits to prevent performance degradation
-    chunkSizeWarningLimit: 500, // Warn at 500KB (reduced from 1000KB)
+    // ✅ PRIORITY 3: Enhanced bundle size limits
+    chunkSizeWarningLimit: 500, // Warn at 500KB
     
     // Report large chunks
     reportCompressedSize: true,
     
     // CSS code splitting
     cssCodeSplit: true,
+    
+    // ✅ PRIORITY 3: Optimize module preload
+    modulePreload: {
+      polyfill: true,
+      resolveDependencies: (filename, deps) => {
+        // Preload critical chunks
+        return deps.filter(dep => 
+          dep.includes('react-vendor') || 
+          dep.includes('query-vendor')
+        );
+      },
+    },
   },
   
   // ✅ BUG FIX #20: Performance budgets configuration

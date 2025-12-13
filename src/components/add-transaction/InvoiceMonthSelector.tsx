@@ -41,7 +41,7 @@ export function InvoiceMonthSelector({
         </SelectContent>
       </Select>
       <p className="text-caption text-muted-foreground">
-        Selecione para qual fatura esse gasto será lançado
+        Selecione para qual fatura esse gasto será lançado. Para parcelamentos, cada parcela será lançada no mês correspondente.
       </p>
     </div>
   );

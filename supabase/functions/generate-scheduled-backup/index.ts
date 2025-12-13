@@ -22,12 +22,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     // Verify CRON_SECRET for scheduled job authentication
     const cronSecret = Deno.env.get('CRON_SECRET');
     const providedSecret = req.headers.get('X-Cron-Secret');
     
     if (cronSecret && providedSecret !== cronSecret) {
-      console.warn('[generate-scheduled-backup] WARN: Unauthorized access attempt - invalid CRON_SECRET');
+      logger.warn('Unauthorized access attempt - invalid CRON_SECRET');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -38,7 +45,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Starting scheduled backup generation...');
+    logger.info('Starting scheduled backup generation...');
 
     // Buscar agendamentos ativos que precisam de backup com retry
     const now = getNowInUserTimezone();
@@ -55,13 +62,13 @@ Deno.serve(async (req) => {
       throw schedulesError;
     }
 
-    console.log(`Found ${schedules?.length || 0} schedules to process`);
+    logger.info(`Found ${schedules?.length || 0} schedules to process`);
 
     const results = [];
 
     for (const schedule of schedules || []) {
       try {
-        console.log(`Processing backup for user ${schedule.user_id}`);
+        logger.info(`Processing backup for user ${schedule.user_id}`);
         
         // Buscar dados do usuário com retry
         const [accountsRes, categoriesRes, transactionsRes] = await Promise.all([
@@ -166,7 +173,7 @@ Deno.serve(async (req) => {
           file_path: fileName,
         });
 
-        console.log(`Backup completed for user ${schedule.user_id}`);
+        logger.info(`Backup completed for user ${schedule.user_id}`);
       } catch (error) {
         console.error(`Error processing backup for user ${schedule.user_id}:`, error);
         results.push({

@@ -3,6 +3,7 @@
  */
 
 import { logger } from './logger';
+import { globalResourceManager } from './globalResourceManager';
 
 interface PerformanceMetrics {
   queryTime: number;
@@ -158,9 +159,10 @@ class PerformanceMonitor {
    * Start periodic memory tracking
    */
   startMemoryTracking(intervalMs: number = 30000): void {
-    setInterval(() => {
+    const trackingInterval = setInterval(() => {
       this.trackMemoryUsage();
     }, intervalMs);
+    globalResourceManager.registerInterval(trackingInterval, 'Performance memory tracking');
   }
 }
 
@@ -169,11 +171,11 @@ export const performanceMonitor = new PerformanceMonitor();
 /**
  * Performance decorator for async functions
  */
-export function withPerformanceTracking<T extends (...args: any[]) => Promise<any>>(
+export function withPerformanceTracking<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   name: string
 ): T {
-  return (async (...args: any[]) => {
+  return (async (...args: unknown[]) => {
     const startTime = performance.now();
     const connectionId = `${name}-${Date.now()}`;
     

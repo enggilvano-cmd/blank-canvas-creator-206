@@ -83,6 +83,7 @@ export interface CreditPaymentModalProps extends BaseModalProps {
     debitAccountId: string;
     amount: number;
     paymentDate: string;
+    invoiceMonth?: string;
   }) => Promise<{
     updatedCreditAccount: Account;
     updatedDebitAccount: Account;
@@ -91,6 +92,7 @@ export interface CreditPaymentModalProps extends BaseModalProps {
   invoiceValueInCents: number;
   nextInvoiceValueInCents: number;
   totalDebtInCents: number;
+  invoiceMonth?: string;
 }
 
 // ============= Mark as Paid Modal Props =============

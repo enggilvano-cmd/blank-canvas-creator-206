@@ -9,7 +9,7 @@ export type BroadcastChannelMessage =
   | { type: 'auth-change'; data: { userId: string | null; sessionId: string | null } }
   | { type: 'logout'; data: {} }
   | { type: 'theme-change'; data: { theme: string } }
-  | { type: 'settings-change'; data: Record<string, any> };
+  | { type: 'settings-change'; data: Record<string, unknown> };
 
 /**
  * Gerenciador de sincronização entre abas
@@ -28,7 +28,7 @@ export type BroadcastChannelMessage =
  */
 export class TabSynchronizer {
   private channel: BroadcastChannel | null = null;
-  private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private listeners: Map<string, Set<(data: Record<string, unknown>) => void>> = new Map();
   private isSupported: boolean;
 
   constructor() {
@@ -52,7 +52,7 @@ export class TabSynchronizer {
   /**
    * Inscrever em eventos
    */
-  subscribe(eventType: string, callback: (data: any) => void): () => void {
+  subscribe(eventType: string, callback: (data: Record<string, unknown>) => void): () => void {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, new Set());
     }
@@ -68,7 +68,7 @@ export class TabSynchronizer {
   /**
    * Transmitir evento para outras abas
    */
-  broadcast(eventType: string, data: any): void {
+  broadcast(eventType: string, data: Record<string, unknown>): void {
     if (!this.isSupported || !this.channel) {
       logger.warn('BroadcastChannel not available, cannot broadcast');
       return;
@@ -80,7 +80,7 @@ export class TabSynchronizer {
   /**
    * Notificar listeners locais
    */
-  private notifyListeners(eventType: string, data: any): void {
+  private notifyListeners(eventType: string, data: Record<string, unknown>): void {
     const callbacks = this.listeners.get(eventType);
     if (callbacks) {
       callbacks.forEach(callback => {

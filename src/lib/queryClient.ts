@@ -58,6 +58,8 @@ export const queryClient = new QueryClient({
 
 // ✅ BUG FIX #9: Remove console.logs em produção
 import { logger } from './logger';
+import { globalResourceManager } from './globalResourceManager';
+import { createQueryInvalidationHelper } from './queryInvalidationHelper';
 
 // Start performance monitoring
 if (typeof window !== 'undefined') {
@@ -65,7 +67,7 @@ if (typeof window !== 'undefined') {
   
   // Log performance metrics every 5 minutes (apenas em dev)
   if (import.meta.env.DEV) {
-    setInterval(() => {
+    const metricsInterval = setInterval(() => {
       const metrics = performanceMonitor.getMetrics();
       const recommendations = performanceMonitor.getRecommendations();
       
@@ -83,6 +85,7 @@ if (typeof window !== 'undefined') {
       }
       logger.groupEnd();
     }, 300000); // 5 minutes
+    globalResourceManager.registerInterval(metricsInterval, 'QueryClient metrics logging');
   }
 }
 
@@ -148,3 +151,10 @@ export function refetchWithDelay(
     });
   }, 10);
 }
+
+/**
+ * ✅ PRIORITY 2: Query Invalidation Helper
+ * Instância centralizada para invalidação de queries
+ * Reduz duplicação de código e melhora consistência
+ */
+export const queryInvalidation = createQueryInvalidationHelper(queryClient);

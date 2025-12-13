@@ -35,3 +35,28 @@ export function currencyStringToCents(value: string): number {
   // Retorna o valor em centavos ou NaN se inválido
   return isNaN(floatVal) ? NaN : Math.round(floatVal * 100);
 }
+
+/**
+ * Gera um UUID v4 compatível com todos os browsers
+ * Usa crypto.randomUUID() se disponível, caso contrário usa fallback
+ * @returns UUID v4 string
+ */
+export function generateUUID(): string {
+  // Tenta usar a API nativa do browser (mais seguro e performático)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try {
+      return crypto.randomUUID();
+    } catch (error) {
+      // Fallback se crypto.randomUUID() falhar (contexto inseguro, etc)
+    }
+  }
+  
+  // Fallback: gera UUID v4 manualmente
+  // Formato: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+

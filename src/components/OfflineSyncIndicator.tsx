@@ -13,25 +13,29 @@ export function OfflineSyncIndicator() {
   const [syncStatus, setSyncStatus] = useState({ isSyncing: false, activeLocks: 0 });
 
   useEffect(() => {
+    let mounted = true;
+    
     const checkQueue = async () => {
-      const operations = await offlineQueue.getAll();
-      setQueueCount(operations.length);
+      if (!mounted) return;
       
-      // Check sync status for race condition debugging
+      const operations = await offlineQueue.getAll();
       const status = offlineSync.getStatus();
-      setSyncStatus(status);
+      
+      if (mounted) {
+        setQueueCount(operations.length);
+        setSyncStatus(status);
+      }
     };
 
     checkQueue();
     const interval = setInterval(checkQueue, 5000);
     
-    // Cleanup sync resources on unmount
+    // Cleanup: clear interval and mark as unmounted
     return () => {
+      mounted = false;
       clearInterval(interval);
-      if (syncStatus.activeLocks > 0) {
-        logger.debug('OfflineSyncIndicator unmounting, cleaning up sync resources');
-        offlineSync.cleanup();
-      }
+      // Note: Não chamamos offlineSync.cleanup() aqui pois outras instâncias podem estar usando
+      logger.debug('OfflineSyncIndicator unmounted');
     };
   }, []);
 
@@ -42,7 +46,8 @@ export function OfflineSyncIndicator() {
   }, [isOnline]);
 
   const handleSync = async () => {
-    if (syncStatus.isSyncing) {
+    // Verificar múltiplas condições de sync em andamento
+    if (isSyncing || syncStatus.isSyncing) {
       logger.info('Sync already in progress, skipping duplicate request');
       return;
     }
@@ -50,11 +55,20 @@ export function OfflineSyncIndicator() {
     setIsSyncing(true);
     try {
       await offlineSync.syncAll();
+      
+      // Re-check queue after sync completes
       const operations = await offlineQueue.getAll();
+      const status = offlineSync.getStatus();
+      
       setQueueCount(operations.length);
+      setSyncStatus(status);
     } catch (error) {
       // Silent background sync: errors are not shown to the user via toast
       logger.debug('Offline sync error', error);
+      
+      // Update status even on error
+      const status = offlineSync.getStatus();
+      setSyncStatus(status);
     } finally {
       setIsSyncing(false);
     }

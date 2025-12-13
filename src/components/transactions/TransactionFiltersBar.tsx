@@ -31,6 +31,9 @@ interface TransactionFiltersBarProps {
   onFilterIsProvisionChange: (value: string) => void;
   filterAccountType: string;
   onFilterAccountTypeChange: (type: string) => void;
+  filterInvoiceMonth: string;
+  onFilterInvoiceMonthChange: (month: string) => void;
+  availableInvoiceMonths: string[];
   filterAccount: string;
   onFilterAccountChange: (accountId: string) => void;
   filterCategory: string;
@@ -68,6 +71,9 @@ export function TransactionFiltersBar({
   onFilterIsProvisionChange,
   filterAccountType,
   onFilterAccountTypeChange,
+  filterInvoiceMonth,
+  onFilterInvoiceMonthChange,
+  availableInvoiceMonths,
   filterAccount,
   onFilterAccountChange,
   filterCategory,
@@ -122,6 +128,9 @@ export function TransactionFiltersBar({
               onFilterIsProvisionChange={onFilterIsProvisionChange}
               filterAccountType={filterAccountType}
               onFilterAccountTypeChange={onFilterAccountTypeChange}
+              filterInvoiceMonth={filterInvoiceMonth}
+              onFilterInvoiceMonthChange={onFilterInvoiceMonthChange}
+              availableInvoiceMonths={availableInvoiceMonths}
               filterAccount={filterAccount}
               onFilterAccountChange={onFilterAccountChange}
               filterCategory={filterCategory}

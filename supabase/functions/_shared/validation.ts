@@ -92,6 +92,7 @@ export const PayBillInputSchema = z.object({
   amount: z.number().positive('Amount must be positive').max(1_000_000_000, 'Amount exceeds maximum allowed value'),
   payment_date: dateSchema,
   description: z.string().trim().min(1, 'Description is required').max(200, 'Description must be less than 200 characters').optional(),
+  invoice_month: z.string().regex(/^\d{4}-\d{2}$/, 'Invoice month must be in format YYYY-MM').optional(),
 }).refine(data => data.credit_account_id !== data.debit_account_id, {
   message: 'Credit and debit accounts must be different',
   path: ['debit_account_id'],

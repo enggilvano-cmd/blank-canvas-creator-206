@@ -20,7 +20,9 @@ export function useDashboardChartData(
     const isTransferLike = (t: Transaction) =>
       t.type === 'transfer' || Boolean((t as any).to_account_id) || Boolean((t as any).linked_transaction_id);
 
-    const isProvision = (t: Transaction) => t.is_provision && t.amount > 0;
+    // Provisões estouradas: apenas despesas com saldo positivo (indicam estouro)
+    // Provisões de receita são naturalmente positivas e devem ser incluídas
+    const isProvision = (t: Transaction) => t.is_provision && t.type === 'expense' && t.amount > 0;
 
     // Helper to calculate balance at the START of a specific date
     // Anchored to the current actual balance from accounts
@@ -35,6 +37,7 @@ export function useDashboardChartData(
       // We are moving backwards in time, so we reverse the effect of these transactions
       const completedSinceTarget = transactions.filter(t => {
         if (isTransferLike(t)) return false;
+        if (isProvision(t)) return false; // Excluir provisões estouradas
         if (t.status !== 'completed') return false;
         
         const tDate = typeof t.date === 'string' ? createDateFromString(t.date) : t.date;
@@ -55,6 +58,7 @@ export function useDashboardChartData(
       // if we are projecting a "real" balance including pending items
       const pendingBeforeTarget = transactions.filter(t => {
         if (isTransferLike(t)) return false;
+        if (isProvision(t)) return false; // Excluir provisões estouradas
         if (t.status !== 'pending') return false;
         
         const tDate = typeof t.date === 'string' ? createDateFromString(t.date) : t.date;
@@ -116,6 +120,8 @@ export function useDashboardChartData(
 
       const dailyTotals = dailyFilteredTrans
         .filter(t => !isTransferLike(t)) // Excluir transferências
+        .filter(t => !isProvision(t)) // Excluir provisões estouradas
+        .filter(t => t.description !== 'Saldo Inicial') // Excluir Saldo Inicial
         .reduce((acc, transaction) => {
         const transactionDate = typeof transaction.date === 'string'
           ? createDateFromString(transaction.date)
@@ -161,6 +167,8 @@ export function useDashboardChartData(
       // Monthly Scale
       const monthlyTotals = transactions
         .filter(t => !isTransferLike(t)) // Excluir transferências
+        .filter(t => !isProvision(t)) // Excluir provisões estouradas
+        .filter(t => t.description !== 'Saldo Inicial') // Excluir Saldo Inicial
         .reduce((acc, transaction) => {
         const transactionDate = typeof transaction.date === 'string'
           ? createDateFromString(transaction.date)

@@ -5,7 +5,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 import { useToast } from '@/hooks/use-toast';
-import { TransactionInput, TransactionUpdate, Category, Account } from '@/types';
+import { TransactionInput, TransactionUpdate, Category, Account, Transaction } from '@/types';
 import { EditScope } from '@/components/TransactionScopeDialog';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,7 +24,7 @@ export function useOfflineTransactionMutations() {
       try {
         if (!user) throw new Error('User not authenticated');
 
-        const optimisticTx = {
+        const optimisticTx: Partial<Transaction> = {
           id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           user_id: user.id,
           description: transactionData.description,
@@ -43,7 +43,7 @@ export function useOfflineTransactionMutations() {
           updated_at: new Date().toISOString(),
         };
 
-        await offlineDatabase.saveTransactions([optimisticTx as any]);
+        await offlineDatabase.saveTransactions([optimisticTx as Transaction]);
 
         await offlineQueue.enqueue({
           type: 'transaction',
@@ -81,7 +81,7 @@ export function useOfflineTransactionMutations() {
         };
 
         // Atualiza todas as listas de transações ativas
-        queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+        queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
           if (!oldData) return [optimisticTxForUI];
           if (Array.isArray(oldData)) {
             return [optimisticTxForUI, ...oldData];
@@ -196,10 +196,10 @@ export function useOfflineTransactionMutations() {
           });
 
           // ✅ Optimistic Update para Edição
-          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
             if (!oldData || !Array.isArray(oldData)) return oldData;
             
-            return oldData.map((tx: any) => {
+            return oldData.map((tx: Transaction) => {
               if (tx.id === updatedTransaction.id) {
                 // Se mudou categoria ou conta, precisamos buscar os objetos completos
                 let newCategory = tx.category;
@@ -304,15 +304,15 @@ export function useOfflineTransactionMutations() {
           });
 
           // ✅ Optimistic Update para Exclusão
-          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
             if (!oldData || !Array.isArray(oldData)) return oldData;
             
             // Encontrar a transação para verificar se é uma transferência
-            const transaction = oldData.find((tx: any) => tx.id === transactionId);
+            const transaction = oldData.find((tx: Transaction) => tx.id === transactionId);
             const linkedId = transaction?.linked_transaction_id;
             
             // Remover a transação e sua vinculada (se for transferência)
-            return oldData.filter((tx: any) => {
+            return oldData.filter((tx: Transaction) => {
               if (tx.id === transactionId) return false;
               if (linkedId && tx.id === linkedId) return false;
               return true;

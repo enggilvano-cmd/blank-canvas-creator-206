@@ -31,13 +31,13 @@ export function useAccountHandlers() {
 
       // 2. Se o saldo inicial foi alterado, garantir que o saldo total seja recalculado
       if (updatedAccount.initial_balance !== undefined) {
-        // Buscar a transação de "Saldo Inicial" se existir
+        // Buscar TODAS as transações de "Saldo Inicial" (para detectar duplicatas)
         const { data: initialTxs, error: fetchError } = await supabase
           .from('transactions')
           .select('id, amount, type')
           .eq('account_id', updatedAccount.id)
           .eq('description', 'Saldo Inicial')
-          .limit(1);
+          .order('created_at', { ascending: true });
 
         if (fetchError) {
           logger.error('Error fetching initial balance transaction', fetchError);
@@ -46,7 +46,18 @@ export function useAccountHandlers() {
         const newInitialBalance = updatedAccount.initial_balance;
 
         if (initialTxs && initialTxs.length > 0) {
-          // Atualizar a transação existente
+          // Se houver múltiplas transações de Saldo Inicial (bug/duplicata), deletar todas exceto a primeira
+          if (initialTxs.length > 1) {
+            logger.warn(`Found ${initialTxs.length} "Saldo Inicial" transactions for account ${updatedAccount.id}. Cleaning up duplicates...`);
+            const duplicateIds = initialTxs.slice(1).map(tx => tx.id);
+            const { error: cleanupError } = await supabase
+              .from('transactions')
+              .delete()
+              .in('id', duplicateIds);
+            if (cleanupError) logger.error('Error cleaning up duplicate initial balance transactions', cleanupError);
+          }
+
+          // Atualizar a primeira transação existente
           if (newInitialBalance === 0) {
             // Se o novo saldo é zero, deletar a transação
             const { error: deleteError } = await supabase

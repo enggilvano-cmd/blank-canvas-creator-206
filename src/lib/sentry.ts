@@ -70,8 +70,8 @@ export const initSentry = () => {
         },
         device: {
           online: navigator.onLine,
-          memory: (performance as any).memory?.usedJSHeapSize 
-            ? `${((performance as any).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`
+          memory: ('memory' in performance && (performance as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize)
+            ? `${((performance as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`
             : 'unknown',
         },
       };

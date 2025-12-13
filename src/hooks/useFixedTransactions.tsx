@@ -35,14 +35,19 @@ export function useFixedTransactions(): UseFixedTransactionsResult {
       setData(cachedData);
       setIsLoading(false);
 
-      // Se online, sincroniza em background
+      // Se online, sincroniza em background (silenciosamente)
       if (isOnline) {
-        // Dispara o sync (que vai atualizar o DB local)
-        await offlineSync.syncAll(); 
-        
-        // Recarrega do cache após o sync terminar
-        const freshData = await offlineDatabase.getFixedTransactions(user.id);
-        setData(freshData);
+        try {
+          // Dispara o sync (que vai atualizar o DB local)
+          await offlineSync.syncAll(); 
+          
+          // Recarrega do cache após o sync terminar
+          const freshData = await offlineDatabase.getFixedTransactions(user.id);
+          setData(freshData);
+        } catch (syncError) {
+          // Sync error não deve bloquear a UI - apenas logamos
+          logger.debug('Background sync failed (non-critical):', syncError);
+        }
       }
     } catch (err) {
       logger.error('Failed to load fixed transactions:', err);

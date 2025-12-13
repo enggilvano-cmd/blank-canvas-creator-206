@@ -37,7 +37,8 @@ export function MarkAsPaidModal({
     if (open && transaction) {
       setDate(new Date());
       // Formatar com vírgula (padrão brasileiro)
-      const formattedAmount = Math.abs(transaction.amount / 100)
+      // transaction.amount já está em reais (DECIMAL no banco)
+      const formattedAmount = Math.abs(transaction.amount)
         .toFixed(2)
         .replace(".", ",");
       setAmount(formattedAmount);
@@ -49,8 +50,9 @@ export function MarkAsPaidModal({
     if (!transaction || !accountId) return;
     
     // Converter vírgula para ponto antes de parseFloat
-    const amountInCents = Math.round(parseFloat(amount.replace(",", ".")) * 100);
-    onConfirm(transaction.id, date, amountInCents, accountId);
+    // Manter em reais (não multiplicar por 100)
+    const amountInReais = parseFloat(amount.replace(",", "."));
+    onConfirm(transaction.id, date, amountInReais, accountId);
     onOpenChange(false);
   };
 

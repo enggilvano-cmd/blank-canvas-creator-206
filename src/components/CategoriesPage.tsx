@@ -19,6 +19,7 @@ import { CategoryFilterChips } from "@/components/categories/CategoryFilterChips
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
 import { useOfflineCategoryMutations } from "@/hooks/useTransactionHandlers";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useDebounce } from "@/hooks/useDebounce";
 interface CategoriesPageProps {
   importModalOpen?: boolean;
   onImportModalOpenChange?: (open: boolean) => void;
@@ -48,6 +49,9 @@ export function CategoriesPage({
 
   const searchTerm = filters.searchTerm;
   const filterType = filters.filterType;
+  
+  // ✅ Debounce search to optimize performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const setSearchTerm = (value: string) => setFilters((prev) => ({ ...prev, searchTerm: value }));
   const setFilterType = (value: typeof filters.filterType) => setFilters((prev) => ({ ...prev, filterType: value }));
@@ -349,11 +353,12 @@ export function CategoriesPage({
 
   const filteredCategories = useMemo(() => {
     return categories.filter(category => {
-      const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase());
+      // \u2705 Use debounced search for better performance
+      const matchesSearch = category.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
       const matchesType = filterType === "all" || category.type === filterType;
       return matchesSearch && matchesType;
     });
-  }, [categories, searchTerm, filterType]);
+  }, [categories, debouncedSearchTerm, filterType]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {

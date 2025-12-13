@@ -20,6 +20,15 @@ export function RecentTransactions({
 }: RecentTransactionsProps) {
   const { formatCurrency } = useSettings();
 
+  // Ordenar transações por data (mais recentes primeiro)
+  // Nota: O filtro de transações PAI já é aplicado na query do useTransactions
+  // Removido useMemo para garantir recálculo sempre que transactions mudar
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    const dateA = typeof a.date === 'string' ? createDateFromString(a.date) : a.date;
+    const dateB = typeof b.date === 'string' ? createDateFromString(b.date) : b.date;
+    return dateB.getTime() - dateA.getTime();
+  });
+
   return (
     <Card
       className="financial-card cursor-pointer apple-interaction"
@@ -34,7 +43,7 @@ export function RecentTransactions({
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-0">
-        {transactions.length === 0 ? (
+        {sortedTransactions.length === 0 ? (
           <div className="text-center py-3 text-muted-foreground">
             <p className="text-xs">Nenhuma transação encontrada</p>
             <Button
@@ -52,7 +61,7 @@ export function RecentTransactions({
         ) : (
           <>
             <div className="space-y-1.5">
-              {transactions.slice(0, maxItems).map((transaction) => (
+              {sortedTransactions.slice(0, maxItems).map((transaction) => (
                 <div
                   key={transaction.id}
                   className="flex items-center justify-between p-1.5 rounded-md bg-muted/20 hover:bg-muted/40 transition-colors"
@@ -86,15 +95,15 @@ export function RecentTransactions({
                           ? '⇄'
                           : '-'}
                       </span>
-                      <span>{formatCurrency(Math.abs(transaction.amount))}</span>
+                      <span>{formatCurrency(Math.abs(Number(transaction.amount) || 0))}</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            {transactions.length > maxItems && (
+            {sortedTransactions.length > maxItems && (
               <p className="text-xs text-muted-foreground mt-2 text-center opacity-70">
-                +{transactions.length - maxItems} transações
+                +{sortedTransactions.length - maxItems} transações
               </p>
             )}
           </>

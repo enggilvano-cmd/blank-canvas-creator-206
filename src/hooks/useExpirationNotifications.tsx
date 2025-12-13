@@ -29,7 +29,7 @@ export function useExpirationNotifications() {
     const triggers = [30, 5, 2, 1, 0];
 
     if (triggers.includes(daysRemaining)) {
-      const lastNotificationDate = localStorage.getItem(NOTIFICATION_KEY);
+      const lastNotificationDate = safeStorage.getItem(NOTIFICATION_KEY);
       
       // Check if we already notified today
       if (lastNotificationDate && isSameDay(parseISO(lastNotificationDate), today)) {
@@ -63,7 +63,7 @@ export function useExpirationNotifications() {
       });
 
       // Save notification date
-      localStorage.setItem(NOTIFICATION_KEY, today.toISOString());
+      safeStorage.setItem(NOTIFICATION_KEY, today.toISOString());
     }
 
   }, [profile, toast]);

@@ -34,6 +34,9 @@ interface TransactionFilterDialogProps {
   onFilterIsProvisionChange: (value: string) => void;
   filterAccountType: string;
   onFilterAccountTypeChange: (value: string) => void;
+  filterInvoiceMonth: string;
+  onFilterInvoiceMonthChange: (month: string) => void;
+  availableInvoiceMonths: string[];
   filterAccount: string;
   onFilterAccountChange: (value: string) => void;
   filterCategory: string;
@@ -64,6 +67,9 @@ export function TransactionFilterDialog({
   onFilterIsProvisionChange,
   filterAccountType,
   onFilterAccountTypeChange,
+  filterInvoiceMonth,
+  onFilterInvoiceMonthChange,
+  availableInvoiceMonths,
   filterAccount,
   onFilterAccountChange,
   filterCategory,
@@ -234,6 +240,26 @@ export function TransactionFilterDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Mês da Fatura */}
+          {availableInvoiceMonths.length > 0 && (
+            <div>
+              <Label htmlFor="filterInvoiceMonth">Mês da Fatura</Label>
+              <Select value={filterInvoiceMonth} onValueChange={onFilterInvoiceMonthChange}>
+                <SelectTrigger id="filterInvoiceMonth" className="mt-2">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {availableInvoiceMonths.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Período */}
           <div>

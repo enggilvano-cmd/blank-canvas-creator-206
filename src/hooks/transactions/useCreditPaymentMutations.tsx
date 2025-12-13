@@ -20,11 +20,13 @@ export function useCreditPaymentMutations() {
     debitAccountId,
     amount,
     paymentDate,
+    invoiceMonth,
   }: {
     creditCardAccountId: string;
     debitAccountId: string;
     amount: number;
     paymentDate: string;
+    invoiceMonth?: string;
   }): Promise<{ creditAccount: Account; bankAccount: Account }> => {
     if (!user) throw new Error('Usuário não autenticado');
 
@@ -42,6 +44,7 @@ export function useCreditPaymentMutations() {
           debit_account_id: debitAccountId,
           amount: Math.abs(amount),
           payment_date: paymentDate,
+          invoice_month: invoiceMonth,
         }
       });
 

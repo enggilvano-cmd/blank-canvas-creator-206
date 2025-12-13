@@ -35,11 +35,12 @@ BEGIN
   -- Calcular saldo baseado em TODAS as transações completed
   -- CORREÇÃO: amount já vem com sinal correto do insert, basta somar
   -- Para cartões de crédito:
-  --   - expense: amount negativo (aumenta dívida)
-  --   - income: amount positivo (diminui dívida/pagamento)
+  --   - expense: amount negativo (aumenta dívida) → balance fica negativo = dívida
+  --   - income: amount positivo (diminui dívida/pagamento) → balance pode ficar positivo = crédito a favor
   -- Para outras contas:
-  --   - expense: amount negativo (sai dinheiro)
-  --   - income: amount positivo (entra dinheiro)
+  --   - expense: amount negativo (sai dinheiro) → balance diminui
+  --   - income: amount positivo (entra dinheiro) → balance aumenta
+  -- IMPORTANTE: Não inclui transações pending, is_provision (estouradas), ou "Saldo Inicial" duplicadas
   SELECT COALESCE(SUM(t.amount), 0)
   INTO v_calculated_balance
   FROM public.transactions t

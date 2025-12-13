@@ -53,9 +53,10 @@ export function useEditTransactionForm(
         category_id: transaction.category_id || "",
         account_id: transaction.account_id || "",
         status: transaction.status || "completed",
-        invoiceMonth: transaction.invoice_month_overridden ? (transaction.invoice_month || "") : "",
+        invoiceMonth: transaction.invoice_month || "",
       };
       
+
       setFormData(initialData);
       setOriginalData(initialData);
     }

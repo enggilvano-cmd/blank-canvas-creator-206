@@ -44,7 +44,8 @@ export function CreditPaymentModal({
   invoiceValueInCents = 0,
   nextInvoiceValueInCents = 0,
   // BUGFIX: Usar a prop da dívida total
-  totalDebtInCents: totalDebtInCentsProp = 0, 
+  totalDebtInCents: totalDebtInCentsProp = 0,
+  invoiceMonth, 
 }: CreditPaymentModalProps) {
   const [formData, setFormData] = useState({
     bankAccountId: "",
@@ -163,8 +164,9 @@ export function CreditPaymentModal({
       await onPayment({
         creditCardAccountId: creditAccount.id,
         debitAccountId: formData.bankAccountId,
-        amount: amountInCents,
+        amount: amountInCents / 100,
         paymentDate: formData.date,
+        invoiceMonth,
       });
 
       toast({

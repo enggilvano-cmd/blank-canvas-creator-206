@@ -21,6 +21,7 @@ interface EditTransactionFormFieldsProps {
   accounts: Account[];
   filteredCategories: Category[];
   isTransfer?: boolean;
+  hideStatusAndInvoice?: boolean;
 }
 
 export function EditTransactionFormFields({
@@ -29,6 +30,7 @@ export function EditTransactionFormFields({
   accounts,
   filteredCategories,
   isTransfer = false,
+  hideStatusAndInvoice = false,
 }: EditTransactionFormFieldsProps) {
   return (
     <>
@@ -180,7 +182,7 @@ export function EditTransactionFormFields({
         </div>
       )}
 
-      {!isTransfer && (
+      {!isTransfer && !hideStatusAndInvoice && (
         <div className="space-y-2">
           <Label htmlFor="status" className="text-caption">Status</Label>
           <Select
@@ -198,7 +200,8 @@ export function EditTransactionFormFields({
         </div>
       )}
 
-      {formData.account_id &&
+      {!hideStatusAndInvoice &&
+       formData.account_id &&
        accounts.find(acc => acc.id === formData.account_id)?.type === "credit" && (
         <div className="space-y-2 border-t pt-4">
           <Label htmlFor="invoiceMonth" className="text-caption">Mês da Fatura (opcional)</Label>

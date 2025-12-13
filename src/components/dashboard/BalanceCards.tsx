@@ -8,6 +8,7 @@ interface BalanceCardsProps {
   periodIncome: number;
   periodExpenses: number;
   creditAvailable: number;
+  creditLimitUsed: number;
   creditCardExpenses: number;
   pendingIncome: number;
   pendingExpenses: number;
@@ -33,6 +34,7 @@ export function BalanceCards({
   periodIncome,
   periodExpenses,
   creditAvailable,
+  creditLimitUsed,
   creditCardExpenses,
   pendingIncome,
   pendingExpenses,
@@ -173,21 +175,10 @@ export function BalanceCards({
 
       <Card
         className="financial-card cursor-pointer apple-interaction hover:scale-[1.02] transition-transform"
-        onClick={() => {
-          const params = getNavigationParams();
-          onNavigateToTransactions?.(
-            'expense',
-            'all',
-            params.dateFilter,
-            'credit',
-            params.selectedMonth,
-            params.customStartDate,
-            params.customEndDate
-          );
-        }}
+        onClick={() => onNavigateToAccounts?.('credit')}
         role="button"
         tabIndex={0}
-        aria-label={`Despesas no Cartão: ${formatCurrency(creditCardExpenses)}. Clique para ver detalhes`}
+        aria-label={`Limite Utilizado: ${formatCurrency(creditLimitUsed)}. Clique para ver cartões`}
       >
         <CardContent className="p-3 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
@@ -196,13 +187,13 @@ export function BalanceCards({
             </div>
           </div>
           <p className="text-caption text-muted-foreground mb-1">
-            Despesas no Cartão
+            Limite Utilizado
           </p>
           <div className="balance-text text-warning">
-            {formatCurrency(creditCardExpenses)}
+            {formatCurrency(creditLimitUsed)}
           </div>
           <p className="text-caption text-muted-foreground mt-1 opacity-70">
-            {getPeriodLabel()}
+            Cartões de Crédito
           </p>
         </CardContent>
       </Card>

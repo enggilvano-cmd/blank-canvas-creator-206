@@ -99,7 +99,8 @@ export async function withRetry<T>(
       );
       
         const err = error as ErrorWithProps;
-        console.log(`Retry attempt ${attempt + 1}/${opts.maxRetries} after ${delayMs}ms due to:`, err?.message || error);
+        // Estruturar log de retry com contexto
+        console.log(`[RETRY] Attempt ${attempt + 1}/${opts.maxRetries} after ${delayMs}ms - Error: ${err?.message || error}`);
       
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delayMs));

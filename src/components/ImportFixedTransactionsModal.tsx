@@ -156,12 +156,46 @@ export function ImportFixedTransactionsModal({
 
     const descricao = String(extractValue(row, ['Descrição', 'Description', 'descricao', 'description']) || '');
     
-    // Parse valor com suporte ao formato brasileiro (ponto = milhar, vírgula = decimal)
-    // Retorna valor em REAIS (float)
-    const rawValor = String(extractValue(row, ['Valor', 'Amount', 'valor', 'amount']) || '0');
-    // Remove pontos de milhar e troca vírgula decimal por ponto
-    const cleanValor = rawValor.replace(/\./g, '').replace(',', '.');
-    const valor = Math.abs(parseFloat(cleanValor));
+    // Parse valor com suporte robusto para formato brasileiro e numérico
+    // Se vier como número do Excel, usa direto; se vier como string, trata formatação
+    const rawValorOriginal = extractValue(row, ['Valor', 'Amount', 'valor', 'amount']);
+    let valor: number;
+
+    if (typeof rawValorOriginal === 'number') {
+      // Valor já é número (vem direto do Excel) - em reais, converter para centavos
+      valor = Math.abs(rawValorOriginal);
+    } else {
+      // Valor é string - precisa fazer parse
+      const rawValor = String(rawValorOriginal || '0').trim();
+      // Remove símbolos de moeda e mantém apenas números, vírgula, ponto e menos
+      const cleanValor = rawValor.replace(/[^0-9,.-]/g, '');
+      
+      const lastComma = cleanValor.lastIndexOf(',');
+      const lastDot = cleanValor.lastIndexOf('.');
+
+      let normalizedValue: string;
+
+      if (lastComma > lastDot) {
+        // Formato brasileiro: 1.234,56 -> remove pontos e substitui vírgula por ponto
+        normalizedValue = cleanValor.replace(/\./g, '').replace(',', '.');
+      } else if (lastDot > lastComma) {
+        // Formato americano: 1,234.56 -> remove vírgulas
+        normalizedValue = cleanValor.replace(/,/g, '');
+      } else if (lastComma === -1 && lastDot === -1) {
+        // Sem separadores
+        normalizedValue = cleanValor;
+      } else {
+        // Caso com apenas um separador
+        if (lastComma !== -1 && lastDot === -1) {
+          normalizedValue = cleanValor.replace(',', '.');
+        } else {
+          normalizedValue = cleanValor;
+        }
+      }
+
+      const parsed = parseFloat(normalizedValue);
+      valor = Math.abs(parsed);
+    }
     
     const tipo = String(extractValue(row, ['Tipo', 'Type', 'tipo', 'type']) || '');
     const conta = String(extractValue(row, ['Conta', 'Account', 'conta', 'account']) || '');
@@ -491,9 +525,12 @@ export function ImportFixedTransactionsModal({
         if (deleteError) throw deleteError;
       }
 
-      // Criar transações fixas
+      // Criar transações fixas com delay para evitar rate limiting
       let successCount = 0;
       let errorCount = 0;
+
+      // Helper para adicionar delay entre requests
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
       for (const t of transactionsToAdd) {
         try {
@@ -612,9 +649,14 @@ export function ImportFixedTransactionsModal({
           } else {
             errorCount++;
           }
+
+          // Delay de 100ms entre requests para evitar rate limiting
+          await delay(100);
         } catch (error) {
           logger.error("Error importing transaction:", error);
           errorCount++;
+          // Delay mesmo em caso de erro
+          await delay(100);
         }
       }
 

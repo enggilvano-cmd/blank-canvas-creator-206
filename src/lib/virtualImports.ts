@@ -13,8 +13,8 @@ type VirtualModule<T> = {
 };
 
 class VirtualImportManager {
-  private modules = new Map<string, VirtualModule<any>>();
-  private loadingPromises = new Map<string, Promise<any>>();
+  private modules = new Map<string, VirtualModule<unknown>>();
+  private loadingPromises = new Map<string, Promise<unknown>>();
 
   /**
    * Register a virtual module

@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Transaction, Account, Category } from "@/types";
+import { memo, useMemo } from "react";
+import { useEntityMap } from "@/lib/performanceOptimizations";
 
 interface FixedTransactionListProps {
   transactions: Transaction[];
@@ -21,7 +23,7 @@ interface FixedTransactionListProps {
   onGenerateNext12Months: (transactionId: string) => void;
 }
 
-export function FixedTransactionList({
+export const FixedTransactionList = memo(function FixedTransactionList({
   transactions,
   accounts,
   categories,
@@ -29,16 +31,24 @@ export function FixedTransactionList({
   onDelete,
   onGenerateNext12Months,
 }: FixedTransactionListProps) {
-  const getAccountName = (accountId: string) => {
-    const account = accounts.find((a) => a.id === accountId);
-    return account?.name || "Conta Desconhecida";
-  };
+  // ✅ O(1) lookup instead of O(n) find - Performance optimization
+  const accountsMap = useEntityMap(accounts);
+  const categoriesMap = useEntityMap(categories);
 
-  const getCategoryName = (categoryId: string | null) => {
-    if (!categoryId) return "-";
-    const category = categories.find((c) => c.id === categoryId);
-    return category?.name || "-";
-  };
+  const getAccountName = useMemo(
+    () => (accountId: string) => {
+      return accountsMap.get(accountId)?.name || "Conta Desconhecida";
+    },
+    [accountsMap]
+  );
+
+  const getCategoryName = useMemo(
+    () => (categoryId: string | null) => {
+      if (!categoryId) return "-";
+      return categoriesMap.get(categoryId)?.name || "-";
+    },
+    [categoriesMap]
+  );
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -147,4 +157,4 @@ export function FixedTransactionList({
       ))}
     </div>
   );
-}
+});

@@ -18,7 +18,7 @@ function createFallbackDate(invalidInput?: unknown): Date {
 /**
  * Calcula o mês de fatura (YYYY-MM) baseado na DATA DA COMPRA e DIA DE FECHAMENTO.
  * ✅ BUGFIX: Agora usa timezone do usuário corretamente
- * ✅ BUGFIX: O mês da fatura é o mês de FECHAMENTO, não de vencimento
+ * ✅ BUGFIX: O mês da fatura é o mês de FECHAMENTO (não de vencimento)
  * 
  * Regra: O mês da fatura identifica quando as compras foram FECHADAS.
  *        O vencimento é apenas um prazo para pagamento APÓS o fechamento.
@@ -26,6 +26,10 @@ function createFallbackDate(invalidInput?: unknown): Date {
  * Exemplo: Fechamento dia 30, Vencimento dia 7
  * - Compra em 12/11 → Fecha em 30/11 → Mês da fatura = "2025-11" (novembro)
  * - Compra em 05/12 → Fecha em 30/12 → Mês da fatura = "2025-12" (dezembro)
+ * 
+ * Exemplo: Fechamento dia 3, Vencimento dia 7
+ * - Compra em 02/12 → Fecha em 03/12 → Mês da fatura = "2025-12" (dezembro)
+ * - Compra em 05/12 → Fecha em 03/01 → Mês da fatura = "2026-01" (janeiro)
  */
 export function calculateInvoiceMonthByDue(
   transactionDate: Date,
@@ -39,7 +43,8 @@ export function calculateInvoiceMonthByDue(
   const txMonth = txDate.getMonth();
   const txYear = txDate.getFullYear();
 
-  // Primeiro, determina quando a fatura FECHA
+  // Determina quando a fatura FECHA
+  // O mês da fatura é sempre o mês de FECHAMENTO
   let billingCycleMonth: number;
   let billingCycleYear: number;
 
@@ -57,28 +62,8 @@ export function calculateInvoiceMonthByDue(
     }
   }
 
-  // Agora calcula quando essa fatura VENCE
-  // O mês da fatura é identificado pelo mês de VENCIMENTO (convenção bancária)
-  // Se dueDate <= closingDate, vence no mês SEGUINTE ao fechamento
-  // Se dueDate > closingDate, vence no MESMO mês do fechamento
-  let invoiceMonth: number;
-  let invoiceYear: number;
-
-  if (dueDate <= closingDate) {
-    // Vence no mês seguinte ao fechamento
-    invoiceMonth = billingCycleMonth + 1;
-    invoiceYear = billingCycleYear;
-    if (invoiceMonth > 11) {
-      invoiceMonth = 0;
-      invoiceYear++;
-    }
-  } else {
-    // Vence no mesmo mês do fechamento (caso raro)
-    invoiceMonth = billingCycleMonth;
-    invoiceYear = billingCycleYear;
-  }
-
-  const result = `${invoiceYear}-${String(invoiceMonth + 1).padStart(2, '0')}`;
+  // Retorna o mês de FECHAMENTO como identificador da fatura
+  const result = `${billingCycleYear}-${String(billingCycleMonth + 1).padStart(2, '0')}`;
 
   return result;
 }
@@ -205,26 +190,44 @@ export function calculateBillDetails(
   const todayNormalized = toUserTimezone(referenceDate);
 
   // --- Lógica de data usando timezone do usuário ---
+  // A navegação por meses SEMPRE mostra as faturas que FECHAM naquele mês
+  // Não importa se o usuário está vendo o mês atual ou navegando
+  
+  // ✅ BUGFIX: Ajusta o dia de fechamento se não existir no mês (ex: 30/fev → 28/fev)
+  // Cria a data e verifica se o mês mudou (overflow)
   let currentBillEnd = new Date(
     todayNormalized.getFullYear(),
     todayNormalized.getMonth(),
     closingDate, 12, 0, 0
   );
-
-  if (todayNormalized.getDate() > closingDate) {
+  
+  // Se o mês mudou (ex: tentou criar 30/fev e virou março), usa o último dia do mês correto
+  if (currentBillEnd.getMonth() !== todayNormalized.getMonth()) {
     currentBillEnd = new Date(
       todayNormalized.getFullYear(),
       todayNormalized.getMonth() + 1,
-      closingDate, 12, 0, 0
+      0, 12, 0, 0  // Dia 0 = último dia do mês anterior
     );
   }
 
   const nextBillStart = new Date(currentBillEnd.getTime() + 24 * 60 * 60 * 1000);
-  const nextBillEnd = new Date(
+  
+  // ✅ BUGFIX: Mesmo ajuste para a próxima fatura
+  let nextBillEnd = new Date(
     nextBillStart.getFullYear(),
     nextBillStart.getMonth() + 1,
     closingDate, 12, 0, 0
   );
+  
+  // Calcula qual seria o mês correto antes do ajuste
+  const expectedNextMonth = nextBillStart.getMonth() + 1 > 11 ? 0 : nextBillStart.getMonth() + 1;
+  if (nextBillEnd.getMonth() !== expectedNextMonth) {
+    nextBillEnd = new Date(
+      nextBillStart.getFullYear(),
+      expectedNextMonth + 1,
+      0, 12, 0, 0  // Dia 0 = último dia do mês anterior
+    );
+  }
 
   // Calcula o mês da fatura baseado na data de FECHAMENTO no formato YYYY-MM
   const currentInvoiceMonth = format(currentBillEnd, "yyyy-MM");

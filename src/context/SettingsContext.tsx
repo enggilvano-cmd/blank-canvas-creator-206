@@ -151,6 +151,9 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   // Load full settings when user is authenticated
   useEffect(() => {
+    // ✅ CRITICAL FIX: Flag para prevenir race condition
+    let isMounted = true;
+    
     const loadSettings = async () => {
       if (!user || loading) {
         logger.debug('Skipping settings load - user or auth loading', { user: !!user, loading });
@@ -162,6 +165,12 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         // Always load settings from Supabase (source of truth)
         const loadedSettings = await getSettings();
         
+        // ✅ Verificar se componente ainda está montado antes de atualizar estado
+        if (!isMounted) {
+          logger.debug('Settings loaded but component unmounted, skipping state update');
+          return;
+        }
+        
         logger.debug('Settings loaded successfully:', loadedSettings);
         setSettings(loadedSettings);
         
@@ -170,12 +179,21 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         
         applyTheme(loadedSettings.theme);
       } catch (error) {
+        // ✅ Verificar se ainda montado antes de aplicar tema
+        if (!isMounted) return;
+        
         logger.error('Error loading settings:', error);
         // Use default settings on error
         applyTheme('system');
       }
     };
+    
     loadSettings();
+    
+    // ✅ Cleanup: marcar como desmontado
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
 

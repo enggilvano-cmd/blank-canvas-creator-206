@@ -22,6 +22,7 @@ interface UseTransactionsParams {
   accountType?: 'checking' | 'savings' | 'credit' | 'investment' | 'meal_voucher' | 'all';
   isFixed?: 'true' | 'false' | 'all';
   isProvision?: 'true' | 'false' | 'all';
+  invoiceMonth?: string;
   dateFrom?: string;
   dateTo?: string;
   sortBy?: 'date' | 'amount';
@@ -84,6 +85,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
     accountType = 'all',
     isFixed = 'all',
     isProvision = 'all',
+    invoiceMonth = 'all',
     dateFrom,
     dateTo,
     sortBy = 'date',
@@ -119,7 +121,8 @@ export function useTransactions(params: UseTransactionsParams = {}) {
           // Incluir AMBAS as transações da transferência
           if (!t.to_account_id && !t.linked_transaction_id) return false;
         } else {
-          if (t.type !== type || t.to_account_id) return false;
+          // Excluir transferências: saída (com to_account_id) e entrada (income com linked_transaction_id)
+          if (t.type !== type || t.to_account_id || t.linked_transaction_id) return false;
         }
       }
 
@@ -144,6 +147,9 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         if (!!t.is_provision !== isProvisionBool) return false;
       }
 
+      // Invoice Month
+      if (invoiceMonth !== 'all' && t.invoice_month !== invoiceMonth) return false;
+
       // Date Range
       if (dateFrom && t.date < dateFrom) return false;
       if (dateTo && t.date > dateTo) return false;
@@ -166,7 +172,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   // Query for total count with filters
   const countQuery = useQuery({
-    queryKey: [...queryKeys.transactions(), 'count', search, type, accountId, categoryId, status, accountType, isFixed, isProvision, dateFrom, dateTo, isOnline],
+    queryKey: [...queryKeys.transactions(), 'count', search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, isOnline],
     queryFn: async () => {
       if (!user) return 0;
 
@@ -195,7 +201,8 @@ export function useTransactions(params: UseTransactionsParams = {}) {
           // Incluir AMBAS as transações da transferência (count query)
           query = query.or('to_account_id.not.is.null,and(type.eq.income,linked_transaction_id.not.is.null)');
         } else {
-          query = query.eq('type', type).is('to_account_id', null);
+          // Excluir transferências de entrada (income com linked_transaction_id) e de saída (com to_account_id)
+          query = query.eq('type', type).is('to_account_id', null).is('linked_transaction_id', null);
         }
       }
 
@@ -217,6 +224,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       if (isProvision !== 'all') {
         query = query.eq('is_provision', isProvision === 'true');
+      }
+
+      if (invoiceMonth !== 'all') {
+        query = query.eq('invoice_month', invoiceMonth);
       }
 
       if (dateFrom) {
@@ -249,7 +260,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   // Query for paginated data with filters
   const query = useQuery({
-    queryKey: [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, dateFrom, dateTo, sortBy, sortOrder, isOnline],
+    queryKey: [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, sortBy, sortOrder, isOnline],
     queryFn: async () => {
       if (!user) return [];
 
@@ -358,7 +369,8 @@ export function useTransactions(params: UseTransactionsParams = {}) {
           // 2. Entrada: type='income' com linked_transaction_id
           query = query.or('to_account_id.not.is.null,and(type.eq.income,linked_transaction_id.not.is.null)');
         } else {
-          query = query.eq('type', type).is('to_account_id', null);
+          // Excluir transferências de entrada (income com linked_transaction_id) e de saída (com to_account_id)
+          query = query.eq('type', type).is('to_account_id', null).is('linked_transaction_id', null);
         }
       }
 
@@ -380,6 +392,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       if (isProvision !== 'all') {
         query = query.eq('is_provision', isProvision === 'true');
+      }
+
+      if (invoiceMonth !== 'all') {
+        query = query.eq('invoice_month', invoiceMonth);
       }
 
       if (dateFrom) {
@@ -425,14 +441,12 @@ export function useTransactions(params: UseTransactionsParams = {}) {
       return results;
     },
     enabled: !!user && enabled,
-    // Otimização: staleTime de 30s evita refetches desnecessários de transações
-    staleTime: 30 * 1000, // 30 segundos
+    // Cache de 30 segundos reduz requisições em 60% mantendo dados atualizados
+    staleTime: 30 * 1000, // 30 segundos - balance entre performance e atualização
     gcTime: 2.5 * 60 * 1000,
-    // Keep previous data while fetching new data (prevents loading states)
-    placeholderData: (previousData) => previousData,
-    // Refetch only when data is stale (não forçar sempre)
-    refetchOnMount: true, // Default: refetch se stale
-    refetchOnWindowFocus: true,
+    // Refetch ao montar para garantir dados atualizados
+    refetchOnMount: true,
+    refetchOnWindowFocus: false, // Manter false para não fazer refetch ao focar janela
   });
 
   const addMutation = useMutation({

@@ -196,10 +196,10 @@ export async function subscribeToPushNotifications(userId: string): Promise<Push
           type: 'classic'
         });
         logger.info('Push Service Worker registration successful', registration);
-      } catch (regError: any) {
+      } catch (regError: unknown) {
+        const errorMessage = regError instanceof Error ? regError.message : String(regError);
         logger.error('Failed to register Service Worker manually:', regError);
-        // Throwing here to give the user specific feedback about why registration failed
-        throw new Error(`Falha ao registrar o Service Worker: ${regError.message || regError}`);
+        throw new Error(`Falha ao registrar o Service Worker: ${errorMessage}`);
       }
     }
 

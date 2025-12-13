@@ -5,6 +5,7 @@ import { offlineQueue } from '@/lib/offlineQueue';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { safeStorage } from '@/lib/safeStorage';
 import type { User } from '@supabase/supabase-js';
 
 const USER_CACHE_KEY = 'planiflow_offline_user';
@@ -16,26 +17,22 @@ export function useOfflineAuth() {
   
   // Cache local para persistir o usuário mesmo se o Supabase falhar offline
   const [cachedUser, setCachedUser] = useState<User | null>(() => {
-    try {
-      const stored = localStorage.getItem(USER_CACHE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch (e) {
-      logger.error('Erro ao ler cache de usuário:', e);
-      return null;
-    }
+    return safeStorage.getJSON<User>(USER_CACHE_KEY);
   });
 
   // Mantém o cache atualizado sempre que o usuário online mudar
   useEffect(() => {
     if (auth.user) {
       setCachedUser(auth.user);
-      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(auth.user));
+      if (!safeStorage.setJSON(USER_CACHE_KEY, auth.user)) {
+        logger.error('Failed to cache user');
+      }
     }
   }, [auth.user]);
 
   const signOut = useCallback(async () => {
     // 1. Limpeza imediata do cache local (crítico para segurança)
-    localStorage.removeItem(USER_CACHE_KEY);
+    safeStorage.removeItem(USER_CACHE_KEY);
     setCachedUser(null);
 
     // 2. Limpeza do banco de dados local

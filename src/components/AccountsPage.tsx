@@ -34,6 +34,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { AccountFilterDialog } from "@/components/accounts/AccountFilterDialog";
 import { AccountFilterChips } from "@/components/accounts/AccountFilterChips";
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
+import { useDebounce } from "@/hooks/useDebounce";
 
 import { Account, ImportAccountData } from '@/types';
 
@@ -82,6 +83,9 @@ export function AccountsPage({
   const searchTerm = filters.searchTerm;
   const filterType = filters.filterType;
   const hideZeroBalance = filters.hideZeroBalance;
+  
+  // ✅ Debounce search to avoid excessive filtering on every keystroke
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const setSearchTerm = (value: string) => setFilters((prev) => ({ ...prev, searchTerm: value }));
   const setFilterType = (value: typeof filters.filterType) => setFilters((prev) => ({ ...prev, filterType: value }));
@@ -176,9 +180,10 @@ export function AccountsPage({
 
   const filteredAccounts = accounts
     .filter((account) => {
+      // \u2705 Use debounced search term for better performance
       const matchesSearch = account.name
         .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+        .includes(debouncedSearchTerm.toLowerCase());
       const matchesType = filterType === "all" || account.type === filterType;
       const matchesZeroBalance = !hideZeroBalance || account.balance !== 0;
       return matchesSearch && matchesType && matchesZeroBalance;

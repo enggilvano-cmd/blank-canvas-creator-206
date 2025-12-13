@@ -249,12 +249,14 @@ export function FixedTransactionsPage({
           if (acc) accountData = { name: acc.name };
       }
 
-      // @ts-ignore
-      newTransaction.category = categoryData;
-      // @ts-ignore
-      newTransaction.account = accountData;
+      // ✅ Type-safe: Criar transação com relações
+      const transactionWithRelations = {
+        ...newTransaction,
+        category: categoryData,
+        account: accountData,
+      };
 
-      await offlineDatabase.saveTransactions([newTransaction as any]);
+      await offlineDatabase.saveTransactions([transactionWithRelations as Transaction]);
       
       await offlineQueue.enqueue({
         type: 'add_fixed_transaction',
@@ -382,6 +384,10 @@ export function FixedTransactionsPage({
     if (transaction.date !== transactionToEdit.date) {
       updates.date = transaction.date;
     }
+    if (transaction.invoice_month !== transactionToEdit.invoice_month) {
+      updates.invoice_month = transaction.invoice_month || undefined;
+      updates.invoice_month_overridden = Boolean(transaction.invoice_month);
+    }
 
     // Se nenhum campo foi alterado, não fazer nada
     if (Object.keys(updates).length === 0) {
@@ -447,11 +453,8 @@ export function FixedTransactionsPage({
 
       // Editar a transação principal SOMENTE se estiver PENDENTE
       if (mainTransaction?.status === "pending") {
-        // Preparar updates para o backend (converter valor para centavos se necessário)
+        // Preparar updates para o backend (valor já está em centavos)
         const backendUpdates = { ...updates };
-        if (typeof backendUpdates.amount === 'number') {
-          backendUpdates.amount = Math.round(backendUpdates.amount * 100);
-        }
 
         const { data, error: mainError } = await supabase.functions.invoke('atomic-edit-transaction', {
           body: {
@@ -483,11 +486,6 @@ export function FixedTransactionsPage({
       if (childTransactions && childTransactions.length > 0) {
         for (const child of childTransactions) {
           const childUpdates = { ...updates };
-
-          // Converter valor para centavos para o backend
-          if (typeof childUpdates.amount === 'number') {
-            childUpdates.amount = Math.round(childUpdates.amount * 100);
-          }
 
           // Se houver atualização de data, calcular a nova data para a filha
           // mantendo o mês e ano originais da filha, alterando apenas o dia
@@ -1142,6 +1140,7 @@ export function FixedTransactionsPage({
           onEditTransaction={handleEdit}
           transaction={transactionToEdit}
           accounts={accounts}
+          hideStatusAndInvoice={true}
         />
       )}
 

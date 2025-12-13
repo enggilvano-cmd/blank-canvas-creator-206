@@ -90,7 +90,12 @@ export function NotificationBell() {
     }
   };
 
-  const getIconColor = (type: string) => {
+  const getIconColor = (type: string, title: string) => {
+    // Destacar faturas vencidas em vermelho
+    if (title === 'Fatura Vencida') {
+      return 'text-destructive';
+    }
+    
     switch (type) {
       case 'reminder':
         return 'text-primary';
@@ -198,12 +203,13 @@ export function NotificationBell() {
                   key={notification.id}
                   className={cn(
                     'p-4 hover:bg-accent/50 hover:shadow-sm transition-all duration-200 cursor-pointer rounded-lg mx-2 my-1',
-                    !notification.read && 'bg-muted/30'
+                    !notification.read && 'bg-muted/30',
+                    notification.title === 'Fatura Vencida' && 'border-l-4 border-destructive bg-destructive/5'
                   )}
                   onClick={() => markAsRead(notification.id)}
                 >
                   <div className="flex gap-3">
-                    <div className={cn('mt-1', getIconColor(notification.type))}>
+                    <div className={cn('mt-1', getIconColor(notification.type, notification.title))}>
                       {getIcon(notification.type)}
                     </div>
                     <div className="flex-1 space-y-1">

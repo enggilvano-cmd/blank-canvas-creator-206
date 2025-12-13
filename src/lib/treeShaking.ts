@@ -172,7 +172,7 @@ export class ImportBatcher {
   /**
    * Load batch of modules
    */
-  async loadBatch(batchName: string): Promise<any[]> {
+  async loadBatch(batchName: string): Promise<unknown[]> {
     const batch = this.batches.get(batchName);
     if (!batch || batch.loaded) {
       return [];

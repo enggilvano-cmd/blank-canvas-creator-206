@@ -1,5 +1,5 @@
 import { useSettings } from "@/context/SettingsContext";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { StatCardsSkeletonGrid } from "@/components/transactions/StatCardSkeleton";
@@ -47,6 +47,8 @@ interface TransactionsPageProps {
   onFilterIsProvisionChange: (value: string) => void;
   filterAccountType: string;
   onFilterAccountTypeChange: (type: string) => void;
+  filterInvoiceMonth: string;
+  onFilterInvoiceMonthChange: (month: string) => void;
   dateFrom?: string;
   dateTo?: string;
   onDateFromChange: (date: string | undefined) => void;
@@ -98,6 +100,8 @@ export function TransactionsPage({
   onFilterIsProvisionChange,
   filterAccountType,
   onFilterAccountTypeChange,
+  filterInvoiceMonth,
+  onFilterInvoiceMonthChange,
   dateFrom,
   dateTo,
   onDateFromChange,
@@ -122,6 +126,18 @@ export function TransactionsPage({
   
   // Track performance
   useComponentPerformance('TransactionsPage', true);
+
+  // Extract unique invoice months from all transactions
+  const availableInvoiceMonths = useMemo(() => {
+    if (!allTransactions) return [];
+    const months = new Set<string>();
+    allTransactions.forEach(t => {
+      if (t.invoice_month) {
+        months.add(t.invoice_month);
+      }
+    });
+    return Array.from(months).sort();
+  }, [allTransactions]);
 
   // Use custom hook for page logic
   const {
@@ -160,6 +176,8 @@ export function TransactionsPage({
     onFilterAccountChange,
     filterCategory,
     onFilterCategoryChange,
+    filterInvoiceMonth,
+    onFilterInvoiceMonthChange,
     periodFilter,
     onPeriodFilterChange,
     selectedMonth,
@@ -205,6 +223,9 @@ export function TransactionsPage({
         onFilterIsProvisionChange={onFilterIsProvisionChange}
         filterAccountType={filterAccountType}
         onFilterAccountTypeChange={onFilterAccountTypeChange}
+        filterInvoiceMonth={filterInvoiceMonth}
+        onFilterInvoiceMonthChange={onFilterInvoiceMonthChange}
+        availableInvoiceMonths={availableInvoiceMonths}
         filterAccount={filterAccount}
         onFilterAccountChange={onFilterAccountChange}
         filterCategory={filterCategory}

@@ -14,6 +14,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Logger estruturado
+    const logger = {
+      info: (msg: string, data?: unknown) => console.log(`[INFO] ${msg}`, data || ''),
+      error: (msg: string, error?: unknown) => console.error(`[ERROR] ${msg}`, error || ''),
+      warn: (msg: string, data?: unknown) => console.warn(`[WARN] ${msg}`, data || ''),
+    };
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -28,22 +35,22 @@ Deno.serve(async (req) => {
     // Apply strict rate limiting for payment operations
     const rateLimitResponse = await rateLimiters.strict.middleware(req, user.id);
     if (rateLimitResponse) {
-      console.warn('[atomic-pay-bill] WARN: Rate limit exceeded for user:', user.id);
+      logger.warn('Rate limit exceeded for user:', user.id);
       return rateLimitResponse;
     }
 
     const body = await req.json();
 
-    console.log('[atomic-pay-bill] INFO: Processing bill payment for user:', user.id);
+    logger.info('Processing bill payment for user:', user.id);
 
     // Validação Zod
     const validation = validateWithZod(PayBillInputSchema, body);
     if (!validation.success) {
-      console.error('[atomic-pay-bill] ERROR: Validation failed:', validation.errors);
+      logger.error('Validation failed:', validation.errors);
       return validationErrorResponse(validation.errors, corsHeaders);
     }
 
-    const { credit_account_id, debit_account_id, amount, payment_date, description } = validation.data;
+    const { credit_account_id, debit_account_id, amount, payment_date, description, invoice_month } = validation.data;
 
     // Verificar se o período está fechado com retry
     const { data: isLocked } = await withRetry(
@@ -54,7 +61,7 @@ Deno.serve(async (req) => {
     );
 
     if (isLocked) {
-      console.error('[atomic-pay-bill] ERROR: Period is locked:', payment_date);
+      logger.error('Period is locked:', payment_date);
       return new Response(
         JSON.stringify({ 
           error: 'Period is locked',
@@ -118,6 +125,9 @@ Deno.serve(async (req) => {
           account_id: credit_account_id,
           linked_transaction_id: debitTx.id,
           status: 'completed',
+          // Se invoice_month foi fornecido, usar override manual
+          invoice_month: invoice_month || null,
+          invoice_month_overridden: invoice_month ? true : false,
         })
         .select()
         .single()

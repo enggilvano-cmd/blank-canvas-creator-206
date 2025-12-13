@@ -135,6 +135,7 @@ export interface TransactionInput {
 
 export interface InstallmentTransactionInput extends TransactionInput {
   currentInstallment?: number;
+  invoiceMonthOverridden?: boolean;
 }
 
 export interface TransactionUpdate {

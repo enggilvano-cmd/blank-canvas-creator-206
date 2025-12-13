@@ -3,10 +3,12 @@ import { offlineDatabase } from './offlineDatabase';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
 import { getErrorMessage, handleError } from './errorUtils';
+import { withTimeout, TimeoutError } from './timeout'; // ✅ BUG FIX #3: Timeout import
 import type { Transaction, Account, Category } from '@/types';
 import { toast } from 'sonner';
 import { queryClient, queryKeys } from './queryClient';
 import { getMonthsAgoUTC } from './timezone';
+import { offlineSyncRateLimiter } from './rateLimiter';
 
 const MAX_RETRIES = 5;
 const SYNC_MONTHS = 12; // Aligned with useTransactions.tsx (1 year history)
@@ -17,16 +19,50 @@ const CIRCUIT_BREAKER_THRESHOLD = 5; // Failures before opening circuit
 const CIRCUIT_BREAKER_TIMEOUT = 60000; // 1 minute before retry
 
 class OfflineSyncManager {
-  private isSyncing = false;
-  private syncPromise: Promise<void> | null = null;
+  // ✅ BUG FIX #2: Race condition prevention - Promise-based atomic lock
+  private lockPromise: Promise<void> | null = null;
+  private lockResolver: (() => void) | null = null;
+  
   private operationLocks = new Map<string, { timestamp: number; promise: Promise<void> }>();
   private abortController: AbortController | null = null;
   private circuitBreakerFailures = 0;
   private circuitBreakerOpenUntil = 0;
   private syncLockName = 'offline-sync-lock';
 
+  // ✅ BUG FIX #2: Acquire atomic lock (works across tabs + threads)
+  private async acquireSyncLock(): Promise<() => void> {
+    // Se houver lock anterior, aguardar
+    if (this.lockPromise) {
+      logger.debug('Waiting for previous sync lock...');
+      await this.lockPromise;
+    }
+
+    // Criar novo lock
+    let resolver: (() => void) | undefined;
+    this.lockPromise = new Promise(resolve => {
+      resolver = resolve;
+    });
+
+    if (!resolver) {
+      throw new Error('Lock resolver not initialized');
+    }
+
+    logger.debug('Acquired sync lock');
+    
+    // Retornar função para liberar lock
+    return () => {
+      resolver?.();
+      this.lockPromise = null;
+      this.lockResolver = null;
+      logger.debug('Released sync lock');
+    };
+  }
+
   async syncAll(): Promise<void> {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine) {
+      logger.debug('Offline - skipping sync');
+      return;
+    }
     
     // ✅ BUG FIX #5: Circuit Breaker Pattern
     if (this.isCircuitOpen()) {
@@ -34,43 +70,39 @@ class OfflineSyncManager {
       return;
     }
     
-    // ✅ BUG FIX #1: Race Condition - Use Web Locks API
+    // ✅ BUG FIX #2: Race Condition - Use Web Locks API quando disponível
     if ('locks' in navigator) {
       try {
-        await navigator.locks.request(this.syncLockName, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
-          if (!lock) {
-            logger.info('Another sync is already in progress (locked)');
-            return;
+        await navigator.locks.request(
+          this.syncLockName,
+          { mode: 'exclusive', ifAvailable: true },
+          async (lock) => {
+            if (!lock) {
+              logger.info('Another sync is already in progress (Web Lock held)');
+              return;
+            }
+            logger.info('✅ Acquired Web Lock, starting sync...');
+            await this.performSyncWithCircuitBreaker();
           }
-          logger.info('Acquired sync lock, starting sync...');
-          await this.performSyncWithCircuitBreaker();
-        });
+        );
       } catch (error) {
-        logger.error('Error acquiring sync lock:', error);
-        this.recordCircuitBreakerFailure();
+        logger.error('Error with Web Locks API, falling back to Promise lock:', error);
+        // Fallback para Promise lock se Web Locks falhar
+        const releaseLock = await this.acquireSyncLock();
+        try {
+          await this.performSyncWithCircuitBreaker();
+        } finally {
+          releaseLock();
+        }
       }
     } else {
-      // Fallback for browsers without Web Locks API
-      if (this.isSyncing && this.syncPromise) {
-        logger.info('Sync already in progress, waiting...');
-        try {
-          await this.syncPromise;
-        } catch (error) {
-          logger.warn('Previous sync failed');
-        }
-        return;
-      }
-
-      if (this.isSyncing) return;
-
-      this.isSyncing = true;
-      this.syncPromise = this.performSyncWithCircuitBreaker();
-      
+      // Fallback para Promise-based lock (browsers sem Web Locks API)
+      logger.debug('Web Locks API not available, using Promise-based lock');
+      const releaseLock = await this.acquireSyncLock();
       try {
-        await this.syncPromise;
+        await this.performSyncWithCircuitBreaker();
       } finally {
-        this.syncPromise = null;
-        this.isSyncing = false;
+        releaseLock();
       }
     }
   }
@@ -115,26 +147,22 @@ class OfflineSyncManager {
     this.cleanupStaleLocks();
     
     try {
-      await this.performSync();
+      // ✅ BUG FIX #3: Envolver sync com timeout
+      await withTimeout(
+        this.performSync(),
+        SYNC_TIMEOUT,
+        `Sync operation timed out after ${SYNC_TIMEOUT / 1000}s`
+      );
       this.recordCircuitBreakerSuccess();
     } catch (error) {
       this.recordCircuitBreakerFailure();
       throw error;
     } finally {
       this.abortController = null;
-      this.isSyncing = false;
     }
   }
 
   private async performSync(): Promise<void> {
-
-    const syncTimeout = setTimeout(() => {
-      if (this.abortController) {
-        this.abortController.abort();
-        logger.warn('Sync operation timed out and was aborted');
-      }
-    }, SYNC_TIMEOUT);
-
     try {
       // 1. Processar Fila de Operações Pendentes
       const operations = await offlineQueue.getAll();
@@ -157,9 +185,15 @@ class OfflineSyncManager {
           }
 
           // Skip operations that have already failed permanently
-          if (operation.status === 'failed') continue;
+          if (operation.status === 'failed') {
+            logger.debug(`Skipping permanently failed operation: ${operation.type}`);
+            continue;
+          }
 
           try {
+            // Apply rate limiting to prevent overwhelming the server
+            await offlineSyncRateLimiter.waitForSlot();
+            
             await this.syncOperationWithLock(operation, tempIdMap);
             await offlineQueue.dequeue(operation.id);
             successCount++;
@@ -174,7 +208,24 @@ class OfflineSyncManager {
             failCount++;
             
             if (operation.retries >= MAX_RETRIES) {
-              toast.error(`Falha permanente ao sincronizar: ${operation.type}. Verifique os logs.`);
+              // Extrair descrição da operação para mensagem mais informativa
+              const description = operation.data?.description || 
+                                 operation.data?.name || 
+                                 operation.type;
+              
+              logger.error(`Falha permanente ao sincronizar ${operation.type}:`, {
+                operationId: operation.id,
+                data: operation.data,
+                lastError: message,
+                retries: operation.retries
+              });
+              
+              toast.error(
+                `Falha permanente: ${description}. ` +
+                `Erro: ${message.substring(0, 100)}. ` +
+                `Acesse Configurações > Limpar Erros para remover.`,
+                { duration: 10000 }
+              );
               
               // CRITICAL FIX: Mark as failed instead of removing
               await offlineQueue.markAsFailed(operation.id, message);
@@ -186,6 +237,14 @@ class OfflineSyncManager {
         
         if (successCount > 0) toast.success(`${successCount} operações sincronizadas.`);
         if (failCount > 0) logger.warn(`${failCount} operações falharam no sync.`);
+        
+        // Log rate limiter statistics
+        const stats = offlineSyncRateLimiter.getStats();
+        logger.info('Rate limiter stats:', {
+          totalRequests: stats.totalRequests,
+          queuedRequests: stats.queuedRequests,
+          availableTokens: stats.availableTokens
+        });
       }
 
       // 2. Baixar Dados Atualizados do Servidor (Sync Down)
@@ -201,6 +260,38 @@ class OfflineSyncManager {
       }
     } finally {
       clearTimeout(syncTimeout);
+    }
+  }
+
+  async clearFailedOperations(): Promise<number> {
+    try {
+      const count = await offlineQueue.clearFailed();
+      if (count > 0) {
+        toast.success(`${count} operações com falha foram removidas.`);
+        // Invalidar queries para atualizar UI
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.categories }),
+        ]);
+      } else {
+        toast.info('Nenhuma operação com falha encontrada.');
+      }
+      return count;
+    } catch (error) {
+      logger.error('Failed to clear failed operations:', error);
+      toast.error('Erro ao limpar operações com falha.');
+      throw error;
+    }
+  }
+
+  async getFailedOperationsCount(): Promise<number> {
+    try {
+      const failed = await offlineQueue.getFailedOperations();
+      return failed.length;
+    } catch (error) {
+      logger.error('Failed to get failed operations count:', error);
+      return 0;
     }
   }
 
@@ -362,7 +453,7 @@ class OfflineSyncManager {
   /**
    * Detect potential conflicts before syncing an operation
    */
-  private async detectConflicts(operation: QueuedOperation, payload: any): Promise<void> {
+  private async detectConflicts(operation: QueuedOperation, payload: Record<string, unknown>): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -455,7 +546,7 @@ class OfflineSyncManager {
   /**
    * Detect data conflicts between local and server versions
    */
-  private detectDataConflicts(serverRecord: any, originalLocalValues: any): string[] {
+  private detectDataConflicts(serverRecord: Record<string, unknown>, originalLocalValues: Record<string, unknown>): string[] {
     const conflicts: string[] = [];
 
     // Check key fields for modifications
@@ -481,7 +572,7 @@ class OfflineSyncManager {
     let payload = { ...operation.data };
     
     // Helper para identificar ID temporário
-    const isTempId = (id: any) => typeof id === 'string' && id.startsWith(TEMP_ID_PREFIX);
+    const isTempId = (id: unknown): id is string => typeof id === 'string' && id.startsWith(TEMP_ID_PREFIX);
 
     // === CONFLICT DETECTION ===
     // Check for potential conflicts before processing
@@ -515,8 +606,20 @@ class OfflineSyncManager {
 
     switch (operation.type) {
       case 'transaction': {
-        const { data: rpcData, error } = await supabase.functions.invoke('atomic-transaction', { body: { transaction: payload } });
-        if (error) throw error;
+        const body = { transaction: payload };
+        logger.info('🔄 [SYNC] Payload:', JSON.stringify(body, null, 2));
+        const response = await supabase.functions.invoke('atomic-transaction', { body });
+        logger.info('🔄 [SYNC] Resposta:', JSON.stringify({ data: response.data, error: response.error }, null, 2));
+        
+        if (response.error) {
+          logger.error('🚨 [SYNC] Erro 400:', JSON.stringify({
+            errorDetails: response.error,
+            responseData: response.data,
+            sentPayload: body
+          }, null, 2));
+          throw response.error;
+        }
+        const { data: rpcData, error } = response;
         
         // Capture new ID and update map
         const responseData = rpcData as { transaction?: { id: string } };
@@ -603,7 +706,7 @@ class OfflineSyncManager {
          
       case 'add_fixed_transaction':
          if (isTempId(payload.id)) delete payload.id;
-         await supabase.functions.invoke('atomic-create-fixed', { body: { transaction: payload } });
+         await supabase.functions.invoke('atomic-create-fixed', { body: payload });
          break;
 
       case 'add_installments': {
@@ -622,18 +725,23 @@ class OfflineSyncManager {
 
           const transaction = transactions[i];
           
-          // @ts-ignore
+          // ✅ Type-safe: Validar estrutura da transação
+          if (!transaction || typeof transaction !== 'object') {
+            logger.error('Invalid transaction in import operation');
+            continue;
+          }
+          
           const { data: rpcData, error } = await supabase.rpc('atomic_create_transaction', {
             p_user_id: user!.id,
-            p_description: transaction.description,
-            p_amount: transaction.amount,
-            p_date: transaction.date,
-            p_type: transaction.type,
-            p_category_id: transaction.category_id,
-            p_account_id: transaction.account_id,
-            p_status: transaction.status,
+            p_description: transaction.description as string,
+            p_amount: transaction.amount as number,
+            p_date: transaction.date as string,
+            p_type: transaction.type as 'income' | 'expense',
+            p_category_id: transaction.category_id as string | null,
+            p_account_id: transaction.account_id as string,
+            p_status: transaction.status as 'pending' | 'completed',
             p_invoice_month: transaction.invoice_month ?? undefined,
-            p_invoice_month_overridden: !!transaction.invoice_month,
+            p_invoice_month_overridden: (transaction as any).invoice_month_overridden ?? false,
           });
 
           if (error) throw error;

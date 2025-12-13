@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { setSentryUser, trackUserAction, setSentryContext } from '@/lib/sentry';
 import { getErrorMessage } from '@/types/errors';
 import { getTabSynchronizer } from '@/lib/tabSync';
+import { globalResourceManager } from '@/lib/globalResourceManager';
 
 interface Profile {
   id: string;
@@ -138,16 +139,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logger.debug('Initializing user data for:', user.id);
       
       // Initialize default categories if none exist
-      const { data: categories } = await supabase
+      const { data: categories, error: categoriesError } = await supabase
         .from('categories')
         .select('id')
         .eq('user_id', user.id)
         .limit(1);
 
-      if (!categories || categories.length === 0) {
+      // Check if operation is still relevant (user might have logged out)
+      if (!user) {
+        logger.debug('User logged out during initialization, aborting');
+        return;
+      }
+
+      if (categoriesError) {
+        logger.error('Error checking categories:', categoriesError);
+      } else if (!categories || categories.length === 0) {
         logger.debug('Initializing default categories');
         await supabase.rpc('initialize_default_categories', { p_user_id: user.id });
       }
+
+      // Check again before continuing
+      if (!user) return;
 
       // Initialize default settings if none exist (using upsert to avoid race conditions)
       await supabase
@@ -424,6 +436,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       trackUserAction('Sign Out', 'auth', { userId: user?.id });
       
       await logActivity('signed_out', 'auth');
+      
+      // ✅ PRIORIDADE 1: Cleanup de recursos globais antes do logout
+      logger.info('Cleaning up global resources before logout...');
+      globalResourceManager.cleanupAll();
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {

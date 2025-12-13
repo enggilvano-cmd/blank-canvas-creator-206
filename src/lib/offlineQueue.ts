@@ -1,5 +1,25 @@
 import { logger } from './logger';
 import { offlineDatabase } from './offlineDatabase';
+import type {
+  QueuedOperationData,
+  TransactionOperationData,
+  EditTransactionOperationData,
+  DeleteTransactionOperationData,
+  TransferOperationData,
+  CreditPaymentOperationData,
+  FixedTransactionOperationData,
+  InstallmentsOperationData,
+  ImportTransactionsOperationData,
+  CategoryOperationData,
+  EditCategoryOperationData,
+  DeleteCategoryOperationData,
+  ImportCategoriesOperationData,
+  AccountOperationData,
+  EditAccountOperationData,
+  DeleteAccountOperationData,
+  ImportAccountsOperationData,
+  ClearAllDataOperationData,
+} from '@/types/queueOperations';
 
 export interface QueuedOperation {
   id: string;
@@ -22,7 +42,7 @@ export interface QueuedOperation {
     | 'delete_account'
     | 'import_accounts'
     | 'clear_all_data';
-  data: any;
+  data: QueuedOperationData['data']; // ✅ Tipado com união discriminada
   timestamp: number;
   retries: number;
   status?: 'pending' | 'processing' | 'failed';
@@ -174,7 +194,7 @@ class OfflineQueueManager {
     });
   }
 
-  async updateData(id: string, data: any): Promise<void> {
+  async updateData(id: string, data: QueuedOperationData['data']): Promise<void> {
     const db = await offlineDatabase.getDB();
 
     return new Promise((resolve, reject) => {
@@ -240,6 +260,65 @@ class OfflineQueueManager {
 
       request.onerror = () => {
         logger.error('Failed to clear queue:', request.error);
+        reject(request.error);
+      };
+    });
+  }
+
+  async clearFailed(): Promise<number> {
+    const db = await offlineDatabase.getDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const getAllRequest = store.getAll();
+
+      getAllRequest.onsuccess = () => {
+        const operations = getAllRequest.result || [];
+        const failedOps = operations.filter(op => op.status === 'failed');
+        
+        let deletedCount = 0;
+        const deletePromises = failedOps.map(op => {
+          return new Promise<void>((res, rej) => {
+            const deleteRequest = store.delete(op.id);
+            deleteRequest.onsuccess = () => {
+              deletedCount++;
+              res();
+            };
+            deleteRequest.onerror = () => rej(deleteRequest.error);
+          });
+        });
+
+        Promise.all(deletePromises)
+          .then(() => {
+            logger.info(`Cleared ${deletedCount} failed operations`);
+            resolve(deletedCount);
+          })
+          .catch(reject);
+      };
+
+      getAllRequest.onerror = () => {
+        logger.error('Failed to clear failed operations:', getAllRequest.error);
+        reject(getAllRequest.error);
+      };
+    });
+  }
+
+  async getFailedOperations(): Promise<QueuedOperation[]> {
+    const db = await offlineDatabase.getDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const operations = request.result || [];
+        resolve(operations.filter(op => op.status === 'failed'));
+      };
+
+      request.onerror = () => {
+        logger.error('Failed to get failed operations:', request.error);
         reject(request.error);
       };
     });

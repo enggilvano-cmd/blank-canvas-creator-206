@@ -52,9 +52,9 @@ export function AddTransactionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" aria-describedby="add-transaction-description">
         <DialogHeader>
-          <DialogTitle className="text-headline">
+          <DialogTitle className="text-headline" id="add-transaction-title">
             {initialType === "income" 
               ? "Adicionar Receita"
               : initialType === "expense" 
@@ -62,8 +62,11 @@ export function AddTransactionModal({
               : "Adicionar Transação"}
           </DialogTitle>
         </DialogHeader>
+        <div id="add-transaction-description" className="sr-only">
+          Formulário para adicionar uma nova transação financeira. Preencha os campos obrigatórios como descrição, valor, data e conta.
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" aria-label="Formulário de nova transação">
           <TransactionFormFields
             description={formData.description}
             type={formData.type}
