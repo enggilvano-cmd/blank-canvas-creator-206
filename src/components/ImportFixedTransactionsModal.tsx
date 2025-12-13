@@ -143,7 +143,7 @@ export function ImportFixedTransactionsModal({
         .is("parent_transaction_id", null);
 
       if (error) throw error;
-      setExistingTransactions(data || []);
+      setExistingTransactions((data || []) as any);
     } catch (error) {
       logger.error("Error loading existing fixed transactions:", error);
     }

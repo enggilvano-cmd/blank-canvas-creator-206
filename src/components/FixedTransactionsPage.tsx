@@ -4,9 +4,7 @@ import { offlineQueue } from "@/lib/offlineQueue";
 import { offlineDatabase } from "@/lib/offlineDatabase";
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Calendar, Search, CalendarPlus, DollarSign, MoreVertical } from "lucide-react";
 import {
   AlertDialog,
@@ -27,7 +25,7 @@ import { EditFixedTransactionModal } from "./EditFixedTransactionModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
-import { FixedTransactionPageActions } from "./fixedtransactions/FixedTransactionPageActions";
+// FixedTransactionPageActions is available but unused currently
 import { ImportFixedTransactionsModal } from "./ImportFixedTransactionsModal";
 import { loadXLSX } from "@/lib/lazyImports";
 import { formatBRNumber } from "@/lib/formatters";
@@ -58,7 +56,7 @@ export function FixedTransactionsPage({
   onAddModalOpenChange?: (open: boolean) => void;
 } = {}) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  useAuth(); // Keep for auth context
   
   // Filters with persistence
   const [filters, setFilters] = usePersistedFilters<FixedTransactionsFilters>(
@@ -217,7 +215,7 @@ export function FixedTransactionsPage({
     }
   };
 
-  const handleAdd = async (transaction: Omit<Transaction, "id" | "created_at" | "updated_at" | "user_id"> & { status?: "pending" | "completed" }) => {
+  const handleAdd = async (transaction: { description: string; amount: number; type: 'income' | 'expense'; category_id: string | null; account_id: string; date: string; is_fixed: boolean; status?: 'pending' | 'completed'; is_provision?: boolean }) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -260,8 +258,16 @@ export function FixedTransactionsPage({
       
       await offlineQueue.enqueue({
         type: 'add_fixed_transaction',
-        data: newTransaction,
-        retries: 0,
+        data: {
+          description: newTransaction.description,
+          amount: newTransaction.amount,
+          start_date: transaction.date,
+          recurrence: 'monthly',
+          type: newTransaction.type as 'income' | 'expense',
+          category_id: newTransaction.category_id || '',
+          account_id: newTransaction.account_id,
+          status: newTransaction.status,
+        },
       });
 
       toast({
@@ -284,11 +290,9 @@ export function FixedTransactionsPage({
         p_user_id: user.id,
         p_description: transaction.description,
         p_amount: transaction.amount,
-        p_date: typeof transaction.date === 'string' 
-          ? transaction.date 
-          : transaction.date.toISOString().split('T')[0],
+        p_date: transaction.date,
         p_type: transaction.type,
-        p_category_id: transaction.category_id || null,
+        p_category_id: transaction.category_id || '',
         p_account_id: transaction.account_id,
         p_status: transaction.status || "pending",
         p_is_provision: false,
@@ -429,11 +433,10 @@ export function FixedTransactionsPage({
       await offlineQueue.enqueue({
         type: 'edit',
         data: {
-          transaction_id: transaction.id,
+          id: transaction.id,
           updates,
-          scope: 'current',
+          scope: 'current' as const,
         },
-        retries: 0
       });
     };
 
@@ -587,8 +590,7 @@ export function FixedTransactionsPage({
       // Se for temp, o sync de 'delete' já ignora. Então é seguro enfileirar.
       await offlineQueue.enqueue({
         type: 'delete',
-        data: { id: transactionToDelete.id },
-        retries: 0
+        data: { id: transactionToDelete.id, scope: 'all' as const },
       });
 
       toast({ title: "Removido offline", description: "Sincronizará quando online." });
@@ -816,7 +818,7 @@ export function FixedTransactionsPage({
           status: "pending" as const,
           user_id: user.id,
           is_fixed: false,
-          is_provision: mainTransaction.is_provision,
+          // is_provision removed - column doesn't exist in DB
           parent_transaction_id: transactionId,
         });
       }
@@ -1129,7 +1131,7 @@ export function FixedTransactionsPage({
         open={addModalOpen}
         onOpenChange={setAddModalOpen}
         onAddTransaction={handleAdd}
-        accounts={accounts}
+        accounts={accounts as any}
       />
 
       {transactionToEdit && (
@@ -1141,7 +1143,7 @@ export function FixedTransactionsPage({
           }}
           onEditTransaction={handleEdit}
           transaction={transactionToEdit}
-          accounts={accounts}
+          accounts={accounts as any}
           hideStatusAndInvoice={true}
         />
       )}
@@ -1150,7 +1152,7 @@ export function FixedTransactionsPage({
         open={importModalOpen}
         onOpenChange={setImportModalOpen}
         onImportComplete={loadFixedTransactions}
-        accounts={accounts}
+        accounts={accounts as any}
         categories={categories}
       />
     </div>

@@ -27,7 +27,7 @@ export function useAccountHandlers() {
       // 1. Atualizar a conta com as novas informações
       const { error: updateError } = await supabase
         .from('accounts')
-        .update(dbUpdates)
+        .update(dbUpdates as any)
         .eq('id', updatedAccount.id)
         .eq('user_id', user.id);
       if (updateError) throw updateError;

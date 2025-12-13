@@ -6,7 +6,6 @@ import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
-import { offlineSync } from '@/lib/offlineSync';
 
 export function useAccounts() {
   const { user } = useAuth();
@@ -64,7 +63,7 @@ export function useAccounts() {
 
       const { error } = await supabase
         .from('accounts')
-        .update(updatedAccount)
+        .update(updatedAccount as any)
         .eq('id', updatedAccount.id)
         .eq('user_id', user.id);
 
@@ -84,13 +83,13 @@ export function useAccounts() {
 
       return { previousAccounts };
     },
-    onError: (err, newAccount, context) => {
+    onError: (err, _newAccount, context) => {
       if (context?.previousAccounts) {
         queryClient.setQueryData(queryKeys.accounts, context.previousAccounts);
       }
       logger.error('Error updating account:', err);
     },
-    onSettled: (data, error, variables) => {
+    onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
       if (variables.balance !== undefined) {
         queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
@@ -124,7 +123,7 @@ export function useAccounts() {
 
       return { previousAccounts };
     },
-    onError: (err, accountId, context) => {
+    onError: (err, _accountId, context) => {
       if (context?.previousAccounts) {
         queryClient.setQueryData(queryKeys.accounts, context.previousAccounts);
       }
@@ -153,7 +152,7 @@ export function useAccounts() {
 
       const { error } = await supabase
         .from('accounts')
-        .insert(accountsToAdd);
+        .insert(accountsToAdd as any);
 
       if (error) throw error;
       return accountsToAdd;

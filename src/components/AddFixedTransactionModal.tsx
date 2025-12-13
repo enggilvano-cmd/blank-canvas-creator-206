@@ -21,10 +21,10 @@ import { formatCurrency } from "@/lib/formatters";
 interface Account {
   id: string;
   name: string;
-  type: "checking" | "savings" | "credit" | "investment";
+  type: "checking" | "savings" | "credit" | "investment" | "meal_voucher";
   balance: number;
   color: string;
-  limit_amount?: number;
+  limit_amount?: number | null;
 }
 
 interface FixedTransactionInput {

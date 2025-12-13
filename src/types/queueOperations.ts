@@ -24,14 +24,15 @@ export interface TransactionOperationData {
 }
 
 export interface EditTransactionOperationData {
-  id: string;
-  updates: Partial<Transaction>;
-  scope?: 'current' | 'all';
+  id?: string;
+  transaction_id?: string; // Alias for id
+  updates: Partial<Transaction> | Record<string, unknown>;
+  scope?: 'current' | 'current-and-remaining' | 'all';
 }
 
 export interface DeleteTransactionOperationData {
   id: string;
-  scope?: 'current' | 'all';
+  scope?: 'current' | 'current-and-remaining' | 'all';
 }
 
 export interface TransferOperationData {

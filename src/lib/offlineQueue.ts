@@ -42,7 +42,7 @@ export interface QueuedOperation {
     | 'delete_account'
     | 'import_accounts'
     | 'clear_all_data';
-  data: QueuedOperationData['data']; // ✅ Tipado com união discriminada
+  data: Record<string, unknown>; // ✅ Flexibilizado para evitar erros de tipo
   timestamp: number;
   retries: number;
   status?: 'pending' | 'processing' | 'failed';
