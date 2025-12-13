@@ -60,7 +60,7 @@ function isRetryableError(error: unknown): boolean {
 /**
  * Executes a function with retry logic and exponential backoff
  * 
- * @param fn - Async function to execute
+ * @param fn - Async function to execute (must return a Promise or a Supabase query builder)
  * @param options - Retry configuration options
  * @returns Promise resolving to the function result
  * 
@@ -70,7 +70,7 @@ function isRetryableError(error: unknown): boolean {
  * });
  */
 export async function withRetry<T>(
-  fn: () => Promise<T>,
+  fn: () => T | Promise<T> | PromiseLike<T>,
   options: RetryOptions = {}
 ): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options };

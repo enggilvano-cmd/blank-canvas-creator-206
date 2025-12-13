@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       const nowInUserTz = getNowInUserTimezone();
       const nextYear = nowInUserTz.getFullYear() + 1
       
-      const futureTransactions = []
+      const futureTransactions: Record<string, unknown>[] = []
       
       // Gerar todos os 12 meses do próximo ano
       for (let month = 0; month < 12; month++) {

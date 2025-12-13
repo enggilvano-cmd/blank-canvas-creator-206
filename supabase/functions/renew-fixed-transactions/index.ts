@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
         logger.info(`Processing fixed transaction: ${transaction.description} (day ${dayOfMonth})`);
 
         // Gerar transações para todos os 12 meses do próximo ano
-        const transactionsToGenerate = []
+        const transactionsToGenerate: Record<string, unknown>[] = []
         
         for (let month = 0; month < 12; month++) {
           const nextDate = createDateInUserTimezone(nextYear, month, dayOfMonth)
