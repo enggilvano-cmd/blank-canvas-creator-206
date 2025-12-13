@@ -284,12 +284,14 @@ export function FixedTransactionsPage({
         p_user_id: user.id,
         p_description: transaction.description,
         p_amount: transaction.amount,
-        p_date: transaction.date,
+        p_date: typeof transaction.date === 'string' 
+          ? transaction.date 
+          : transaction.date.toISOString().split('T')[0],
         p_type: transaction.type,
-        p_category_id: transaction.category_id,
+        p_category_id: transaction.category_id || null,
         p_account_id: transaction.account_id,
         p_status: transaction.status || "pending",
-        p_is_provision: transaction.is_provision || false,
+        p_is_provision: false,
       });
 
       if (error) {
