@@ -222,9 +222,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         query = query.eq('is_fixed', isFixed === 'true');
       }
 
-      if (isProvision !== 'all') {
-        query = query.eq('is_provision', isProvision === 'true');
-      }
+      // is_provision filter removed - column doesn't exist
 
       if (invoiceMonth !== 'all') {
         query = query.eq('invoice_month', invoiceMonth);
@@ -318,7 +316,6 @@ export function useTransactions(params: UseTransactionsParams = {}) {
           parent_transaction_id,
           linked_transaction_id,
           is_fixed,
-          is_provision,
           invoice_month,
           invoice_month_overridden,
           created_at,
@@ -390,9 +387,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         query = query.eq('is_fixed', isFixed === 'true');
       }
 
-      if (isProvision !== 'all') {
-        query = query.eq('is_provision', isProvision === 'true');
-      }
+      // is_provision filter removed - column doesn't exist
 
       if (invoiceMonth !== 'all') {
         query = query.eq('invoice_month', invoiceMonth);
