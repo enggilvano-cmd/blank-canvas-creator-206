@@ -1,0 +1,2 @@
+-- Drop the older version of get_transactions_totals with 11 arguments (the one with string types)
+DROP FUNCTION IF EXISTS public.get_transactions_totals(uuid, text, text, uuid, uuid, text, text, text, text, text, text);

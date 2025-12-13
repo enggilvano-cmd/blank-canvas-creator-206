@@ -21,16 +21,20 @@ export function useAccountHandlers() {
   const handleEditAccount = useCallback(async (updatedAccount: Partial<Account> & { id: string }) => {
     if (!user) return;
     try {
+      // Remove initial_balance from updates as it doesn't exist in the DB
+      const { initial_balance: _initialBalance, ...dbUpdates } = updatedAccount as Partial<Account> & { id: string; initial_balance?: number };
+      
       // 1. Atualizar a conta com as novas informações
       const { error: updateError } = await supabase
         .from('accounts')
-        .update(updatedAccount)
+        .update(dbUpdates)
         .eq('id', updatedAccount.id)
         .eq('user_id', user.id);
       if (updateError) throw updateError;
 
       // 2. Se o saldo inicial foi alterado, garantir que o saldo total seja recalculado
-      if (updatedAccount.initial_balance !== undefined) {
+      const newInitialBalance = (updatedAccount as Partial<Account> & { initial_balance?: number }).initial_balance;
+      if (newInitialBalance !== undefined) {
         // Buscar TODAS as transações de "Saldo Inicial" (para detectar duplicatas)
         const { data: initialTxs, error: fetchError } = await supabase
           .from('transactions')
@@ -42,8 +46,6 @@ export function useAccountHandlers() {
         if (fetchError) {
           logger.error('Error fetching initial balance transaction', fetchError);
         }
-
-        const newInitialBalance = updatedAccount.initial_balance;
 
         if (initialTxs && initialTxs.length > 0) {
           // Se houver múltiplas transações de Saldo Inicial (bug/duplicata), deletar todas exceto a primeira
