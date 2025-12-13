@@ -191,7 +191,7 @@ export function getLowBalanceAlerts(accounts: NotificationAccount[], threshold: 
         title: "Saldo Baixo",
         message: `A conta ${account.name} está com saldo baixo: R$ ${account.balance.toFixed(2)}`,
         type: "alert",
-        date: today,
+        date: new Date(),
         read: false,
         actionType: "account_low",
         actionData: { accountId: account.id }

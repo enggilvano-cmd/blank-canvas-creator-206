@@ -294,8 +294,8 @@ export function useTransactionMutations() {
       if (updatedTransaction.invoice_month !== undefined) {
         updates.invoice_month = updatedTransaction.invoice_month || null;
       }
-      if (updatedTransaction.invoice_month_overridden !== undefined) {
-        updates.invoice_month_overridden = updatedTransaction.invoice_month_overridden;
+      if ((updatedTransaction as any).invoice_month_overridden !== undefined) {
+        (updates as any).invoice_month_overridden = (updatedTransaction as any).invoice_month_overridden;
       }
 
       const { error } = await supabase.functions.invoke('atomic-edit-transaction', {
