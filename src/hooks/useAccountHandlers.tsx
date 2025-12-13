@@ -296,14 +296,14 @@ export function useAccountHandlers() {
             if (initialBalanceTransactions.length > 0) {
                 const { error: txError } = await supabase
                     .from('transactions')
-                    .insert(initialBalanceTransactions);
+                    .insert(initialBalanceTransactions as any);
                 
                 if (txError) {
                     logger.error('Failed to create initial balance transactions for imported accounts', txError);
                     toast({
                         title: 'Aviso',
                         description: 'Contas importadas, mas houve erro ao registrar o histórico de saldo inicial.',
-                        variant: 'warning'
+                        variant: 'default'
                     });
                 }
             }

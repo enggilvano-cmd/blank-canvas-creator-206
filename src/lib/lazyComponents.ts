@@ -50,14 +50,7 @@ export const DatabasePerformanceTest = lazy(() =>
   import('@/components/DatabasePerformanceTest').then(module => ({ default: module.DatabasePerformanceTest }))
 );
 
-// PWA and debugging components
-export const PWACompatibilityTest = lazy(() => 
-  import('@/components/PWACompatibilityTest').then(module => ({ default: module.PWACompatibilityTest }))
-);
-
-export const PWADebug = lazy(() => 
-  import('@/components/PWADebug').then(module => ({ default: module.PWADebug }))
-);
+// PWA and debugging components - removed as components don't exist
 
 // User management components
 export const UserManagement = lazy(() => 

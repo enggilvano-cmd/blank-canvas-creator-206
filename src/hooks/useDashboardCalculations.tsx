@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from 'react';
-import type { Account, DateFilterType, Transaction } from '@/types';
+import type { Account, DateFilterType } from '@/types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -192,13 +192,12 @@ export function useDashboardCalculations(
           p_user_id: user.id,
           p_type: 'all',
           p_status: 'all',
-          p_account_id: undefined,
-          p_category_id: undefined,
+          p_account_id: 'all',
+          p_category_id: 'all',
           p_account_type: 'all',
-          p_date_from: dateRange.dateFrom,
-          p_date_to: dateRange.dateTo,
-          p_search: undefined,
-        });
+          p_date_from: dateRange.dateFrom || undefined,
+          p_date_to: dateRange.dateTo || undefined,
+        } as any);
 
         if (totalsError) {
           logger.error("Error fetching aggregated totals:", totalsError);
@@ -210,13 +209,12 @@ export function useDashboardCalculations(
           p_user_id: user.id,
           p_type: 'expense',
           p_status: 'all',
-          p_account_id: undefined,
-          p_category_id: undefined,
+          p_account_id: 'all',
+          p_category_id: 'all',
           p_account_type: 'credit',
-          p_date_from: dateRange.dateFrom,
-          p_date_to: dateRange.dateTo,
-          p_search: undefined,
-        });
+          p_date_from: dateRange.dateFrom || undefined,
+          p_date_to: dateRange.dateTo || undefined,
+        } as any);
 
         if (creditError) {
           logger.error("Error fetching credit card expenses:", creditError);
@@ -227,13 +225,12 @@ export function useDashboardCalculations(
           p_user_id: user.id,
           p_type: 'expense',
           p_status: 'pending',
-          p_account_id: undefined,
-          p_category_id: undefined,
+          p_account_id: 'all',
+          p_category_id: 'all',
           p_account_type: 'all',
-          p_date_from: dateRange.dateFrom,
-          p_date_to: dateRange.dateTo,
-          p_search: undefined,
-        });
+          p_date_from: dateRange.dateFrom || undefined,
+          p_date_to: dateRange.dateTo || undefined,
+        } as any);
 
         if (pendingExpError) {
           logger.error("Error fetching pending expenses:", pendingExpError);
@@ -244,13 +241,12 @@ export function useDashboardCalculations(
           p_user_id: user.id,
           p_type: 'income',
           p_status: 'pending',
-          p_account_id: undefined,
-          p_category_id: undefined,
+          p_account_id: 'all',
+          p_category_id: 'all',
           p_account_type: 'all',
-          p_date_from: dateRange.dateFrom,
-          p_date_to: dateRange.dateTo,
-          p_search: undefined,
-        });
+          p_date_from: dateRange.dateFrom || undefined,
+          p_date_to: dateRange.dateTo || undefined,
+        } as any);
 
         if (pendingIncError) {
           logger.error("Error fetching pending income:", pendingIncError);

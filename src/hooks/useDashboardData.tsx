@@ -71,7 +71,7 @@ export function useDashboardData() {
       ] = await Promise.all([
         supabase
           .from('accounts')
-          .select('id, name, type, balance, initial_balance, limit_amount, due_date, closing_date, color, created_at, updated_at')
+          .select('id, name, type, balance, limit_amount, due_date, closing_date, color, created_at, updated_at')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false }),
         
@@ -101,7 +101,7 @@ export function useDashboardData() {
       if (categoriesResult.error) throw categoriesResult.error;
 
       // Transform data
-      const accounts = (accountsResult.data || []).map((acc) => ({
+      const accounts = ((accountsResult.data || []) as any[]).map((acc) => ({
         ...acc,
         limit: acc.limit_amount,
       })) as Account[];

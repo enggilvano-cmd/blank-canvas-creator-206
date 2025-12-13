@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInDays, parseISO, isSameDay } from 'date-fns';
+import { safeStorage } from '@/lib/safeStorage';
 
 const NOTIFICATION_KEY = 'last_expiration_notification_date';
 
@@ -14,9 +15,9 @@ export function useExpirationNotifications() {
 
     let expiresAt: Date | null = null;
 
-    if (profile.role === 'trial' && profile.trial_expires_at) {
+    if (profile.trial_expires_at) {
       expiresAt = parseISO(profile.trial_expires_at);
-    } else if (profile.role === 'subscriber' && profile.subscription_expires_at) {
+    } else if (profile.subscription_expires_at) {
       expiresAt = parseISO(profile.subscription_expires_at);
     }
 

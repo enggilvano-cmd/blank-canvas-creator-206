@@ -9,7 +9,7 @@ import { useAuth } from './useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/types/errors';
-import { Account } from '@/types';
+import { Account, Transaction } from '@/types';
 
 // Interface para dados de criação de conta
 interface AccountCreateData {
@@ -94,7 +94,7 @@ export function useOfflineAccountMutations() {
           };
           
           // Type assertion with proper validation
-          await offlineDatabase.saveTransactions([optimisticTx as Transaction]);
+          await offlineDatabase.saveTransactions([optimisticTx as unknown as Transaction]);
           
           queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
               if (!oldData) return [optimisticTx];
@@ -278,7 +278,7 @@ export function useOfflineAccountMutations() {
               
               // Update local DB for transaction
               const updatedTx = { ...initialTx, ...txUpdates, updated_at: new Date().toISOString() };
-              await offlineDatabase.saveTransactions([updatedTx]);
+              await offlineDatabase.saveTransactions([updatedTx as unknown as Transaction]);
               
               // Update React Query Cache for transactions
               queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
@@ -439,7 +439,7 @@ export function useOfflineAccountMutations() {
             if (txs && txs.length > 0) {
                 const { error: txError } = await supabase
                     .from('transactions')
-                    .update(txData)
+                    .update(txData as any)
                     .eq('id', txs[0].id);
                 if (txError) logger.error('Failed to update initial balance transaction', txError);
             } else if (newInitialBalance !== 0) {
@@ -459,7 +459,7 @@ export function useOfflineAccountMutations() {
                     toast({
                         title: 'Aviso',
                         description: 'Saldo atualizado, mas houve erro ao registrar a transação de histórico.',
-                        variant: 'warning'
+                        variant: 'default'
                     });
                 }
             }
@@ -628,7 +628,7 @@ export function useOfflineAccountMutations() {
             if (initialBalanceTransactions.length > 0) {
                 const { error: txError } = await supabase
                     .from('transactions')
-                    .insert(initialBalanceTransactions);
+                    .insert(initialBalanceTransactions as any);
                 
                 if (txError) {
                     logger.error('Failed to create initial balance transactions for imported accounts', txError);
