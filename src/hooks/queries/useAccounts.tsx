@@ -28,7 +28,7 @@ export function useAccounts() {
 
       const { data, error } = await supabase
         .from('accounts')
-        .select('id, name, type, balance, initial_balance, limit_amount, due_date, closing_date, color, created_at, updated_at')
+        .select('id, name, type, balance, limit_amount, due_date, closing_date, color, created_at, updated_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
