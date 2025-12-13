@@ -19,7 +19,7 @@ import { AppTransaction, Account } from "@/types";
 import { calculateBillDetails, calculateInvoiceMonthByDue } from "@/lib/dateUtils";
 import { CreditCardBillCard } from "@/components/CreditCardBillCard";
 import { CreditBillDetailsModal } from "@/components/CreditBillDetailsModal";
-import { cn } from "@/lib/utils";
+import { cn as _cn } from "@/lib/utils";
 import { format, addMonths, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CreditBillFilterDialog } from "@/components/creditbills/CreditBillFilterDialog";

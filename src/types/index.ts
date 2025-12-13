@@ -12,10 +12,10 @@ export interface Account {
   name: string;
   type: "checking" | "savings" | "credit" | "investment" | "meal_voucher";
   balance: number;
-  initial_balance?: number;
-  limit_amount?: number;
-  due_date?: number;
-  closing_date?: number;
+  initial_balance?: number | null;
+  limit_amount?: number | null;
+  due_date?: number | null;
+  closing_date?: number | null;
   color: string;
   user_id?: string;
   created_at?: string;
@@ -46,15 +46,16 @@ export interface Transaction {
   account_id: string;
   status: "pending" | "completed";
   user_id?: string;
-  to_account_id?: string; // For transfers
-  installments?: number; // Number of installments for installment transactions
-  current_installment?: number; // Current installment number (1-based)
-  parent_transaction_id?: string; // ID linking installment transactions together
-  linked_transaction_id?: string; // Para vincular pagamentos/transferências
-  invoice_month?: string; // Month of credit card invoice (YYYY-MM)
-  invoice_month_overridden?: boolean; // True when user manually sets invoice month
-  is_fixed?: boolean;
-  is_provision?: boolean;
+  to_account_id?: string | null; // For transfers
+  installments?: number | null; // Number of installments for installment transactions
+  current_installment?: number | null; // Current installment number (1-based)
+  parent_transaction_id?: string | null; // ID linking installment transactions together
+  linked_transaction_id?: string | null; // Para vincular pagamentos/transferências
+  invoice_month?: string | null; // Month of credit card invoice (YYYY-MM)
+  invoice_month_overridden?: boolean | null; // True when user manually sets invoice month
+  is_fixed?: boolean | null;
+  is_recurring?: boolean | null;
+  is_provision?: boolean | null;
   created_at?: string;
   updated_at?: string;
   // Relations from JOINs
@@ -63,19 +64,19 @@ export interface Transaction {
     name: string;
     type: "income" | "expense" | "both";
     color: string;
-  };
+  } | null;
   account?: {
     id: string;
     name: string;
     type: "checking" | "savings" | "credit" | "investment" | "meal_voucher";
     color: string;
-  };
+  } | null;
   to_account?: {
     id: string;
     name: string;
     type: "checking" | "savings" | "credit" | "investment" | "meal_voucher";
     color: string;
-  };
+  } | null;
   linked_transactions?: {
     account_id: string;
     accounts?: {
@@ -83,8 +84,8 @@ export interface Transaction {
       name: string;
       type: "checking" | "savings" | "credit" | "investment" | "meal_voucher";
       color: string;
-    };
-  };
+    } | null;
+  } | null;
 }
 
 // Para o store, garantindo que a data seja um objeto Date

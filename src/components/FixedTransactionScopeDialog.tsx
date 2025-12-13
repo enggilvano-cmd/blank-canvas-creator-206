@@ -1,7 +1,5 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export type FixedScope = "current" | "current-and-remaining" | "all";
 
@@ -19,7 +17,7 @@ export function FixedTransactionScopeDialog({
   onOpenChange,
   onScopeSelected,
   mode = "edit",
-  hasCompleted = false,
+  hasCompleted: _hasCompleted = false,
   pendingCount = 0,
 }: FixedTransactionScopeDialogProps) {
   const handleScopeSelection = (scope: FixedScope) => {

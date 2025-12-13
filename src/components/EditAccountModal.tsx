@@ -16,7 +16,7 @@ import { logger } from "@/lib/logger";
 import { Account, PREDEFINED_COLORS, ACCOUNT_TYPE_LABELS } from "@/types";
 import { ColorPicker } from "@/components/forms/ColorPicker";
 import { EditAccountModalProps } from "@/types/formProps";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as _supabase } from "@/integrations/supabase/client";
 
 export function EditAccountModal({
   open,

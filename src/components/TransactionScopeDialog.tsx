@@ -1,7 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export type EditScope = "current" | "current-and-remaining" | "all";
 
@@ -25,7 +23,7 @@ export function TransactionScopeDialog({
   totalInstallments = 1,
   isFixed = false,
   mode = "edit",
-  hasCompleted = false,
+  hasCompleted: _hasCompleted = false,
   pendingCount = 0,
 }: TransactionScopeDialogProps) {
   const handleScopeSelection = (scope: EditScope) => {

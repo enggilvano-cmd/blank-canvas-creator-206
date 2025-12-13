@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Edit, Trash2, Search, Tag, TrendingUp, TrendingDown, ArrowUpDown, FileDown, Upload, MoreVertical } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Tag, TrendingUp, TrendingDown, ArrowUpDown, MoreVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { AddCategoryModal } from "@/components/AddCategoryModal";
