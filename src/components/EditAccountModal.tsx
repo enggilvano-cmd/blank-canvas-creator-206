@@ -41,8 +41,8 @@ export function EditAccountModal({
     // Resetar e carregar o saldo inicial sempre que a conta ou o modal abre
     if (!account || !open) return;
 
-    // Usar o initial_balance se disponível, caso contrário usar o balance
-    const balanceValue = account.initial_balance != null ? account.initial_balance : account.balance || 0;
+    // Usar o balance da conta (initial_balance não existe mais no DB)
+    const balanceValue = account.balance || 0;
 
     setFormData({
       name: account.name,
@@ -111,9 +111,10 @@ export function EditAccountModal({
       hasChanges = true;
     }
 
-    // Verifica se houve mudança no saldo inicial ou se é uma migração (initial_balance undefined)
-    if (formData.balanceInCents !== account.initial_balance) {
-      updates.initial_balance = formData.balanceInCents;
+    // Verifica se houve mudança no saldo
+    if (formData.balanceInCents !== account.balance) {
+      // Use a custom property that handleEditAccount understands
+      (updates as Partial<Account> & { id: string; initial_balance?: number }).initial_balance = formData.balanceInCents;
       hasChanges = true;
     }
     
