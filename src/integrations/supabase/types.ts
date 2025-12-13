@@ -739,6 +739,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      atomic_create_transaction: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_category_id: string
+          p_date: string
+          p_description: string
+          p_invoice_month?: string
+          p_invoice_month_overridden?: boolean
+          p_status: Database["public"]["Enums"]["transaction_status"]
+          p_type: Database["public"]["Enums"]["transaction_type"]
+          p_user_id: string
+        }
+        Returns: {
+          error_message: string
+          new_balance: number
+          success: boolean
+          transaction_id: string
+        }[]
+      }
       atomic_delete_transaction: {
         Args: { p_scope?: string; p_transaction_id: string; p_user_id: string }
         Returns: {
