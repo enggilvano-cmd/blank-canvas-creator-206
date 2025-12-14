@@ -1,11 +1,10 @@
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { ImportTransactionData } from '@/types';
 import { logger } from '@/lib/logger';
-import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/lib/errorUtils';
 
 type DetectedTransferPair = {
@@ -100,7 +99,7 @@ async function processBatch<T, R>(
 export function useImportMutations() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
 
   const handleImportTransactions = useCallback(async (
     transactionsData: ImportTransactionData[],
@@ -403,17 +402,7 @@ export function useImportMutations() {
       }
 
       // 8. Invalidar cache e atualizar UI
-      await Promise.all([
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.transactionsBase,
-          refetchType: 'all'
-        }),
-        queryClient.refetchQueries({ 
-          queryKey: queryKeys.transactionsBase,
-          type: 'all'
-        }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
+      await invalidateTransactions();
 
       const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
       const successRate = ((successCount / transactionsData.length) * 100).toFixed(1);
@@ -461,7 +450,7 @@ export function useImportMutations() {
       
       throw error;
     }
-  }, [user, queryClient, toast]);
+  }, [user, invalidateTransactions, toast]);
 
   return {
     handleImportTransactions,

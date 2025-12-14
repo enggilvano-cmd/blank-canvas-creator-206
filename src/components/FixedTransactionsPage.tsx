@@ -1,10 +1,13 @@
 import { useFixedTransactions } from "@/hooks/useFixedTransactions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useQueryInvalidation } from "@/hooks/useQueryInvalidation";
 import { offlineQueue } from "@/lib/offlineQueue";
 import { offlineDatabase } from "@/lib/offlineDatabase";
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, TrendingDown, Calendar, Search, CalendarPlus, DollarSign, MoreVertical } from "lucide-react";
 import {
   AlertDialog,
@@ -23,8 +26,6 @@ import { logger } from "@/lib/logger";
 import { AddFixedTransactionModal } from "./AddFixedTransactionModal";
 import { EditFixedTransactionModal } from "./EditFixedTransactionModal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/queryClient";
 // FixedTransactionPageActions is available but unused currently
 import { ImportFixedTransactionsModal } from "./ImportFixedTransactionsModal";
 import { loadXLSX } from "@/lib/lazyImports";
@@ -42,6 +43,7 @@ interface FixedTransactionsFilters {
   categoryId: string;
   accountId: string;
   isProvision: string;
+  sortBy: "data" | "valor";
 }
 
 export function FixedTransactionsPage({
@@ -55,8 +57,11 @@ export function FixedTransactionsPage({
   addModalOpen?: boolean;
   onAddModalOpenChange?: (open: boolean) => void;
 } = {}) {
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
   useAuth(); // Keep for auth context
+  
+  // State for sort direction
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   // Filters with persistence
   const [filters, setFilters] = usePersistedFilters<FixedTransactionsFilters>(
@@ -67,6 +72,7 @@ export function FixedTransactionsPage({
       categoryId: "all",
       accountId: "all",
       isProvision: "all",
+      sortBy: "data",
     }
   );
 
@@ -75,12 +81,15 @@ export function FixedTransactionsPage({
   const categoryId = filters.categoryId || "all";
   const accountId = filters.accountId || "all";
   const isProvision = filters.isProvision || "all";
+  const sortBy = filters.sortBy || "data";
 
   const setSearchTerm = (value: string) => setFilters((prev) => ({ ...prev, searchTerm: value }));
   const setFilterType = (value: typeof filters.filterType) => setFilters((prev) => ({ ...prev, filterType: value }));
   const setCategoryId = (value: string) => setFilters((prev) => ({ ...prev, categoryId: value }));
   const setAccountId = (value: string) => setFilters((prev) => ({ ...prev, accountId: value }));
   const setIsProvision = (value: string) => setFilters((prev) => ({ ...prev, isProvision: value }));
+  const setSortBy = (value: "data" | "valor") => setFilters((prev) => ({ ...prev, sortBy: value }));
+  const toggleSortOrder = () => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
   
   const isOnline = useOnlineStatus();
 
@@ -267,6 +276,7 @@ export function FixedTransactionsPage({
           category_id: newTransaction.category_id || '',
           account_id: newTransaction.account_id,
           status: newTransaction.status,
+          is_provision: transaction.is_provision || false,
         },
       });
 
@@ -295,11 +305,13 @@ export function FixedTransactionsPage({
         p_category_id: transaction.category_id || '',
         p_account_id: transaction.account_id,
         p_status: transaction.status || "pending",
-        p_is_provision: false,
+        p_is_provision: transaction.is_provision || false,
       });
 
       if (error) {
         const errorMessage = error.message || JSON.stringify(error);
+        console.error('❌ RPC Error:', { error, message: errorMessage });
+        
         // Detectar erros de rede e fazer fallback
         if (errorMessage.includes("Failed to send a request") || 
             errorMessage.includes("NetworkError") || 
@@ -325,20 +337,15 @@ export function FixedTransactionsPage({
       });
 
       // 🔄 Sincronizar listas e dashboard imediatamente
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.refetchQueries({ queryKey: queryKeys.accounts }),
-      ]);
+      await invalidateTransactions();
 
       loadFixedTransactions(); // Refetch fixed transactions
       setAddModalOpen(false);
     } catch (error) {
       // Catch também para exceções de rede lançadas pelo invoke
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Error adding fixed transaction:', { error, errorMessage });
+      
       if (errorMessage.includes("Failed to send a request") || 
           errorMessage.includes("NetworkError") || 
           errorMessage.includes("fetch failed") ||
@@ -349,9 +356,20 @@ export function FixedTransactionsPage({
       }
 
       logger.error("Error adding fixed transaction:", error);
+      
+      // Mensagens de erro mais específicas
+      let displayMessage = "Não foi possível adicionar a transação fixa.";
+      if (errorMessage.includes("Account not found")) {
+        displayMessage = "A conta selecionada não existe ou não pertence a você.";
+      } else if (errorMessage.includes("Category not found")) {
+        displayMessage = "A categoria selecionada não existe ou não pertence a você.";
+      } else if (error instanceof Error) {
+        displayMessage = error.message;
+      }
+      
       toast({
         title: "Erro ao adicionar transação",
-        description: error instanceof Error ? error.message : "Não foi possível adicionar a transação fixa.",
+        description: displayMessage,
         variant: "destructive",
       });
     }
@@ -537,14 +555,7 @@ export function FixedTransactionsPage({
       });
 
       // 🔄 Sincronizar listas e dashboard imediatamente
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.refetchQueries({ queryKey: queryKeys.accounts }),
-      ]);
+      await invalidateTransactions();
 
       loadFixedTransactions();
     } catch (error) {
@@ -706,14 +717,7 @@ export function FixedTransactionsPage({
       }
 
       // 🔄 Sincronizar listas e dashboard imediatamente
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.refetchQueries({ queryKey: queryKeys.accounts }),
-      ]);
+      await invalidateTransactions();
 
       loadFixedTransactions();
       setTransactionToDelete(null);
@@ -836,14 +840,7 @@ export function FixedTransactionsPage({
       });
 
       // 🔄 Sincronizar listas e dashboard
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.refetchQueries({ queryKey: queryKeys.accounts }),
-      ]);
+      await invalidateTransactions();
 
       loadFixedTransactions();
     } catch (error) {
@@ -857,7 +854,7 @@ export function FixedTransactionsPage({
   };
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
+    let result = transactions.filter((transaction) => {
       const matchesSearch = transaction.description
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
@@ -873,7 +870,29 @@ export function FixedTransactionsPage({
 
       return matchesSearch && matchesType && matchesCategory && matchesAccount && matchesProvision;
     });
-  }, [transactions, searchTerm, filterType, categoryId, accountId, isProvision]);
+
+    // Apply sorting
+    if (sortBy === "valor") {
+      result = result.sort((a, b) => {
+        const diff = b.amount - a.amount;
+        return sortOrder === 'asc' ? -diff : diff;
+      });
+    } else {
+      // Sort by day only (ignoring month and year)
+      result = result.sort((a, b) => {
+        const dateA = typeof a.date === 'string' ? new Date(a.date) : a.date;
+        const dateB = typeof b.date === 'string' ? new Date(b.date) : b.date;
+        
+        const dayA = dateA.getDate();
+        const dayB = dateB.getDate();
+        
+        const diff = dayB - dayA;
+        return sortOrder === 'asc' ? -diff : diff;
+      });
+    }
+
+    return result;
+  }, [transactions, searchTerm, filterType, categoryId, accountId, isProvision, sortBy, sortOrder]);
 
   const stats = useMemo(() => {
     const totalFixed = filteredTransactions.length;
@@ -1063,15 +1082,38 @@ export function FixedTransactionsPage({
               />
             </div>
 
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar planejamento..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            {/* Search with Sort Dropdown */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar planejamento..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Sort Dropdown and Order Button */}
+              <div className="flex items-center gap-2">
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as "data" | "valor")}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="data">Data</SelectItem>
+                    <SelectItem value="valor">Valor</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleSortOrder}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

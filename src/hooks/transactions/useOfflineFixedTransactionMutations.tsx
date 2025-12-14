@@ -5,15 +5,15 @@ import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryClient';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { getErrorMessage } from '@/types/errors';
+import { notifyFixedTransactionsChange } from '@/hooks/useFixedTransactions';
 
 export function useOfflineFixedTransactionMutations() {
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
 
   const processOfflineAdd = useCallback(async (transactionData: any) => {
     try {
@@ -21,6 +21,8 @@ export function useOfflineFixedTransactionMutations() {
         type: 'add_fixed_transaction',
         data: transactionData,
       });
+
+      notifyFixedTransactionsChange();
 
       toast({
         title: 'Transação fixa registrada',
@@ -61,8 +63,8 @@ export function useOfflineFixedTransactionMutations() {
 
         if (error) throw error;
 
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+        await invalidateTransactions();
+        notifyFixedTransactionsChange();
         
         toast({
           title: 'Sucesso',
@@ -92,7 +94,7 @@ export function useOfflineFixedTransactionMutations() {
     }
 
     await processOfflineAdd(transactionData);
-  }, [isOnline, user, queryClient, toast, processOfflineAdd]);
+  }, [isOnline, user, invalidateTransactions, toast, processOfflineAdd]);
 
   const processOfflineEdit = useCallback(async (transactionId: string, updates: any, scope: any) => {
     try {
@@ -142,8 +144,7 @@ export function useOfflineFixedTransactionMutations() {
 
         if (error) throw error;
 
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+        await invalidateTransactions();
         
         toast({
           title: 'Sucesso',
@@ -171,7 +172,7 @@ export function useOfflineFixedTransactionMutations() {
     }
 
     await processOfflineEdit(transactionId, updates, scope);
-  }, [isOnline, user, queryClient, toast, processOfflineEdit]);
+  }, [isOnline, user, invalidateTransactions, toast, processOfflineEdit]);
 
   const processOfflineDelete = useCallback(async (transactionId: string, scope: any) => {
     try {
@@ -218,8 +219,7 @@ export function useOfflineFixedTransactionMutations() {
 
         if (error) throw error;
 
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+        await invalidateTransactions();
         
         toast({
           title: 'Sucesso',
@@ -247,7 +247,7 @@ export function useOfflineFixedTransactionMutations() {
     }
 
     await processOfflineDelete(transactionId, scope);
-  }, [isOnline, user, queryClient, toast, processOfflineDelete]);
+  }, [isOnline, user, invalidateTransactions, toast, processOfflineDelete]);
 
   return {
     handleAddFixedTransaction,

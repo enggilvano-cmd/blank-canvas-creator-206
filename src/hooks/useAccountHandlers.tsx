@@ -1,12 +1,11 @@
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { Account, ImportAccountData } from '@/types';
 import { logger } from '@/lib/logger';
-import { queryKeys } from '@/lib/queryClient';
 import { importAccountSchema } from '@/lib/validationSchemas';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { z } from 'zod';
@@ -15,7 +14,7 @@ import { getErrorMessage } from '@/types/errors';
 export function useAccountHandlers() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions, invalidateAccounts } = useQueryInvalidation();
   const isOnline = useOnlineStatus();
 
   const handleEditAccount = useCallback(async (updatedAccount: Partial<Account> & { id: string }) => {
@@ -110,8 +109,7 @@ export function useAccountHandlers() {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // 5. Invalidar o cache APÓS todas as operações
-      await queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+      await invalidateTransactions();
       
       toast({
         title: 'Sucesso',
@@ -126,7 +124,7 @@ export function useAccountHandlers() {
       });
       throw error;
     }
-  }, [user, queryClient, toast]);
+  }, [user, invalidateTransactions, toast]);
 
   const handleDeleteAccount = useCallback(async (accountId: string) => {
     if (!user) return;
@@ -177,7 +175,7 @@ export function useAccountHandlers() {
       
       if (error) throw error;
       
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateAccounts();
       toast({
         title: 'Sucesso',
         description: 'Conta excluída com sucesso',
@@ -191,7 +189,7 @@ export function useAccountHandlers() {
       });
       throw error;
     }
-  }, [user, toast, queryClient]);
+  }, [user, toast, invalidateAccounts]);
 
   const handleImportAccounts = useCallback(async (
     accountsData: ImportAccountData[],
@@ -309,7 +307,7 @@ export function useAccountHandlers() {
             }
         }
         
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+        await invalidateAccounts();
         toast({
           title: 'Sucesso',
           description: `${accountsToAdd.length} contas importadas${accountsToReplace.length > 0 ? ` (${accountsToReplace.length} substituídas)` : ''} com sucesso!`,
@@ -353,7 +351,7 @@ export function useAccountHandlers() {
       logger.info('Accounts import queued for offline sync');
       
       // Invalidate cache para atualizar a UI imediatamente com dados temporários
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateAccounts();
     } catch (error) {
       logger.error('Failed to queue accounts import:', error);
       toast({
@@ -363,7 +361,7 @@ export function useAccountHandlers() {
       });
       throw error;
     }
-  }, [isOnline, user, queryClient, toast]);
+  }, [isOnline, user, invalidateAccounts, toast]);
 
   return {
     handleEditAccount,

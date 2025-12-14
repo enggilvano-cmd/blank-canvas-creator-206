@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Transaction } from '@/types';
@@ -7,6 +7,7 @@ import { queryKeys } from '@/lib/queryClient';
 import { createDateFromString } from '@/lib/dateUtils';
 import { addTransactionSchema, editTransactionSchema } from '@/lib/validationSchemas';
 import { z } from 'zod';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 
 interface UseInfiniteTransactionsParams {
   pageSize?: number;
@@ -60,7 +61,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
     enabled = true
   } = params;
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
 
   const filters = { search, type, accountId, categoryId, status, accountType, dateFrom, dateTo, sortBy, sortOrder };
 
@@ -330,14 +331,8 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       return data;
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.refetchQueries({ queryKey: queryKeys.accounts }),
-      ]);
+      // ✅ P2-1 FIX: Usar hook centralizado para invalidação
+      await invalidateTransactions();
     },
     onError: (error) => {
       logger.error('Error adding transaction:', error);
@@ -372,14 +367,9 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       return data;
     },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.refetchQueries({ queryKey: queryKeys.accounts }),
-      ]);
+    onSuccess: async () => {
+      // ✅ P2-1 FIX: Usar hook centralizado para invalidação
+      await invalidateTransactions();
     },
   });
 
@@ -402,13 +392,9 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
     },
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts }),
-      ]);
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: queryKeys.transactionsBase }),
-        queryClient.refetchQueries({ queryKey: queryKeys.accounts }),
-      ]);
+    onSuccess: async () => {
+      // ✅ P2-1 FIX: Usar hook centralizado para invalidação
+      await invalidateTransactions();
     },
   });
 

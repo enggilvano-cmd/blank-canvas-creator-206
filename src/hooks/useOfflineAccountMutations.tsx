@@ -1,12 +1,12 @@
 ﻿import { useCallback } from 'react';
 import { useOnlineStatus } from './useOnlineStatus';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/types/errors';
 import { Account, Transaction } from '@/types';
@@ -26,7 +26,8 @@ export function useOfflineAccountMutations() {
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { invalidateAccounts, helper } = useQueryInvalidation();
+  const queryClient = helper.queryClient;
 
   const processOfflineAdd = useCallback(async (accountData: AccountCreateData) => {
     try {
@@ -466,7 +467,7 @@ export function useOfflineAccountMutations() {
         }
 
         queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+        await invalidateAccounts();
         toast({
           title: 'Sucesso',
           description: 'Conta atualizada com sucesso',

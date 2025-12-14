@@ -1,10 +1,6 @@
 -- ✅ BUG FIX #6: Add SERIALIZABLE isolation level to atomic_create_transfer
 -- Prevents lost updates and ensures consistency in concurrent transfers
 
--- Drop existing function
-DROP FUNCTION IF EXISTS public.atomic_create_transfer(uuid, uuid, uuid, numeric, text, text, date, transaction_status);
-
--- Recreate with proper transaction isolation
 CREATE OR REPLACE FUNCTION public.atomic_create_transfer(
   p_user_id uuid,
   p_from_account_id uuid,

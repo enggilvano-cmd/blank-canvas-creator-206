@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { Transaction } from '@/types';
 import { logger } from '@/lib/logger';
-import { queryKeys } from '@/lib/queryClient';
 import { createDateFromString } from '@/lib/dateUtils';
 import { addTransactionSchema, editTransactionSchema } from '@/lib/validationSchemas';
 import { z } from 'zod';
@@ -93,7 +93,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
     enabled = true
   } = params;
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions, invalidateCategories } = useQueryInvalidation();
   const isOnline = useOnlineStatus();
 
       // Helper para filtrar transações em memória (usado offline)
@@ -480,8 +480,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
     },
     onSuccess: () => {
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      invalidateTransactions();
     },
     onError: (error) => {
       logger.error('Error adding transaction:', error);
@@ -513,8 +512,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
     },
     onSuccess: () => {
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      invalidateTransactions();
     },
   });
 
@@ -537,8 +535,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
     },
     onSuccess: () => {
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      invalidateTransactions();
     },
   });
 
@@ -583,9 +580,8 @@ export function useTransactions(params: UseTransactionsParams = {}) {
     },
     onSuccess: () => {
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      invalidateTransactions();
+      invalidateCategories();
     },
   });
 

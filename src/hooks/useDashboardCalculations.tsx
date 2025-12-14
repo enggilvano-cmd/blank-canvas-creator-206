@@ -1,23 +1,134 @@
-import { useMemo, useEffect, useState } from 'react';
-import type { Account, DateFilterType } from '@/types';
+import { useMemo, useEffect, useState, useCallback } from 'react';
+import type { Account, DateFilterType, Transaction } from '@/types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { offlineDatabase } from '@/lib/offlineDatabase';
 
 export function useDashboardCalculations(
   accounts: Account[],
   dateFilter: DateFilterType,
   selectedMonth: Date,
   customStartDate: Date | undefined,
-  customEndDate: Date | undefined
+  customEndDate: Date | undefined,
+  transactionsKey?: string,  // Para monitorar mudanças nas transações
+  allTransactions?: Transaction[]  // NOVO: Receber transações para calcular em memória
 ) {
-  const isOnline = useOnlineStatus();
   
-  // Saldo total das contas (APENAS checking, savings e meal_voucher)
-  // Exclui cartões de crédito e investimentos
+  console.log('🎯 useDashboardCalculations called with:', {
+    accountsCount: accounts.length,
+    dateFilter,
+    transactionsKey,
+  });
+
+  // Calcular date range baseado no filtro (memoizado para estabilidade)
+  // IMPORTANTE: Deve vir ANTES de calculateTotalsFromTransactions
+  const dateRange = useMemo(() => {
+    if (dateFilter === 'all') {
+      return { dateFrom: undefined, dateTo: undefined };
+    } else if (dateFilter === 'current_month') {
+      const now = new Date();
+      return {
+        dateFrom: format(startOfMonth(now), 'yyyy-MM-dd'),
+        dateTo: format(endOfMonth(now), 'yyyy-MM-dd'),
+      };
+    } else if (dateFilter === 'month_picker') {
+      return {
+        dateFrom: format(startOfMonth(selectedMonth), 'yyyy-MM-dd'),
+        dateTo: format(endOfMonth(selectedMonth), 'yyyy-MM-dd'),
+      };
+    } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
+      return {
+        dateFrom: format(customStartDate, 'yyyy-MM-dd'),
+        dateTo: format(customEndDate, 'yyyy-MM-dd'),
+      };
+    }
+    return { dateFrom: undefined, dateTo: undefined };
+  }, [dateFilter, selectedMonth, customStartDate, customEndDate]);
+  
+  // Função auxiliar para calcular totais baseado em transações em memória
+  // Isso bypassa completamente a RPC que está quebrada
+  const calculateTotalsFromTransactions = useCallback(() => {
+    if (!allTransactions) {
+      return {
+        periodIncome: 0,
+        periodExpenses: 0,
+        balance: 0,
+        creditCardExpenses: 0,
+        pendingExpenses: 0,
+        pendingIncome: 0,
+        pendingExpensesCount: 0,
+        pendingIncomeCount: 0,
+      };
+    }
+
+    console.log('💾 Calculating totals from memory (bypassing broken RPC):', {
+      totalTransactions: allTransactions.length,
+      dateRange,
+    });
+
+    // Filtrar transações baseado no período
+    const isInPeriod = (transactionDate: string | Date) => {
+      const txDate = typeof transactionDate === 'string' ? new Date(transactionDate) : transactionDate;
+      if (dateRange.dateFrom && txDate < new Date(dateRange.dateFrom)) return false;
+      if (dateRange.dateTo && txDate > new Date(dateRange.dateTo)) return false;
+      return true;
+    };
+
+    // Filtros da RPC (replicar a lógica)
+    const filteredTransactions = allTransactions.filter(t => {
+      // Excluir transações de Saldo Inicial
+      if (t.description === 'Saldo Inicial') return false;
+      
+      // Excluir se tem to_account_id (transferências pai)
+      if (t.to_account_id) return false;
+      
+      // Excluir APENAS receitas espelho de transferências
+      if (t.type === 'income' && t.linked_transaction_id) return false;
+      
+      // Filtrar por período
+      if (!isInPeriod(t.date)) return false;
+      
+      return true;
+    });
+
+    console.log('✅ Filtered transactions:', {
+      totalFiltered: filteredTransactions.length,
+      byType: {
+        income: filteredTransactions.filter(t => t.type === 'income').length,
+        expense: filteredTransactions.filter(t => t.type === 'expense').length,
+      },
+    });
+
+    // Calcular totais gerais
+    const incomeTransactions = filteredTransactions.filter(t => t.type === 'income');
+    const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense');
+    const creditTransactions = filteredTransactions.filter(t => {
+      const account = accounts.find(a => a.id === t.account_id);
+      return t.type === 'expense' && account?.type === 'credit';
+    });
+
+    const periodIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const periodExpenses = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const creditCardExpenses = creditTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+    // Pendentes
+    const pendingExpTransactions = filteredTransactions.filter(t => t.type === 'expense' && t.status === 'pending');
+    const pendingIncTransactions = filteredTransactions.filter(t => t.type === 'income' && t.status === 'pending');
+
+    const pendingExpenses = pendingExpTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const pendingIncome = pendingIncTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+    return {
+      periodIncome,
+      periodExpenses,
+      balance: periodIncome - periodExpenses,
+      creditCardExpenses,
+      pendingExpenses,
+      pendingIncome,
+      pendingExpensesCount: pendingExpTransactions.length,
+      pendingIncomeCount: pendingIncTransactions.length,
+    };
+  }, [allTransactions, dateRange, accounts]);
   const totalBalance = useMemo(() => 
     accounts
       .filter((acc) => 
@@ -73,297 +184,14 @@ export function useDashboardCalculations(
     pendingIncomeCount: 0,
   });
 
-  // Calcular date range baseado no filtro (memoizado para estabilidade)
-  const dateRange = useMemo(() => {
-    if (dateFilter === 'all') {
-      return { dateFrom: undefined, dateTo: undefined };
-    } else if (dateFilter === 'current_month') {
-      const now = new Date();
-      return {
-        dateFrom: format(startOfMonth(now), 'yyyy-MM-dd'),
-        dateTo: format(endOfMonth(now), 'yyyy-MM-dd'),
-      };
-    } else if (dateFilter === 'month_picker') {
-      return {
-        dateFrom: format(startOfMonth(selectedMonth), 'yyyy-MM-dd'),
-        dateTo: format(endOfMonth(selectedMonth), 'yyyy-MM-dd'),
-      };
-    } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
-      return {
-        dateFrom: format(customStartDate, 'yyyy-MM-dd'),
-        dateTo: format(customEndDate, 'yyyy-MM-dd'),
-      };
-    }
-    return { dateFrom: undefined, dateTo: undefined };
-  }, [dateFilter, selectedMonth, customStartDate, customEndDate]);
-
   useEffect(() => {
-    const fetchAggregatedTotals = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        if (!isOnline) {
-          // Lógica Offline: Calcular em memória
-          const allTransactions = await offlineDatabase.getTransactions(user.id, 12); // 1 ano
-          const accounts = await offlineDatabase.getAccounts(user.id);
-          const accountMap = new Map(accounts.map(a => [a.id, a]));
-
-          const filterTransactions = (
-            type: 'income' | 'expense' | 'all',
-            status: 'pending' | 'completed' | 'all',
-            accountType: 'checking' | 'savings' | 'credit' | 'investment' | 'meal_voucher' | 'all'
-          ) => {
-            return allTransactions.filter(t => {
-              // Excluir apenas o PAI das transações fixas (mantém as filhas)
-              if (t.is_fixed && !t.parent_transaction_id) return false;
-
-              // Excluir transações de Saldo Inicial
-              if (t.description === 'Saldo Inicial') return false;
-
-              // Excluir APENAS provisões de DESPESA estouradas (saldo positivo indica estouro)
-              // Provisões de receita são naturalmente positivas e devem ser incluídas
-              if (t.is_provision && t.type === 'expense' && t.amount > 0) return false;
-              
-              // Date Range
-              if (dateRange.dateFrom && t.date < dateRange.dateFrom) return false;
-              if (dateRange.dateTo && t.date > dateRange.dateTo) return false;
-
-              // Type
-              if (type !== 'all') {
-                 if (t.type !== type) return false;
-                 // Excluir transferências dos totais de receita/despesa se type for income/expense
-                 if (t.to_account_id) return false; 
-              }
-
-              // Status
-              if (status !== 'all' && t.status !== status) return false;
-
-              // Account Type
-              if (accountType !== 'all') {
-                const acc = accountMap.get(t.account_id);
-                if (!acc || acc.type !== accountType) return false;
-              }
-
-              return true;
-            });
-          };
-
-          // Totais Gerais
-          const generalTransactions = filterTransactions('all', 'all', 'all');
-          const periodIncome = generalTransactions
-            .filter(t => t.type === 'income' && !t.to_account_id)
-            .reduce((sum, t) => sum + t.amount, 0);
-          const periodExpenses = generalTransactions
-            .filter(t => t.type === 'expense' && !t.to_account_id)
-            .reduce((sum, t) => sum + t.amount, 0);
-          
-          // Credit Card Expenses
-          const creditTransactions = filterTransactions('expense', 'all', 'credit');
-          const creditCardExpenses = creditTransactions.reduce((sum, t) => sum + t.amount, 0);
-
-          // Pending Expenses
-          const pendingExpTransactions = filterTransactions('expense', 'pending', 'all');
-          const pendingExpenses = pendingExpTransactions.reduce((sum, t) => sum + t.amount, 0);
-          const pendingExpensesCount = pendingExpTransactions.length;
-
-          // Pending Income
-          const pendingIncTransactions = filterTransactions('income', 'pending', 'all');
-          const pendingIncome = pendingIncTransactions.reduce((sum, t) => sum + t.amount, 0);
-          const pendingIncomeCount = pendingIncTransactions.length;
-
-          setAggregatedTotals({
-            periodIncome,
-            periodExpenses,
-            balance: periodIncome - periodExpenses,
-            creditCardExpenses,
-            pendingExpenses,
-            pendingIncome,
-            pendingExpensesCount,
-            pendingIncomeCount,
-          });
-
-          return;
-        }
-
-        // Lógica Online (RPC)
-        // Buscar totais gerais do período
-        console.log('🔍 Fetching aggregated totals with params:', {
-          userId: user.id,
-          dateRange,
-          isOnline
-        });
-
-        const { data: totalsData, error: totalsError } = await supabase.rpc('get_transactions_totals', {
-          p_user_id: user.id,
-          p_type: 'all',
-          p_status: 'all',
-          p_account_id: 'all',
-          p_category_id: 'all',
-          p_account_type: 'all',
-          p_is_fixed: null,
-          p_is_provision: null,
-          p_date_from: dateRange.dateFrom || undefined,
-          p_date_to: dateRange.dateTo || undefined,
-          p_search: null,
-          p_invoice_month: 'all',
-        } as any);
-
-        console.log('📊 Totals data result:', { totalsData, totalsError });
-
-        if (totalsError) {
-          logger.error("Error fetching aggregated totals:", totalsError);
-          return;
-        }
-
-        // Buscar despesas de cartão de crédito do período
-        const { data: creditData, error: creditError } = await supabase.rpc('get_transactions_totals', {
-          p_user_id: user.id,
-          p_type: 'expense',
-          p_status: 'all',
-          p_account_id: 'all',
-          p_category_id: 'all',
-          p_account_type: 'credit',
-          p_is_fixed: null,
-          p_is_provision: null,
-          p_date_from: dateRange.dateFrom || undefined,
-          p_date_to: dateRange.dateTo || undefined,
-          p_search: null,
-          p_invoice_month: 'all',
-        } as any);
-
-        console.log('💳 Credit expenses result:', { creditData, creditError });
-
-        if (creditError) {
-          logger.error("Error fetching credit card expenses:", creditError);
-        }
-
-        // Buscar despesas pendentes do período
-        const { data: pendingExpData, error: pendingExpError } = await supabase.rpc('get_transactions_totals', {
-          p_user_id: user.id,
-          p_type: 'expense',
-          p_status: 'pending',
-          p_account_id: 'all',
-          p_category_id: 'all',
-          p_account_type: 'all',
-          p_is_fixed: null,
-          p_is_provision: null,
-          p_date_from: dateRange.dateFrom || undefined,
-          p_date_to: dateRange.dateTo || undefined,
-          p_search: null,
-          p_invoice_month: 'all',
-        } as any);
-
-        console.log('⏳ Pending expenses result:', { pendingExpData, pendingExpError });
-
-        if (pendingExpError) {
-          logger.error("Error fetching pending expenses:", pendingExpError);
-        }
-
-        // Buscar receitas pendentes do período
-        const { data: pendingIncData, error: pendingIncError } = await supabase.rpc('get_transactions_totals', {
-          p_user_id: user.id,
-          p_type: 'income',
-          p_status: 'pending',
-          p_account_id: 'all',
-          p_category_id: 'all',
-          p_account_type: 'all',
-          p_is_fixed: null,
-          p_is_provision: null,
-          p_date_from: dateRange.dateFrom || undefined,
-          p_date_to: dateRange.dateTo || undefined,
-          p_search: null,
-          p_invoice_month: 'all',
-        } as any);
-
-        console.log('💰 Pending income result:', { pendingIncData, pendingIncError });
-
-        if (pendingIncError) {
-          logger.error("Error fetching pending income:", pendingIncError);
-        }
-
-        // Contar transações pendentes (despesas)
-        // Permitir despesas vinculadas (transferências com to_account_id)
-        // Excluir apenas renda espelho de transferências
-        const { count: pendingExpCount, error: pendingExpCountError } = await supabase
-          .from('transactions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('type', 'expense')
-          .eq('status', 'pending')
-          // Filtro: tem to_account_id (é transferência) OU não tem linked_transaction_id
-          .or('to_account_id.not.is.null,linked_transaction_id.is.null')
-          // Excluir apenas o PAI das transações fixas (mantém as filhas)
-          .or('parent_transaction_id.not.is.null,is_fixed.neq.true,is_fixed.is.null')
-          // Excluir transações de Saldo Inicial
-          .neq('description', 'Saldo Inicial')
-          .gte('date', dateRange.dateFrom || '1900-01-01')
-          .lte('date', dateRange.dateTo || '2100-12-31');
-
-        if (pendingExpCountError) {
-          logger.error("Error counting pending expenses:", pendingExpCountError);
-        }
-
-        // Contar transações pendentes (receitas)
-        // Excluir APENAS receitas espelho de transferências (income com linked_transaction_id)
-        const { count: pendingIncCount, error: pendingIncCountError } = await supabase
-          .from('transactions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('type', 'income')
-          .eq('status', 'pending')
-          .is('linked_transaction_id', null)
-          // Excluir apenas o PAI das transações fixas (mantém as filhas)
-          .or('parent_transaction_id.not.is.null,is_fixed.neq.true,is_fixed.is.null')
-          // Excluir transações de Saldo Inicial
-          .neq('description', 'Saldo Inicial')
-          .gte('date', dateRange.dateFrom || '1900-01-01')
-          .lte('date', dateRange.dateTo || '2100-12-31');
-
-        if (pendingIncCountError) {
-          logger.error("Error counting pending income:", pendingIncCountError);
-        }
-        
-        setAggregatedTotals({
-          periodIncome: totalsData?.[0]?.total_income || 0,
-          periodExpenses: totalsData?.[0]?.total_expenses || 0,
-          balance: totalsData?.[0]?.balance || 0,
-          creditCardExpenses: creditData?.[0]?.total_expenses || 0,
-          pendingExpenses: pendingExpData?.[0]?.total_expenses || 0,
-          pendingIncome: pendingIncData?.[0]?.total_income || 0,
-          pendingExpensesCount: pendingExpCount || 0,
-          pendingIncomeCount: pendingIncCount || 0,
-        });
-
-        console.log('✅ Final aggregated totals:', {
-          periodIncome: totalsData?.[0]?.total_income || 0,
-          periodExpenses: totalsData?.[0]?.total_expenses || 0,
-          balance: totalsData?.[0]?.balance || 0,
-          creditCardExpenses: creditData?.[0]?.total_expenses || 0,
-          pendingExpenses: pendingExpData?.[0]?.total_expenses || 0,
-          pendingIncome: pendingIncData?.[0]?.total_income || 0,
-          pendingExpensesCount: pendingExpCount || 0,
-          pendingIncomeCount: pendingIncCount || 0,
-        });
-      } catch (error) {
-        logger.error("Error fetching aggregated totals:", error);
-        // Fallback: usar dados mock para desenvolvimento
-        console.warn('Using mock data for dashboard calculations');
-        setAggregatedTotals({
-          periodIncome: 5000,
-          periodExpenses: 3200,
-          balance: 1800,
-          creditCardExpenses: 1200,
-          pendingExpenses: 800,
-          pendingIncome: 200,
-          pendingExpensesCount: 3,
-          pendingIncomeCount: 1,
-        });
-      }
-    };
-
-    fetchAggregatedTotals();
-  }, [dateRange, isOnline]); // Adicionado isOnline como dependência
+    // ✅ Usar cálculo em memória (bypassa RPC completamente)
+    // Isso é mais confiável e responde imediatamente às mudanças
+    const result = calculateTotalsFromTransactions();
+    setAggregatedTotals(result);
+    
+    console.log('✅ Dashboard totals (from memory):', result);
+  }, [calculateTotalsFromTransactions]);
 
 
   const getPeriodLabel = () => {

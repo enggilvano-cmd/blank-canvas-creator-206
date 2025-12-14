@@ -28,18 +28,40 @@ class OfflineSyncManager {
   private circuitBreakerFailures = 0;
   private circuitBreakerOpenUntil = 0;
   private syncLockName = 'offline-sync-lock';
+  
+  // ✅ BUG FIX #2: Derived from lockPromise - NOT independent boolean
+  // This prevents race conditions by checking if a lock promise exists
+  private get isSyncing(): boolean {
+    return this.lockPromise !== null;
+  }
+  
+  // ✅ BUG FIX #2: Derived sync promise for status checking
+  private get syncPromise(): Promise<void> | null {
+    return this.lockPromise;
+  }
 
   // ✅ BUG FIX #2: Acquire atomic lock (works across tabs + threads)
   private async acquireSyncLock(): Promise<() => void> {
-    // Se houver lock anterior, aguardar
+    // Se houver lock anterior, aguardar (com timeout para evitar deadlock)
     if (this.lockPromise) {
       logger.debug('Waiting for previous sync lock...');
-      await this.lockPromise;
+      try {
+        // Timeout de 30 segundos para aguardar lock anterior
+        await Promise.race([
+          this.lockPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout waiting for previous lock')), 30000)
+          )
+        ]);
+      } catch (error) {
+        logger.warn('Error waiting for previous lock:', error);
+        // Continue anyway - may be a stale lock
+      }
     }
 
-    // Criar novo lock
+    // Criar novo lock com resolver garantido
     let resolver: (() => void) | undefined;
-    this.lockPromise = new Promise(resolve => {
+    const lockPromise = new Promise<void>(resolve => {
       resolver = resolve;
     });
 
@@ -47,15 +69,24 @@ class OfflineSyncManager {
       throw new Error('Lock resolver not initialized');
     }
 
-    logger.debug('Acquired sync lock');
+    this.lockPromise = lockPromise;
+    this.lockResolver = resolver;
     
-    // Retornar função para liberar lock
-    return () => {
-      resolver?.();
-      this.lockPromise = null;
-      this.lockResolver = null;
-      logger.debug('Released sync lock');
+    logger.debug('✅ Acquired sync lock');
+    
+    // Retornar função para liberar lock (idempotent - pode ser chamada múltiplas vezes)
+    const releaseLock = () => {
+      if (this.lockPromise === lockPromise) {
+        resolver?.();
+        this.lockPromise = null;
+        this.lockResolver = null;
+        logger.debug('🔓 Released sync lock');
+      } else {
+        logger.debug('Lock already released or superceded');
+      }
     };
+    
+    return releaseLock;
   }
 
   async syncAll(): Promise<void> {
@@ -305,6 +336,9 @@ class OfflineSyncManager {
       // ✅ BUG FIX #12: Use UTC for consistent server sync
       const dateFrom = getMonthsAgoUTC(SYNC_MONTHS);
 
+      // ✅ BUG FIX #3: Timeout para cada query (30s por padrão)
+      const QUERY_TIMEOUT = 30000;
+
       // Transactions - Fetch all with pagination to avoid data loss
       let allTransactions: Transaction[] = [];
       let page = 0;
@@ -312,13 +346,17 @@ class OfflineSyncManager {
       let hasMore = true;
 
       while (hasMore) {
-        const { data: pageData, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('date', dateFrom)
-          .order('date', { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+        const { data: pageData, error } = await withTimeout(
+          supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user.id)
+            .gte('date', dateFrom)
+            .order('date', { ascending: false })
+            .range(page * pageSize, (page + 1) * pageSize - 1),
+          QUERY_TIMEOUT,
+          `Transactions page ${page} query timed out after ${QUERY_TIMEOUT / 1000}s`
+        );
 
         if (error) throw error;
 
@@ -343,12 +381,16 @@ class OfflineSyncManager {
       }
 
       // Fixed Transactions (Sync separado para garantir que todas sejam baixadas, independente da data)
-      const { data: fixedTransactions } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_fixed', true)
-        .is('parent_transaction_id', null);
+      const { data: fixedTransactions } = await withTimeout(
+        supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_fixed', true)
+          .is('parent_transaction_id', null),
+        QUERY_TIMEOUT,
+        `Fixed transactions query timed out after ${QUERY_TIMEOUT / 1000}s`
+      );
 
       if (fixedTransactions) {
         // Salvar transações fixas no banco local e remover as que foram excluídas
@@ -356,10 +398,14 @@ class OfflineSyncManager {
       }
 
       // Accounts
-      const { data: accounts } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id);
+      const { data: accounts } = await withTimeout(
+        supabase
+          .from('accounts')
+          .select('*')
+          .eq('user_id', user.id),
+        QUERY_TIMEOUT,
+        `Accounts query timed out after ${QUERY_TIMEOUT / 1000}s`
+      );
 
       if (accounts) {
         // Conversão de tipos se necessário (limit_amount vs limit)
@@ -371,10 +417,14 @@ class OfflineSyncManager {
       }
 
       // Categories
-      const { data: categories } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id);
+      const { data: categories } = await withTimeout(
+        supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', user.id),
+        QUERY_TIMEOUT,
+        `Categories query timed out after ${QUERY_TIMEOUT / 1000}s`
+      );
 
       if (categories) {
         await offlineDatabase.syncCategories(categories as Category[], user.id);
@@ -604,11 +654,18 @@ class OfflineSyncManager {
        }
     }
 
+    // ✅ BUG FIX #3: Timeout para RPC calls (30s por operação)
+    const OPERATION_TIMEOUT = 30000;
+
     switch (operation.type) {
       case 'transaction': {
         const body = { transaction: payload };
         logger.info('🔄 [SYNC] Payload:', JSON.stringify(body, null, 2));
-        const response = await supabase.functions.invoke('atomic-transaction', { body });
+        const response = await withTimeout(
+          supabase.functions.invoke('atomic-transaction', { body }),
+          OPERATION_TIMEOUT,
+          'Transaction function invocation timed out after 30s'
+        );
         logger.info('🔄 [SYNC] Resposta:', JSON.stringify({ data: response.data, error: response.error }, null, 2));
         
         if (response.error) {
@@ -635,7 +692,11 @@ class OfflineSyncManager {
              logger.warn('Skipping edit for unresolved temporary ID', payload);
              return; 
         }
-        await supabase.functions.invoke('atomic-edit-transaction', { body: payload });
+        await withTimeout(
+          supabase.functions.invoke('atomic-edit-transaction', { body: payload }),
+          OPERATION_TIMEOUT,
+          'Edit transaction function invocation timed out after 30s'
+        );
         break;
 
       case 'delete':
@@ -643,20 +704,32 @@ class OfflineSyncManager {
             // Deletar algo que nem existe no servidor = sucesso imediato.
             return;
         }
-        await supabase.rpc('atomic_delete_transaction', {
-          p_user_id: user!.id,
-          p_transaction_id: payload.p_transaction_id || payload.id // Handle both naming conventions
-        });
+        await withTimeout(
+          supabase.rpc('atomic_delete_transaction', {
+            p_user_id: user!.id,
+            p_transaction_id: payload.p_transaction_id || payload.id // Handle both naming conventions
+          }),
+          OPERATION_TIMEOUT,
+          'Delete transaction RPC timed out after 30s'
+        );
         break;
 
       case 'transfer':
         if (payload.origin_transaction_id && isTempId(payload.origin_transaction_id)) delete payload.origin_transaction_id;
         if (payload.destination_transaction_id && isTempId(payload.destination_transaction_id)) delete payload.destination_transaction_id;
-        await supabase.functions.invoke('atomic-transfer', { body: { transfer: payload } });
+        await withTimeout(
+          supabase.functions.invoke('atomic-transfer', { body: { transfer: payload } }),
+          OPERATION_TIMEOUT,
+          'Transfer function invocation timed out after 30s'
+        );
         break;
 
       case 'add_account': {
-        const { data, error } = await supabase.from('accounts').insert({ ...payload, user_id: user!.id }).select().single();
+        const { data, error } = await withTimeout(
+          supabase.from('accounts').insert({ ...payload, user_id: user!.id }).select().single(),
+          OPERATION_TIMEOUT,
+          'Add account query timed out after 30s'
+        );
         if (error) throw error;
         
         if (originalTempId && data?.id) {
@@ -667,16 +740,28 @@ class OfflineSyncManager {
       
       case 'edit_account':
         if (isTempId(payload.account_id)) return;
-        await supabase.from('accounts').update(payload.updates).eq('id', payload.account_id);
+        await withTimeout(
+          supabase.from('accounts').update(payload.updates).eq('id', payload.account_id),
+          OPERATION_TIMEOUT,
+          'Edit account query timed out after 30s'
+        );
         break;
 
       case 'delete_account':
         if (isTempId(payload.account_id)) return;
-        await supabase.from('accounts').delete().eq('id', payload.account_id);
+        await withTimeout(
+          supabase.from('accounts').delete().eq('id', payload.account_id),
+          OPERATION_TIMEOUT,
+          'Delete account query timed out after 30s'
+        );
         break;
 
       case 'add_category': {
-        const { data, error } = await supabase.from('categories').insert({ ...payload, user_id: user!.id }).select().single();
+        const { data, error } = await withTimeout(
+          supabase.from('categories').insert({ ...payload, user_id: user!.id }).select().single(),
+          OPERATION_TIMEOUT,
+          'Add category query timed out after 30s'
+        );
         if (error) throw error;
         
         if (originalTempId && data?.id) {
@@ -687,12 +772,20 @@ class OfflineSyncManager {
 
       case 'edit_category':
         if (isTempId(payload.category_id)) return;
-        await supabase.from('categories').update(payload.updates).eq('id', payload.category_id);
+        await withTimeout(
+          supabase.from('categories').update(payload.updates).eq('id', payload.category_id),
+          OPERATION_TIMEOUT,
+          'Edit category query timed out after 30s'
+        );
         break;
       
       case 'delete_category':
         if (isTempId(payload.category_id)) return;
-        await supabase.from('categories').delete().eq('id', payload.category_id);
+        await withTimeout(
+          supabase.from('categories').delete().eq('id', payload.category_id),
+          OPERATION_TIMEOUT,
+          'Delete category query timed out after 30s'
+        );
         break;
 
       case 'logout':
@@ -701,12 +794,20 @@ class OfflineSyncManager {
         break;
 
       case 'credit_payment':
-         await supabase.functions.invoke('atomic-pay-bill', { body: payload });
+         await withTimeout(
+           supabase.functions.invoke('atomic-pay-bill', { body: payload }),
+           OPERATION_TIMEOUT,
+           'Credit payment function invocation timed out after 30s'
+         );
          break;
          
       case 'add_fixed_transaction':
          if (isTempId(payload.id)) delete payload.id;
-         await supabase.functions.invoke('atomic-create-fixed', { body: payload });
+         await withTimeout(
+           supabase.functions.invoke('atomic-create-fixed', { body: payload }),
+           OPERATION_TIMEOUT,
+           'Add fixed transaction function invocation timed out after 30s'
+         );
          break;
 
       case 'add_installments': {
@@ -731,18 +832,22 @@ class OfflineSyncManager {
             continue;
           }
           
-          const { data: rpcData, error } = await supabase.rpc('atomic_create_transaction', {
-            p_user_id: user!.id,
-            p_description: transaction.description as string,
-            p_amount: transaction.amount as number,
-            p_date: transaction.date as string,
-            p_type: transaction.type as 'income' | 'expense',
-            p_category_id: transaction.category_id as string | null,
-            p_account_id: transaction.account_id as string,
-            p_status: transaction.status as 'pending' | 'completed',
-            p_invoice_month: transaction.invoice_month ?? undefined,
-            p_invoice_month_overridden: (transaction as any).invoice_month_overridden ?? false,
-          });
+          const { data: rpcData, error } = await withTimeout(
+            supabase.rpc('atomic_create_transaction', {
+              p_user_id: user!.id,
+              p_description: transaction.description as string,
+              p_amount: transaction.amount as number,
+              p_date: transaction.date as string,
+              p_type: transaction.type as 'income' | 'expense',
+              p_category_id: transaction.category_id as string | null,
+              p_account_id: transaction.account_id as string,
+              p_status: transaction.status as 'pending' | 'completed',
+              p_invoice_month: transaction.invoice_month ?? undefined,
+              p_invoice_month_overridden: (transaction as any).invoice_month_overridden ?? false,
+            }),
+            OPERATION_TIMEOUT,
+            `Add installment ${i} RPC timed out after 30s`
+          );
 
           if (error) throw error;
 
@@ -775,14 +880,18 @@ class OfflineSyncManager {
 
         const parentId = createdIds[0];
         const updatePromises = createdIds.map((id, index) =>
-          supabase
-            .from('transactions')
-            .update({
-              installments: total_installments,
-              current_installment: index + 1,
-              parent_transaction_id: parentId,
-            })
-            .eq('id', id)
+          withTimeout(
+            supabase
+              .from('transactions')
+              .update({
+                installments: total_installments,
+                current_installment: index + 1,
+                parent_transaction_id: parentId,
+              })
+              .eq('id', id),
+            OPERATION_TIMEOUT,
+            `Update installment metadata ${index} timed out after 30s`
+          )
         );
 
         const updateResults = await Promise.all(updatePromises);
@@ -804,9 +913,13 @@ class OfflineSyncManager {
         if (replace_ids.length > 0) {
           for (const txId of replace_ids) {
             try {
-              await supabase.functions.invoke('atomic-delete-transaction', {
-                body: { transaction_id: txId, scope: 'current' }
-              });
+              await withTimeout(
+                supabase.functions.invoke('atomic-delete-transaction', {
+                  body: { transaction_id: txId, scope: 'current' }
+                }),
+                OPERATION_TIMEOUT,
+                `Delete replaced transaction ${txId} timed out after 30s`
+              );
             } catch (e) {
               logger.warn(`Failed to delete replaced transaction ${txId} during import sync`, e);
             }
@@ -832,19 +945,23 @@ class OfflineSyncManager {
                continue; 
             }
 
-            const { data: rpcData, error } = await supabase.functions.invoke('atomic-transaction', {
-              body: {
-                transaction: {
-                  description: transaction.description,
-                  amount: transaction.amount,
-                  date: transaction.date,
-                  type: transaction.type,
-                  category_id: category_id,
-                  account_id: transaction.account_id,
-                  status: transaction.status || 'completed',
+            const { data: rpcData, error } = await withTimeout(
+              supabase.functions.invoke('atomic-transaction', {
+                body: {
+                  transaction: {
+                    description: transaction.description,
+                    amount: transaction.amount,
+                    date: transaction.date,
+                    type: transaction.type,
+                    category_id: category_id,
+                    account_id: transaction.account_id,
+                    status: transaction.status || 'completed',
+                  }
                 }
-              }
-            });
+              }),
+              OPERATION_TIMEOUT,
+              `Import transaction invocation timed out after 30s`
+            );
 
             if (error) throw error;
             
@@ -859,7 +976,11 @@ class OfflineSyncManager {
                  updates.invoice_month = transaction.invoice_month;
                  updates.invoice_month_overridden = true;
                }
-               await supabase.from('transactions').update(updates).eq('id', transactionId);
+               await withTimeout(
+                 supabase.from('transactions').update(updates).eq('id', transactionId),
+                 OPERATION_TIMEOUT,
+                 `Import metadata update timed out after 30s`
+               );
             }
             successCount++;
           } catch (err: unknown) {
@@ -891,12 +1012,16 @@ class OfflineSyncManager {
         let successCount = 0;
         for (const category of categories) {
           try {
-            const { error } = await supabase
-              .from('categories')
-              .insert({
-                ...category,
-                user_id: user!.id,
-              });
+            const { error } = await withTimeout(
+              supabase
+                .from('categories')
+                .insert({
+                  ...category,
+                  user_id: user!.id,
+                }),
+              OPERATION_TIMEOUT,
+              `Import category "${category.name}" timed out after 30s`
+            );
 
             if (error) throw error;
             successCount++;
@@ -925,14 +1050,18 @@ class OfflineSyncManager {
 
         for (const account of accounts) {
           try {
-            const { data, error } = await supabase
-              .from('accounts')
-              .insert({
-                ...account,
-                user_id: user!.id,
-              })
-              .select()
-              .single();
+            const { data, error } = await withTimeout(
+              supabase
+                .from('accounts')
+                .insert({
+                  ...account,
+                  user_id: user!.id,
+                })
+                .select()
+                .single(),
+              OPERATION_TIMEOUT,
+              `Import account "${account.name}" timed out after 30s`
+            );
 
             if (error) throw error;
             if (data) createdAccounts.push(data as unknown as Account);
@@ -963,9 +1092,13 @@ class OfflineSyncManager {
                 });
             
             if (initialBalanceTransactions.length > 0) {
-                const { error: txError } = await supabase
+                const { error: txError } = await withTimeout(
+                  supabase
                     .from('transactions')
-                    .insert(initialBalanceTransactions);
+                    .insert(initialBalanceTransactions),
+                  OPERATION_TIMEOUT,
+                  'Create initial balance transactions timed out after 30s'
+                );
                 
                 if (txError) {
                     logger.error('Failed to create initial balance transactions for imported accounts in sync', txError);
@@ -982,9 +1115,21 @@ class OfflineSyncManager {
       }
 
       case 'clear_all_data':
-        await supabase.from("transactions").delete().eq("user_id", user!.id);
-        await supabase.from("accounts").delete().eq("user_id", user!.id);
-        await supabase.from("categories").delete().eq("user_id", user!.id);
+        await withTimeout(
+          supabase.from("transactions").delete().eq("user_id", user!.id),
+          OPERATION_TIMEOUT,
+          'Clear transactions timed out after 30s'
+        );
+        await withTimeout(
+          supabase.from("accounts").delete().eq("user_id", user!.id),
+          OPERATION_TIMEOUT,
+          'Clear accounts timed out after 30s'
+        );
+        await withTimeout(
+          supabase.from("categories").delete().eq("user_id", user!.id),
+          OPERATION_TIMEOUT,
+          'Clear categories timed out after 30s'
+        );
         break;
 
       default:
@@ -1007,9 +1152,9 @@ class OfflineSyncManager {
     // Clear all operation locks
     this.operationLocks.clear();
     
-    // Reset sync state
-    this.isSyncing = false;
-    this.syncPromise = null;
+    // Reset sync lock (isSyncing and syncPromise are derived from this)
+    this.lockPromise = null;
+    this.lockResolver = null;
 
     logger.info('Offline sync manager cleanup completed');
   }

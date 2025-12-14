@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { TransactionInput, TransactionUpdate, Account, Category, Transaction } from '@/types';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
@@ -13,7 +13,8 @@ import { generateUUID } from '@/lib/utils';
 export function useTransactionMutations() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions, helper } = useQueryInvalidation();
+  const queryClient = helper.queryClient;
 
   const handleAddTransaction = useCallback(async (transactionData: TransactionInput) => {
     if (!user) return;
@@ -143,8 +144,7 @@ export function useTransactionMutations() {
       }
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateTransactions();
     } catch (error: unknown) {
       // Rollback
       if (previousAccounts) {
@@ -309,8 +309,7 @@ export function useTransactionMutations() {
       if (error) throw error;
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateTransactions();
     } catch (error: unknown) {
       // Rollback
       if (previousAccounts) {

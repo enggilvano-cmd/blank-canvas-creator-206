@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { useAccounts } from '../queries/useAccounts';
 import { Account, Transaction } from '@/types';
 import { logger } from '@/lib/logger';
@@ -12,7 +12,7 @@ import { getErrorMessage } from '@/lib/errorUtils';
 export function useCreditPaymentMutations() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
   const { accounts } = useAccounts();
 
   const handleCreditPayment = useCallback(async ({
@@ -55,8 +55,7 @@ export function useCreditPaymentMutations() {
 
       logger.info('🔄 Refazendo fetch após pagamento...');
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateTransactions();
 
       return {
         creditAccount: { ...creditAccount, balance: data.credit_balance?.[0]?.new_balance || creditAccount.balance },
@@ -72,7 +71,7 @@ export function useCreditPaymentMutations() {
       });
       throw error;
     }
-  }, [user, accounts, queryClient, toast]);
+  }, [user, accounts, invalidateTransactions, toast]);
 
   const handleReversePayment = useCallback(async (paymentsToReverse: Transaction[]) => {
     if (!user || !paymentsToReverse || paymentsToReverse.length === 0) {
@@ -99,8 +98,7 @@ export function useCreditPaymentMutations() {
 
       logger.info('🔄 Refazendo fetch após estorno...');
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateTransactions();
 
       toast({ title: 'Pagamento estornado com sucesso!' });
     } catch (error: unknown) {
@@ -112,7 +110,7 @@ export function useCreditPaymentMutations() {
         variant: 'destructive',
       });
     }
-  }, [user, queryClient, toast]);
+  }, [user, invalidateTransactions, toast]);
 
   return {
     handleCreditPayment,

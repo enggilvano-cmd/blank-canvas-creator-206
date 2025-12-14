@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { Layout } from "@/components/Layout";
 import { Dashboard } from "@/components/Dashboard";
+import { DebugDashboard } from "@/components/DebugDashboard";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { TransactionHeader } from "@/components/transactions/TransactionHeader";
@@ -545,6 +546,12 @@ const PlaniFlowApp = () => {
 
   const renderCurrentPage = () => {
     switch (currentPage) {
+      case "debug":
+        return (
+          <RouteErrorBoundary routeName="Debug Dashboard">
+            <DebugDashboard />
+          </RouteErrorBoundary>
+        );
       case "accounts":
         return (
           <RouteErrorBoundary routeName="Accounts Page">

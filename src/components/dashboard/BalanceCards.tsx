@@ -45,6 +45,16 @@ export function BalanceCards({
   onNavigateToAccounts,
   onNavigateToTransactions,
 }: BalanceCardsProps) {
+  console.log('🎨 BalanceCards renderizado com valores:', {
+    totalBalance,
+    periodIncome,
+    periodExpenses,
+    creditAvailable,
+    creditLimitUsed,
+    creditCardExpenses,
+    pendingIncome,
+    pendingExpenses,
+  });
   return (
     <>
       <Card

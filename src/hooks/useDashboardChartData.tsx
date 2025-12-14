@@ -17,8 +17,18 @@ export function useDashboardChartData(
   customEndDate: Date | undefined
 ) {
   return useMemo(() => {
-    const isTransferLike = (t: Transaction) =>
-      t.type === 'transfer' || Boolean((t as any).to_account_id) || Boolean((t as any).linked_transaction_id);
+    const isTransferLike = (t: Transaction) => {
+      // ✅ USAR A MESMA LÓGICA DOS CARDS:
+      // Excluir apenas:
+      // 1. Tipo 'transfer' explícito (legado)
+      // 2. Transferências pai (to_account_id)
+      // 3. APENAS receitas espelho de transferências (income + linked_transaction_id)
+      // ❌ NÃO excluir despesas com linked_transaction_id (elas são reais)
+      if (t.type === 'transfer') return true;
+      if ((t as any).to_account_id) return true;
+      if (t.type === 'income' && (t as any).linked_transaction_id) return true;
+      return false;
+    };
 
     // Provisões estouradas: apenas despesas com saldo positivo (indicam estouro)
     // Provisões de receita são naturalmente positivas e devem ser incluídas
@@ -154,13 +164,19 @@ export function useDashboardChartData(
       return sortedEntries.map(([dateKey, data]) => {
         saldoAcumulado = saldoAcumulado + data.income - data.expenses;
         const [year, month, day] = dateKey.split('-').map((num) => parseInt(num, 10));
+        
+        // ✅ Garantir que valores são sempre números válidos (nunca null/undefined)
+        const receitas = typeof data.income === 'number' ? data.income : 0;
+        const despesas = typeof data.expenses === 'number' ? data.expenses : 0;
+        const saldo = typeof saldoAcumulado === 'number' ? saldoAcumulado : 0;
+
         return {
           month: format(new Date(year, month - 1, day), 'dd/MM', {
             locale: ptBR,
           }),
-          receitas: data.income,
-          despesas: data.expenses,
-          saldo: saldoAcumulado,
+          receitas,
+          despesas,
+          saldo,
         };
       });
     } else {
@@ -211,14 +227,19 @@ export function useDashboardChartData(
 
         const [year, month] = monthKey.split('-').map((num) => parseInt(num, 10));
 
+        // ✅ Garantir que valores são sempre números válidos (nunca null/undefined)
+        const receitas = typeof data.income === 'number' ? data.income : 0;
+        const despesas = typeof data.expenses === 'number' ? data.expenses : 0;
+        const saldo = typeof saldoAcumulado === 'number' ? saldoAcumulado : 0;
+
         return {
           month: format(new Date(year, month - 1, 1), 'MMM', { locale: ptBR }),
-          receitas: data.income,
-          despesas: data.expenses,
-          saldo: saldoAcumulado,
-          income: data.income,
-          expenses: data.expenses,
-          balance: saldoAcumulado,
+          receitas,
+          despesas,
+          saldo,
+          income: receitas,
+          expenses: despesas,
+          balance: saldo,
         };
       });
     }

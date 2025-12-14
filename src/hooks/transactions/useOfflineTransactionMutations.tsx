@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTransactionMutations } from './useTransactionMutations';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 import { useToast } from '@/hooks/use-toast';
@@ -10,14 +10,14 @@ import { EditScope } from '@/components/TransactionScopeDialog';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/types/errors';
-import { queryKeys } from '@/lib/queryClient';
+import { notifyFixedTransactionsChange } from '@/hooks/useFixedTransactions';
 
 export function useOfflineTransactionMutations() {
   const isOnline = useOnlineStatus();
   const onlineMutations = useTransactionMutations();
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
 
   const handleAddTransaction = useCallback(async (transactionData: TransactionInput) => {
     const processOfflineAdd = async () => {
@@ -104,8 +104,7 @@ export function useOfflineTransactionMutations() {
         }
 
         // ✅ Invalidar queries para garantir consistência eventual
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-        queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+        await invalidateTransactions();
       } catch (error) {
         logger.error('Failed to queue transaction:', error);
         toast({
@@ -272,10 +271,9 @@ export function useOfflineTransactionMutations() {
       });
 
       // ✅ Invalidar queries para refetch imediato
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateTransactions();
     },
-    [isOnline, onlineMutations, toast, user, queryClient]
+    [isOnline, onlineMutations, toast, user, invalidateTransactions]
   );
 
   const handleDeleteTransaction = useCallback(
@@ -290,8 +288,11 @@ export function useOfflineTransactionMutations() {
                 description: 'O saldo inicial não pode ser excluído. Edite a conta para alterar o saldo inicial.',
                 variant: 'destructive'
              });
-             return;
+             return false;
           }
+
+          // Verificar se é uma transação fixa ANTES de deletar
+          const isFixedTransaction = tx?.is_fixed || false;
 
           await offlineDatabase.deleteTransaction(transactionId);
 
@@ -319,6 +320,7 @@ export function useOfflineTransactionMutations() {
             });
           });
 
+          return isFixedTransaction;
         } catch (error) {
           logger.error('Failed to queue delete:', error);
           toast({
@@ -326,6 +328,7 @@ export function useOfflineTransactionMutations() {
             description: 'Não foi possível salvar a exclusão offline',
             variant: 'destructive',
           });
+          return false;
         }
       };
 
@@ -343,12 +346,16 @@ export function useOfflineTransactionMutations() {
             message.toLowerCase().includes('connection refused')
           ) {
             logger.warn('Network/Edge Function error ao excluir transação, usando modo offline.', error);
-            await processOfflineDelete();
+            const isFixed = await processOfflineDelete();
             toast({
               title: 'Modo Offline',
               description: 'Exclusão será sincronizada quando voltar online.',
               duration: 3000,
             });
+            // Notificar hook de transações fixas se necessário
+            if (isFixed) {
+              notifyFixedTransactionsChange();
+            }
             return;
           }
           throw error;
@@ -356,7 +363,7 @@ export function useOfflineTransactionMutations() {
       }
 
       // Se não está online, usar modo offline
-      await processOfflineDelete();
+      const isFixed = await processOfflineDelete();
       toast({
         title: 'Modo Offline',
         description: 'Exclusão será sincronizada quando voltar online.',
@@ -364,10 +371,13 @@ export function useOfflineTransactionMutations() {
       });
 
       // ✅ Invalidar queries para refetch imediato
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateTransactions();
+      // ✅ Notificar hook de transações fixas se necessário
+      if (isFixed) {
+        notifyFixedTransactionsChange();
+      }
     },
-    [isOnline, onlineMutations, toast, user, queryClient]
+    [isOnline, onlineMutations, toast, user, invalidateTransactions]
   );
 
   return {

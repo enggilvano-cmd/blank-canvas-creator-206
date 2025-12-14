@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { trackUserAction, setSentryContext } from "@/lib/sentry";
@@ -7,9 +6,9 @@ import { getTodayString, createDateFromString, calculateInvoiceMonthByDue, addMo
 import { Account, TransactionInput, InstallmentTransactionInput } from "@/types";
 import { addTransactionSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
-import { queryKeys } from "@/lib/queryClient";
 import { supabase } from "@/integrations/supabase/client";
 import { getErrorMessage } from "@/types/errors";
+import { useQueryInvalidation } from "@/hooks/useQueryInvalidation";
 
 import { useCategories } from "@/hooks/useCategories";
 
@@ -60,7 +59,7 @@ export function useAddTransactionForm({
   onSuccess,
   onClose,
 }: UseAddTransactionFormParams) {
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
   const { toast } = useToast();
   const { categories } = useCategories();
   const [formData, setFormData] = useState<FormData>({ ...initialFormState, type: (initialType || "") as "" | "income" | "expense" });
@@ -365,9 +364,8 @@ export function useAddTransactionForm({
 
     await onAddInstallmentTransactions(transactionsToCreate);
     
-    // Invalidar queries para atualizar Dashboard e listas
-    queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-    queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+    // ✅ P2-1 FIX: Usar hook centralizado para invalidação
+    await invalidateTransactions();
     onSuccess?.();
     
     toast({
@@ -417,8 +415,8 @@ export function useAddTransactionForm({
         description: `Transação fixa criada com ${result.created_count} ocorrências`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      // ✅ P2-1 FIX: Usar hook centralizado para invalidação
+      await invalidateTransactions();
       onSuccess?.();
       onClose();
     } catch (error: unknown) {
@@ -447,9 +445,8 @@ export function useAddTransactionForm({
 
     await onAddTransaction(transactionPayload);
 
-    // Invalidar queries para atualizar Dashboard e listas
-    queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-    queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+    // ✅ P2-1 FIX: Usar hook centralizado para invalidação
+    await invalidateTransactions();
     onSuccess?.();
 
     toast({

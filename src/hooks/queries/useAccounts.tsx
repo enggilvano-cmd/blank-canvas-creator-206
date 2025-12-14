@@ -1,19 +1,20 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { Account } from '@/types';
 import { logger } from '@/lib/logger';
-import { queryKeys } from '@/lib/queryClient';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 
 export function useAccounts() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const { invalidateAccounts, helper } = useQueryInvalidation();
+  const queryClient = helper.queryClient;
   const isOnline = useOnlineStatus();
 
   const query = useQuery({
-    queryKey: queryKeys.accounts,
+    queryKey: helper.queryKeys.accounts,
     queryFn: async () => {
       if (!user) return [];
       

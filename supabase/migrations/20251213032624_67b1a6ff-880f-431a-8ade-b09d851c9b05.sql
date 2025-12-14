@@ -35,8 +35,19 @@ BEGIN
   WHERE id = p_account_id AND user_id = p_user_id;
 
   IF v_account_type IS NULL THEN
-    RETURN QUERY SELECT false, NULL::UUID, 0, 'Account not found'::TEXT;
+    RETURN QUERY SELECT false, NULL::UUID, 0, 'Account not found or does not belong to user'::TEXT;
     RETURN;
+  END IF;
+
+  -- Validate category if provided (must belong to user)
+  IF p_category_id IS NOT NULL AND p_category_id != '' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM categories 
+      WHERE id = p_category_id::uuid AND user_id = p_user_id
+    ) THEN
+      RETURN QUERY SELECT false, NULL::UUID, 0, 'Category not found or does not belong to user'::TEXT;
+      RETURN;
+    END IF;
   END IF;
 
   -- Calculate signed amount based on type
@@ -61,7 +72,8 @@ BEGIN
     status,
     is_fixed,
     is_recurring,
-    recurrence_type
+    recurrence_type,
+    is_provision
   ) VALUES (
     p_user_id,
     p_description,
@@ -73,7 +85,8 @@ BEGIN
     'pending', -- Parent is always pending
     true,      -- is_fixed
     true,      -- is_recurring
-    'monthly'  -- recurrence_type
+    'monthly', -- recurrence_type
+    p_is_provision
   )
   RETURNING id INTO v_parent_id;
 
@@ -99,7 +112,8 @@ BEGIN
       is_fixed,
       is_recurring,
       recurrence_type,
-      parent_transaction_id
+      parent_transaction_id,
+      is_provision
     ) VALUES (
       p_user_id,
       p_description,
@@ -112,7 +126,8 @@ BEGIN
       false,
       false,
       NULL,
-      v_parent_id
+      v_parent_id,
+      p_is_provision
     )
     RETURNING id INTO v_child_id;
 

@@ -1,17 +1,16 @@
 import { useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { InstallmentTransactionInput } from '@/types';
 import { logger } from '@/lib/logger';
-import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/lib/errorUtils';
 
 export function useInstallmentMutations() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { invalidateTransactions } = useQueryInvalidation();
 
   const handleAddInstallmentTransactions = useCallback(async (transactionsData: InstallmentTransactionInput[]) => {
     if (!user) return;
@@ -129,8 +128,7 @@ export function useInstallmentMutations() {
       }
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      await invalidateTransactions();
     } catch (error: unknown) {
       logger.error('Error adding installment transactions:', error);
       const errorMessage = getErrorMessage(error);
@@ -141,7 +139,7 @@ export function useInstallmentMutations() {
       });
       throw error;
     }
-  }, [user, queryClient, toast]);
+  }, [user, invalidateTransactions, toast]);
 
   return {
     handleAddInstallmentTransactions,

@@ -182,8 +182,13 @@ export const addTransactionSchema = z.object({
   
   category_id: z
     .string()
-    .uuid({ message: "Categoria inválida" })
-    .min(1, { message: "Selecione uma categoria" }),
+    .refine((val) => val === "" || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val), { 
+      message: "Categoria inválida" 
+    })
+    .superRefine((val, ctx) => {
+      // Será validado por refine() abaixo no .superRefine() que verifica type
+      return true;
+    }),
   
   account_id: z
     .string()
@@ -218,6 +223,16 @@ export const addTransactionSchema = z.object({
   invoiceMonth: z.string().optional(),
   
   isFixed: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+  // ✅ P1-3 FIX: Validação condicional de categoria
+  // Categoria é obrigatória para income/expense, mas NÃO para transfer
+  if (data.type !== "transfer" && !data.category_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["category_id"],
+      message: "Selecione uma categoria"
+    });
+  }
 });
 
 export type AddTransactionFormData = z.infer<typeof addTransactionSchema>;

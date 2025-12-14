@@ -49,6 +49,20 @@ export function Dashboard({
   // Track performance do Dashboard
   useComponentPerformance('Dashboard', true);
 
+  // DEBUG: Log dos dados recebidos
+  console.log('📊 Dashboard recebeu:', {
+    accountsCount: accounts.length,
+    transactionsCount: transactions.length,
+    categoriesCount: categories.length,
+    fixedTransactionsCount: fixedTransactions.length,
+    accounts: accounts.map(a => ({ id: a.id, type: a.type, balance: a.balance })),
+    transactions: transactions.slice(0, 5).map(t => ({ id: t.id, type: t.type, amount: t.amount, date: t.date })),
+  });
+
+  // Usar um key derivado das transações para forçar re-render do hook
+  // Isso garante que useDashboardCalculations será re-executado quando há novas transações
+  const transactionsKey = useMemo(() => transactions.length.toString(), [transactions.length]);
+
   const {
     dateFilter,
     setDateFilter,
@@ -79,7 +93,9 @@ export function Dashboard({
     dateFilter,
     selectedMonth,
     customStartDate,
-    customEndDate
+    customEndDate,
+    transactionsKey,  // Passar key das transações para monitorar mudanças
+    transactions  // ✅ NOVO: Passar transações para cálculo em memória
   );
 
   // Calcular intervalo de datas para os cards de provisões

@@ -74,6 +74,18 @@ export function FinancialEvolutionChart({
     customEndDate
   );
 
+  // DEBUG: Log chart data para diagnosticar problema das barras desaparecidas
+  console.log('📈 FinancialEvolutionChart - chartData:', {
+    scale: chartScale,
+    dataLength: chartData.length,
+    sample: chartData.slice(0, 3).map(d => ({
+      month: d.month,
+      receitas: d.receitas,
+      despesas: d.despesas,
+      saldo: d.saldo,
+    })),
+    allZero: chartData.every(d => d.receitas === 0 && d.despesas === 0),
+  });
 
   // Memoize tooltip formatter to prevent re-renders
   const tooltipFormatter = useMemo(
@@ -260,30 +272,38 @@ export function FinancialEvolutionChart({
                   )}
 
                   <Bar
+                    key="receitas-bar"
                     dataKey="receitas"
-                    fill="hsl(var(--success))"
+                    fill="#10b981"
                     radius={[4, 4, 0, 0]}
                     name="Receitas"
+                    isAnimationActive={false}
+                    minPointSize={2}
+                    yAxisId="left"
                   />
 
                   <Bar
+                    key="despesas-bar"
                     dataKey="despesas"
-                    fill="hsl(var(--destructive))"
+                    fill="#ef4444"
                     radius={[4, 4, 0, 0]}
                     name="Despesas"
+                    isAnimationActive={false}
+                    minPointSize={2}
+                    yAxisId="left"
                   />
 
                   <Line
                     type="monotone"
                     dataKey="saldo"
-                    stroke="hsl(var(--primary))"
+                    stroke="#3b82f6"
                     strokeWidth={3}
                     dot={renderDot}
                     activeDot={{
                       r: 6,
                       strokeWidth: 2,
-                      fill: 'hsl(var(--primary))',
-                      stroke: 'hsl(var(--background))',
+                      fill: '#3b82f6',
+                      stroke: '#ffffff',
                     }}
                     connectNulls={false}
                     name="Saldo Acumulado"
