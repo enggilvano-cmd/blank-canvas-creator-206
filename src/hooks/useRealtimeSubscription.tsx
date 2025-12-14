@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { queryKeys } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { logger } from '@/lib/logger';
 import { globalResourceManager } from '@/lib/globalResourceManager';
 

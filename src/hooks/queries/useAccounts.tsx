@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { Account } from '@/types';
 import { logger } from '@/lib/logger';
+import { queryKeys } from '@/lib/queryClient';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 
@@ -91,9 +92,9 @@ export function useAccounts() {
       logger.error('Error updating account:', err);
     },
     onSettled: (_data, _error, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      invalidateAccounts();
       if (variables.balance !== undefined) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+        helper.invalidateMultiple([queryKeys.transactionsBase], { refetch: true });
       }
     },
   });
@@ -131,8 +132,7 @@ export function useAccounts() {
       logger.error('Error deleting account:', err);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+      helper.invalidateMultiple([queryKeys.accounts, queryKeys.transactionsBase], { refetch: true });
     },
   });
 
@@ -160,7 +160,7 @@ export function useAccounts() {
     },
     onSuccess: () => {
       // ✅ Invalidação imediata dispara refetch automático sem delay
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      invalidateAccounts();
     },
   });
 
