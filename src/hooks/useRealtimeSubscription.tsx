@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 import { globalResourceManager } from '@/lib/globalResourceManager';
 
 export function useRealtimeSubscription() {
-  const queryClient = useQueryClient();
+  const { invalidateTransactions, invalidateCategories, helper } = useQueryInvalidation();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -18,37 +18,33 @@ export function useRealtimeSubscription() {
     const timerIds: string[] = [];
     const listenerIds: string[] = [];
 
-    // Função auxiliar para invalidar transações de forma robusta
-    const invalidateTransactions = () => {
+    // Usa métodos do hook em vez de redefini-los
+    const invalidateTransactionsLocal = async () => {
       logger.info('Invalidating transactions queries...');
-      
-      // 1. Invalida usando a chave base (padrão)
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
-      
-      // 2. Invalida usando predicado para garantir que pegue todas as variações de filtros
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          Array.isArray(query.queryKey) && 
-          query.queryKey[0] === 'transactions'
-      });
-
-      // 3. Invalida especificamente o count
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          Array.isArray(query.queryKey) && 
-          query.queryKey[0] === 'transactions' &&
-          query.queryKey.includes('count')
-      });
+      try {
+        // Use hook method which includes proper invalidation strategy
+        await invalidateTransactions();
+      } catch (error) {
+        logger.error('Error invalidating transactions:', error);
+      }
     };
 
-    const invalidateAccounts = () => {
+    const invalidateAccountsLocal = async () => {
       logger.info('Invalidating accounts queries...');
-      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      try {
+        helper.invalidateMultiple([helper.queryKeys.accounts], { refetch: true });
+      } catch (error) {
+        logger.error('Error invalidating accounts:', error);
+      }
     };
 
-    const invalidateCategories = () => {
+    const invalidateCategoriesLocal = async () => {
       logger.info('Invalidating categories queries...');
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      try {
+        await invalidateCategories();
+      } catch (error) {
+        logger.error('Error invalidating categories:', error);
+      }
     };
 
     const channel = supabase
@@ -83,12 +79,12 @@ export function useRealtimeSubscription() {
         },
         (payload) => {
           logger.info('Realtime update received for accounts:', payload);
-          invalidateAccounts();
-          invalidateTransactions();
+          invalidateAccountsLocal();
+          invalidateTransactionsLocal();
           
           const timer2 = setTimeout(() => {
-            invalidateAccounts();
-            invalidateTransactions();
+            invalidateAccountsLocal();
+            invalidateTransactionsLocal();
           }, 500);
           const timer2Id = globalResourceManager.registerTimeout(timer2, 'Realtime accounts retry');
           timerIds.push(timer2Id);
@@ -103,8 +99,8 @@ export function useRealtimeSubscription() {
         },
         (payload) => {
           logger.info('Realtime update received for categories:', payload);
-          invalidateCategories();
-          invalidateTransactions();
+          invalidateCategoriesLocal();
+          invalidateTransactionsLocal();
         }
       )
       .on(
@@ -116,7 +112,7 @@ export function useRealtimeSubscription() {
         },
         (payload) => {
             logger.info('Realtime update received for fixed_transactions:', payload);
-            invalidateTransactions();
+            invalidateTransactionsLocal();
         }
       )
       .subscribe((status) => {
@@ -142,5 +138,5 @@ export function useRealtimeSubscription() {
       
       logger.info('Realtime subscription cleanup complete');
     };
-  }, [user, queryClient]);
+  }, [user, invalidateTransactions, invalidateCategories, helper]);
 }
