@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
+import { notifyFixedTransactionsChange } from '@/hooks/useFixedTransactions';
 import { TransactionInput, TransactionUpdate, Account, Category, Transaction } from '@/types';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
@@ -145,6 +146,10 @@ export function useTransactionMutations() {
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
       await invalidateTransactions();
+      
+      // ✅ CRÍTICO: Notificar mudança em transações fixas (provisões) para recálculo do dashboard
+      // Quando adiciona um lançamento, precisa atualizar os cálculos de provisões
+      notifyFixedTransactionsChange();
     } catch (error: unknown) {
       // Rollback
       if (previousAccounts) {
@@ -310,6 +315,11 @@ export function useTransactionMutations() {
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
       await invalidateTransactions();
+      
+      // ✅ CRÍTICO: Notificar mudança em transações fixas (provisões) para recálculo do dashboard
+      // Se editou um lançamento, os cálculos de provisões podem mudar
+      // Se editou uma provisão, ela mesma precisa refetchar
+      notifyFixedTransactionsChange();
     } catch (error: unknown) {
       // Rollback
       if (previousAccounts) {
@@ -442,6 +452,10 @@ export function useTransactionMutations() {
       // ✅ Invalidação imediata dispara refetch automático sem delay
       queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+      
+      // ✅ CRÍTICO: Notificar mudança em transações fixas (provisões) para recálculo do dashboard
+      // Quando deleta um lançamento, os cálculos de provisões mudam
+      notifyFixedTransactionsChange();
 
       toast({
         title: 'Sucesso',

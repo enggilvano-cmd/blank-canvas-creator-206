@@ -255,8 +255,9 @@ const PlaniFlowApp = () => {
     isLoading: loadingAllTransactions,
   } = useTransactions({
     pageSize: null, // Buscar todas para cálculos corretos
-    // Sem filtros aplicados
-    enabled: currentPage === 'dashboard' || currentPage === 'analytics' || currentPage === 'transactions' || currentPage === 'users' || currentPage === 'system-settings',
+    // ✅ CRÍTICO: Manter enabled=true SEMPRE para que refetch aconteça mesmo em outras páginas
+    // Se desabilitar, a query não faz refetch quando uma nova transação é adicionada
+    // enabled: currentPage === 'dashboard' || currentPage === 'analytics' || currentPage === 'transactions' || currentPage === 'users' || currentPage === 'system-settings',
   });
 
   const { categories, loading: loadingCategories } = useCategories();
@@ -864,14 +865,15 @@ const PlaniFlowApp = () => {
           onAddTransaction={handleAddTransaction}
           onAddInstallmentTransactions={handleAddInstallmentTransactions}
           onSuccess={() => {
-            // Invalidar e forçar refetch imediato de queries ativas
+            // ✅ Invalidar e forçar refetch COMPLETO (inclusive queries inativas)
+            // Isso garante que allTransactions (Dashboard) atualize mesmo quando não está visível
             queryClient.invalidateQueries({ 
               queryKey: queryKeys.transactionsBase,
-              refetchType: 'active'
+              refetchType: 'all'  // ← CRÍTICO: 'all' refetcha inclusive queries inativas
             });
             queryClient.invalidateQueries({ 
               queryKey: queryKeys.accounts,
-              refetchType: 'active'
+              refetchType: 'all'
             });
           }}
           accounts={accounts}

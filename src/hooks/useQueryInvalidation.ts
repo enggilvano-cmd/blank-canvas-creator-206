@@ -23,6 +23,11 @@ export function useQueryInvalidation() {
   /**
    * Invalida transações e contas (padrão mais comum)
    * Usado após criar/editar/deletar transações
+   * 
+   * ✅ Garante refetch de todas as variações de transações:
+   * - Transações paginadas (AddTransactionModal, EditTransactionModal, etc)
+   * - Transações sem paginação (Dashboard, Analytics)
+   * - Recalcular provisioned transactions nos cards
    */
   const invalidateTransactions = useCallback(
     async (options = {}) => {
@@ -31,6 +36,7 @@ export function useQueryInvalidation() {
         queryKeys.accounts,
       ], {
         refetch: true,
+        force: true, // ✅ Força refetch mesmo que não estejam stale
         ...options,
       });
     },

@@ -113,6 +113,11 @@ export function AddFixedTransactionModal({
       errors.date = "Data é obrigatória";
     }
 
+    // ✅ Validação: Categoria é obrigatória para provisões
+    if (formData.is_provision && !formData.category_id) {
+      errors.category_id = "Categoria é obrigatória para provisões";
+    }
+
     setValidationErrors(errors);
 
     if (Object.keys(errors).length > 0) {

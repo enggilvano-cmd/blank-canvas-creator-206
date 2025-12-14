@@ -7,7 +7,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { CurrencyInput } from "@/components/forms/CurrencyInput";
 
 import { ACCOUNT_TYPE_LABELS } from '@/types';
 import { MarkAsPaidModalProps } from '@/types/formProps';
@@ -29,19 +29,15 @@ export function MarkAsPaidModal({
   onConfirm,
 }: MarkAsPaidModalProps) {
   const [date, setDate] = useState<Date>(new Date());
-  const [amount, setAmount] = useState<string>("");
+  const [amount, setAmount] = useState<number>(0); // Em centavos
   const [accountId, setAccountId] = useState<string>("");
 
   // Quando o modal abre, pré-preenche os valores
   useEffect(() => {
     if (open && transaction) {
       setDate(new Date());
-      // Formatar com vírgula (padrão brasileiro)
-      // transaction.amount já está em reais (DECIMAL no banco)
-      const formattedAmount = Math.abs(transaction.amount)
-        .toFixed(2)
-        .replace(".", ",");
-      setAmount(formattedAmount);
+      // transaction.amount já está em centavos
+      setAmount(Math.abs(transaction.amount));
       setAccountId(transaction.account_id);
     }
   }, [open, transaction]);
@@ -49,22 +45,14 @@ export function MarkAsPaidModal({
   const handleConfirm = () => {
     if (!transaction || !accountId) return;
     
-    // Converter vírgula para ponto antes de parseFloat
-    // Manter em reais (não multiplicar por 100)
-    const amountInReais = parseFloat(amount.replace(",", "."));
-    onConfirm(transaction.id, date, amountInReais, accountId);
+    // Amount já está em centavos (valor do CurrencyInput)
+    onConfirm(transaction.id, date, amount, accountId);
     onOpenChange(false);
   };
 
-  const handleAmountChange = (value: string) => {
-    // Permitir apenas números e vírgula (padrão brasileiro)
-    const sanitized = value.replace(/[^\d,]/g, "");
-    // Garantir apenas uma vírgula
-    const parts = sanitized.split(",");
-    const formatted = parts.length > 2 
-      ? parts[0] + "," + parts.slice(1).join("")
-      : sanitized;
-    setAmount(formatted);
+  const handleAmountChange = (value: number) => {
+    // CurrencyInput já retorna o valor em centavos
+    setAmount(value);
   };
 
   if (!transaction) return null;
@@ -89,12 +77,11 @@ export function MarkAsPaidModal({
           {/* Valor */}
           <div className="grid gap-2">
             <Label htmlFor="amount" className="text-caption">Valor</Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="text"
               value={amount}
-              onChange={(e) => handleAmountChange(e.target.value)}
-              placeholder="0.00"
+              onValueChange={handleAmountChange}
+              className="h-10 sm:h-11"
             />
           </div>
 
@@ -132,7 +119,7 @@ export function MarkAsPaidModal({
           </Button>
           <Button 
             onClick={handleConfirm}
-            disabled={!accountId || !amount || parseFloat(amount.replace(",", ".")) <= 0}
+            disabled={!accountId || amount <= 0}
           >
             Confirmar
           </Button>

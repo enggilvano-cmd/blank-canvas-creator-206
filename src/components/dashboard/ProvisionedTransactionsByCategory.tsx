@@ -36,19 +36,22 @@ export function ProvisionedTransactionsByCategory({
     const fixedProvisions = fixedTransactions.filter(t => {
       if (!t.is_provision) return false;
       if (t.type !== type) return false;
+      // ✅ CRÍTICO: Excluir provisões sem categoria (não podem ser rastreadas)
+      if (!t.category_id) return false;
       return true;
     });
 
-    // Buscar despesas reais (apenas completed) NO PERÍODO filtrado
+    // Buscar despesas/receitas reais (NO PERÍODO filtrado)
     const realExpenses = transactions.filter(t => {
       // Filtrar por tipo
       if (t.type !== type) return false;
       
-      // Apenas despesas reais (não provisões)
+      // Apenas despesas/receitas reais (não provisões)
       if (t.is_provision) return false;
 
-      // Apenas transações concluídas (excluir pendentes)
-      if (t.status !== 'completed') return false;
+      // ✅ CRÍTICO: Incluir TODAS as transações (pendentes e completadas)
+      // Pois uma despesa/receita pendente também consome da provisão
+      // if (t.status !== 'completed') return false;
 
       // Excluir transações fixas/recorrentes
       if (t.is_fixed) return false;
@@ -58,8 +61,9 @@ export function ProvisionedTransactionsByCategory({
       if (dateFrom && transactionDate < dateFrom) return false;
       if (dateTo && transactionDate > dateTo) return false;
 
-      // Excluir transferências
-      if (t.to_account_id) return false;
+      // ✅ CRÍTICO: NÃO excluir por to_account_id
+      // Transações internas de transferência também consomem provisões
+      // if (t.to_account_id) return false;
 
       return true;
     });
@@ -68,6 +72,7 @@ export function ProvisionedTransactionsByCategory({
     const categoryMap = new Map<string, CategoryTotal>();
     
     // Criar mapa com valores iniciais das transações fixas
+    // ✅ Apenas provisões com categoria_id válida são incluídas
     fixedProvisions.forEach(t => {
       const category = categories.find(c => c.id === t.category_id);
       if (!category) return;
@@ -85,7 +90,9 @@ export function ProvisionedTransactionsByCategory({
     // Somar despesas reais de cada categoria
     realExpenses.forEach(t => {
       const existing = categoryMap.get(t.category_id);
-      if (!existing) return; // Só soma se houver provisão para essa categoria
+      if (!existing) {
+        return; // Só soma se houver provisão para essa categoria
+      }
 
       const amount = Math.abs(t.amount);
       existing.totalCompleted += amount;

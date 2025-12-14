@@ -115,9 +115,10 @@ export class QueryInvalidationHelper {
       await this._queryClient.invalidateQueries({
         queryKey: queryKey as unknown[],
         exact,
-        refetchType: force ? 'active' : refetch ? 'active' : 'none'
+        refetchType: force ? 'all' : refetch ? 'active' : 'none'  // 'all' força refetch mesmo de inactive queries
       });
 
+      // Refetch adicional apenas se não for force (já refetched acima)
       if (refetch && !force) {
         await this._queryClient.refetchQueries({
           queryKey: queryKey as unknown[],
