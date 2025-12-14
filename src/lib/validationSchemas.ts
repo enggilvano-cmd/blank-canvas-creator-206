@@ -147,8 +147,8 @@ export type EditCategoryFormData = z.infer<typeof editCategorySchema>;
 
 // ============= Transaction Schemas =============
 
-// Schema para AddTransactionModal
-export const addTransactionSchema = z.object({
+// Base schema para AddTransactionModal
+const addTransactionBaseSchema = z.object({
   description: z
     .string()
     .trim()
@@ -223,7 +223,9 @@ export const addTransactionSchema = z.object({
   invoiceMonth: z.string().optional(),
   
   isFixed: z.boolean().optional(),
-}).superRefine((data, ctx) => {
+});
+
+export const addTransactionSchema = addTransactionBaseSchema.superRefine((data, ctx) => {
   // ✅ P1-3 FIX: Validação condicional de categoria
   // Categoria é obrigatória para income/expense, mas NÃO para transfer
   if (data.type !== "transfer" && !data.category_id) {
@@ -238,8 +240,18 @@ export const addTransactionSchema = z.object({
 export type AddTransactionFormData = z.infer<typeof addTransactionSchema>;
 
 // Schema para EditTransactionModal
-export const editTransactionSchema = addTransactionSchema.extend({
+export const editTransactionSchema = addTransactionBaseSchema.extend({
   id: z.string().uuid({ message: "ID da transação inválido" }),
+}).superRefine((data, ctx) => {
+  // ✅ P1-3 FIX: Validação condicional de categoria (mesmo que addTransactionSchema)
+  // Categoria é obrigatória para income/expense, mas NÃO para transfer
+  if (data.type !== "transfer" && !data.category_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["category_id"],
+      message: "Selecione uma categoria"
+    });
+  }
 });
 
 export type EditTransactionFormData = z.infer<typeof editTransactionSchema>;

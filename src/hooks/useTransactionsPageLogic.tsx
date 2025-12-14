@@ -297,19 +297,18 @@ export function useTransactionsPageLogic({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const params = {
+        const params: Record<string, unknown> = {
           p_user_id: user.id,
-          p_type: filterType,
-          p_status: filterStatus,
-          p_account_id: filterAccount,
-          p_category_id: filterCategory,
-          p_account_type: filterAccountType,
-          p_is_fixed: filterIsFixed !== 'all' ? filterIsFixed === 'true' : undefined,
-          p_is_provision: filterIsProvision !== 'all' ? filterIsProvision === 'true' : undefined,
-          p_date_from: dateFrom || undefined,
-          p_date_to: dateTo || undefined,
-          p_search: search || undefined,
-          p_invoice_month: filterInvoiceMonth !== 'all' ? filterInvoiceMonth : 'all',
+          p_type: filterType || null,
+          p_status: filterStatus || null,
+          p_account_id: filterAccount || null,
+          p_category_id: filterCategory || null,
+          p_account_type: filterAccountType || null,
+          p_is_fixed: filterIsFixed !== 'all' ? filterIsFixed === 'true' : null,
+          p_is_provision: filterIsProvision !== 'all' ? filterIsProvision === 'true' : null,
+          p_date_from: dateFrom || null,
+          p_date_to: dateTo || null,
+          p_search: search || null,
         };
 
         logger.info("Fetching aggregated totals with params:", params);

@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 import { globalResourceManager } from '@/lib/globalResourceManager';
 
 export function useRealtimeSubscription() {
-  const { invalidateTransactions, invalidateCategories, helper } = useQueryInvalidation();
+  const { invalidateTransactions, invalidateAccounts, invalidateCategories, helper } = useQueryInvalidation();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -17,35 +17,6 @@ export function useRealtimeSubscription() {
     // ✅ BUG FIX #2: Track resources for proper cleanup with global manager
     const timerIds: string[] = [];
     const listenerIds: string[] = [];
-
-    // Usa métodos do hook em vez de redefini-los
-    const invalidateTransactionsLocal = async () => {
-      logger.info('Invalidating transactions queries...');
-      try {
-        // Use hook method which includes proper invalidation strategy
-        await invalidateTransactions();
-      } catch (error) {
-        logger.error('Error invalidating transactions:', error);
-      }
-    };
-
-    const invalidateAccountsLocal = async () => {
-      logger.info('Invalidating accounts queries...');
-      try {
-        helper.invalidateMultiple([helper.queryKeys.accounts], { refetch: true });
-      } catch (error) {
-        logger.error('Error invalidating accounts:', error);
-      }
-    };
-
-    const invalidateCategoriesLocal = async () => {
-      logger.info('Invalidating categories queries...');
-      try {
-        await invalidateCategories();
-      } catch (error) {
-        logger.error('Error invalidating categories:', error);
-      }
-    };
 
     const channel = supabase
       .channel('db-changes')
@@ -79,12 +50,12 @@ export function useRealtimeSubscription() {
         },
         (payload) => {
           logger.info('Realtime update received for accounts:', payload);
-          invalidateAccountsLocal();
-          invalidateTransactionsLocal();
+          invalidateAccounts();
+          invalidateTransactions();
           
           const timer2 = setTimeout(() => {
-            invalidateAccountsLocal();
-            invalidateTransactionsLocal();
+            invalidateAccounts();
+            invalidateTransactions();
           }, 500);
           const timer2Id = globalResourceManager.registerTimeout(timer2, 'Realtime accounts retry');
           timerIds.push(timer2Id);
@@ -99,8 +70,8 @@ export function useRealtimeSubscription() {
         },
         (payload) => {
           logger.info('Realtime update received for categories:', payload);
-          invalidateCategoriesLocal();
-          invalidateTransactionsLocal();
+          invalidateCategories();
+          invalidateTransactions();
         }
       )
       .on(
@@ -112,7 +83,7 @@ export function useRealtimeSubscription() {
         },
         (payload) => {
             logger.info('Realtime update received for fixed_transactions:', payload);
-            invalidateTransactionsLocal();
+            invalidateTransactions();
         }
       )
       .subscribe((status) => {
@@ -138,5 +109,5 @@ export function useRealtimeSubscription() {
       
       logger.info('Realtime subscription cleanup complete');
     };
-  }, [user, invalidateTransactions, invalidateCategories, helper]);
+  }, [user, invalidateTransactions, invalidateAccounts, invalidateCategories]);
 }

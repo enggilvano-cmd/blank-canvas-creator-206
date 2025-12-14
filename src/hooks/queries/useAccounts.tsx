@@ -15,7 +15,7 @@ export function useAccounts() {
   const isOnline = useOnlineStatus();
 
   const query = useQuery({
-    queryKey: helper.queryKeys.accounts,
+    queryKey: queryKeys.accounts,
     queryFn: async () => {
       if (!user) return [];
       

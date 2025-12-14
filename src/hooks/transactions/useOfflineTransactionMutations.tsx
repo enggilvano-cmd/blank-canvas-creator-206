@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTransactionMutations } from './useTransactionMutations';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 import { useToast } from '@/hooks/use-toast';
+import { queryKeys } from '@/lib/queryClient';
 import { TransactionInput, TransactionUpdate, Category, Account, Transaction } from '@/types';
 import { EditScope } from '@/components/TransactionScopeDialog';
 import { logger } from '@/lib/logger';
@@ -17,6 +19,7 @@ export function useOfflineTransactionMutations() {
   const onlineMutations = useTransactionMutations();
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { invalidateTransactions } = useQueryInvalidation();
 
   const handleAddTransaction = useCallback(async (transactionData: TransactionInput) => {
@@ -149,7 +152,7 @@ export function useOfflineTransactionMutations() {
       description: 'Transação será sincronizada quando voltar online.',
       duration: 3000,
     });
-  }, [isOnline, onlineMutations, toast, user, queryClient]);
+  }, [isOnline, onlineMutations, toast, user, queryClient, invalidateTransactions]);
 
   const handleEditTransaction = useCallback(
     async (updatedTransaction: TransactionUpdate, editScope?: EditScope) => {

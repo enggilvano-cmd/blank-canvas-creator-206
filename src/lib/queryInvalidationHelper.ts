@@ -60,7 +60,21 @@ export interface BatchInvalidationOptions extends InvalidationOptions {
 export class QueryInvalidationHelper {
   private pendingInvalidations = new Set<string>();
 
-  constructor(private queryClient: QueryClient) {}
+  constructor(private _queryClient: QueryClient) {}
+
+  /**
+   * Getter para acessar o queryClient (necessário para operações diretas)
+   */
+  get queryClientInstance(): QueryClient {
+    return this._queryClient;
+  }
+
+  /**
+   * Alias para compatibilidade (alguns hooks usam .queryClient em vez de .queryClientInstance)
+   */
+  get queryClient(): QueryClient {
+    return this._queryClient;
+  }
 
   /**
    * Invalida uma única query
@@ -98,14 +112,14 @@ export class QueryInvalidationHelper {
         logger.debug('Invalidating query:', queryKey);
       }
 
-      await this.queryClient.invalidateQueries({
+      await this._queryClient.invalidateQueries({
         queryKey: queryKey as unknown[],
         exact,
         refetchType: force ? 'active' : refetch ? 'active' : 'none'
       });
 
       if (refetch && !force) {
-        await this.queryClient.refetchQueries({
+        await this._queryClient.refetchQueries({
           queryKey: queryKey as unknown[],
           exact,
           type: 'active'
@@ -171,7 +185,7 @@ export class QueryInvalidationHelper {
   ): void {
     setTimeout(() => {
       queryKeys.forEach(key => {
-        this.queryClient.refetchQueries({ queryKey: key as unknown[] });
+        this._queryClient.refetchQueries({ queryKey: key as unknown[] });
       });
     }, delay);
   }
@@ -186,7 +200,7 @@ export class QueryInvalidationHelper {
       logger.debug('Removing query from cache:', queryKey);
     }
 
-    this.queryClient.removeQueries({ queryKey: queryKey as unknown[] });
+    this._queryClient.removeQueries({ queryKey: queryKey as unknown[] });
   }
 
   /**
@@ -199,7 +213,7 @@ export class QueryInvalidationHelper {
       logger.info('Resetting all queries');
     }
 
-    await this.queryClient.resetQueries();
+    await this._queryClient.resetQueries();
   }
 
   /**
@@ -207,7 +221,7 @@ export class QueryInvalidationHelper {
    */
   async cancelQueries(queryKey: readonly unknown[]): Promise<void> {
     logger.debug('Cancelling queries:', queryKey);
-    await this.queryClient.cancelQueries({ queryKey: queryKey as unknown[] });
+    await this._queryClient.cancelQueries({ queryKey: queryKey as unknown[] });
   }
 
   /**
@@ -264,8 +278,8 @@ export class QueryInvalidationHelper {
   getStats() {
     return {
       pendingInvalidations: this.pendingInvalidations.size,
-      activeQueries: this.queryClient.getQueryCache().getAll().length,
-      queries: this.queryClient.getQueryCache().getAll().map(q => ({
+      activeQueries: this._queryClient.getQueryCache().getAll().length,
+      queries: this._queryClient.getQueryCache().getAll().map(q => ({
         queryKey: q.queryKey,
         state: q.state.status,
         dataUpdatedAt: q.state.dataUpdatedAt,

@@ -13,13 +13,14 @@ import { EditCategoryModal } from "@/components/EditCategoryModal";
 import { ImportCategoriesModal } from "@/components/ImportCategoriesModal";
 import { getUserId, withErrorHandling } from "@/lib/supabase-utils";
 import type { Category } from "@/types";
-import { queryClient, queryKeys } from "@/lib/queryClient";
+import { queryKeys } from "@/lib/queryClient";
 import { CategoryFilterDialog } from "@/components/categories/CategoryFilterDialog";
 import { CategoryFilterChips } from "@/components/categories/CategoryFilterChips";
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
 import { useOfflineCategoryMutations } from "@/hooks/useTransactionHandlers";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useQueryInvalidation } from "@/hooks/useQueryInvalidation";
 interface CategoriesPageProps {
   importModalOpen?: boolean;
   onImportModalOpenChange?: (open: boolean) => void;
@@ -77,6 +78,7 @@ export function CategoriesPage({
     handleDeleteCategory: offlineDeleteCategory,
     handleImportCategories: offlineImportCategories,
   } = useOfflineCategoryMutations();
+  const { helper } = useQueryInvalidation();
   // Generate filter chips
   const filterChips = useMemo(() => {
     const chips = [];
@@ -168,7 +170,7 @@ export function CategoriesPage({
     if (data) {
       setCategories(prev => [...prev, data]);
       // Invalidate categories cache so other components see the new category
-      await queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      await helper.invalidate(queryKeys.categories, { refetch: true });
       toast({
         title: "Categoria Adicionada",
         description: "Categoria criada com sucesso",
@@ -208,7 +210,7 @@ export function CategoriesPage({
       setEditingCategory(null);
       
       // Invalidate categories cache so other components see the update
-      await queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      await helper.invalidate(queryKeys.categories, { refetch: true });
       
       toast({
         title: "Categoria Atualizada",
@@ -263,7 +265,7 @@ export function CategoriesPage({
       setCategories(prev => prev.filter(cat => cat.id !== categoryId));
       
       // Invalidate categories cache so other components see the deletion
-      await queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      await helper.invalidate(queryKeys.categories, { refetch: true });
       
       toast({
         title: "Categoria Excluída",
@@ -324,7 +326,7 @@ export function CategoriesPage({
       });
 
       // Invalidate categories cache so other components see the imported categories
-      await queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+      await helper.invalidate(queryKeys.categories, { refetch: true });
 
       toast({
         title: "Sucesso",

@@ -289,8 +289,6 @@ class OfflineSyncManager {
       } else {
         logger.error('Critical sync error:', error);
       }
-    } finally {
-      clearTimeout(syncTimeout);
     }
   }
 

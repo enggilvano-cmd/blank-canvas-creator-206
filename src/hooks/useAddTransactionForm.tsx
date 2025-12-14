@@ -427,7 +427,7 @@ export function useAddTransactionForm({
         variant: 'destructive',
       });
     }
-  }, [formData, onClose, onSuccess, queryClient]);
+  }, [formData, onClose, onSuccess, invalidateTransactions, toast]);
 
   const handleSingleTransaction = async () => {
     // Transação simples
