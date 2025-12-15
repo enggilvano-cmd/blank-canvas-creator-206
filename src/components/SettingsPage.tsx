@@ -89,42 +89,108 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Export all user data with specific columns
-      const [accounts, transactions, categories, settings] = await Promise.all([
+      // Export ALL user data - COMPLETO COM TODAS AS TABELAS
+      logger.info('Iniciando exportação completa de backup...');
+      
+      const [
+        accounts, 
+        transactions, 
+        categories, 
+        settings,
+        profile,
+        notificationSettings,
+        pushSubscriptions,
+        backupSchedules,
+        periodClosures
+      ] = await Promise.all([
         supabase
           .from('accounts')
-          .select('id, name, type, balance, limit_amount, due_date, closing_date, color, created_at, updated_at')
+          .select('id, name, type, balance, limit_amount, due_date, closing_date, color, user_id, created_at, updated_at')
           .eq('user_id', user.id),
         supabase
           .from('transactions')
           .select(`
             id, description, amount, date, type, status, category_id, account_id, to_account_id,
             installments, current_installment, parent_transaction_id, linked_transaction_id,
-            is_recurring, is_fixed, recurrence_type, recurrence_end_date, invoice_month,
-            invoice_month_overridden, created_at, updated_at
+            is_recurring, is_fixed, is_provision, recurrence_type, recurrence_end_date, invoice_month,
+            invoice_month_overridden, user_id, created_at, updated_at
           `)
           .eq('user_id', user.id),
         supabase
           .from('categories')
-          .select('id, name, type, color, created_at, updated_at')
+          .select('id, name, type, color, user_id, created_at, updated_at')
           .eq('user_id', user.id),
         supabase
           .from('user_settings')
-          .select('currency, theme, notifications, auto_backup, language')
+          .select('*')
           .eq('user_id', user.id)
-          .single()
+          .single(),
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single(),
+        supabase
+          .from('notification_settings')
+          .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('push_subscriptions')
+          .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('backup_schedules')
+          .select('*')
+          .eq('user_id', user.id),
+        supabase
+          .from('period_closures')
+          .select('*')
+          .eq('user_id', user.id)
       ]);
 
+      // Check for errors in queries
+      if (accounts.error) throw accounts.error;
+      if (transactions.error) throw transactions.error;
+      if (categories.error) throw categories.error;
+      if (settings.error && settings.error.code !== 'PGRST116') throw settings.error;
+      if (profile.error && profile.error.code !== 'PGRST116') throw profile.error;
+      // notification_settings, push_subscriptions, backup_schedules e period_closures podem não existir (são opcionais)
+
       const data = {
+        // Dados principais
         accounts: accounts.data || [],
         transactions: transactions.data || [],
         categories: categories.data || [],
         settings: settings.data || {},
-        exportDate: new Date().toISOString()
+        
+        // Dados do perfil e configurações
+        profile: profile.data || null,
+        notification_settings: notificationSettings.data || [],
+        push_subscriptions: pushSubscriptions.data || [],
+        
+        // Dados de agendamento e períodos
+        backup_schedules: backupSchedules.data || [],
+        period_closures: periodClosures.data || [],
+        
+        // Metadados
+        exportDate: new Date().toISOString(),
+        backupVersion: '2.0' // Para rastrear versão do formato do backup
       };
       
-      // Validate data before export
-      if (Object.keys(data).length === 0) {
+      // Validate data before export - check if at least one type has data
+      const hasData = (
+        data.accounts.length > 0 || 
+        data.transactions.length > 0 || 
+        data.categories.length > 0 || 
+        Object.keys(data.settings).length > 0 ||
+        data.profile !== null ||
+        data.notification_settings.length > 0 ||
+        data.push_subscriptions.length > 0 ||
+        data.backup_schedules.length > 0 ||
+        data.period_closures.length > 0
+      );
+      
+      if (!hasData) {
         toast({
           title: 'Nenhum dado para exportar',
           description: 'Não há dados disponíveis para exportação',
@@ -132,13 +198,33 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
         });
         return;
       }
+      
+      logger.info('Exportando dados completos:', {  
+        accounts: data.accounts.length, 
+        transactions: data.transactions.length, 
+        categories: data.categories.length,
+        hasProfile: data.profile !== null,
+        notificationSettings: data.notification_settings.length,
+        pushSubscriptions: data.push_subscriptions.length,
+        backupSchedules: data.backup_schedules.length,
+        periodClosures: data.period_closures.length,
+        backupVersion: data.backupVersion,
+        totalSize: `${(JSON.stringify(data).length / 1024).toFixed(2)}KB`
+      });
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T');
       const dateStr = timestamp[0];
       const timeStr = timestamp[1].split('.')[0];
       
-      const blob = new Blob([JSON.stringify(data, null, 2)], { 
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { 
         type: 'application/json;charset=utf-8' 
+      });
+      
+      logger.debug('Arquivo de exportação:', {
+        size: `${(blob.size / 1024).toFixed(2)}KB`,
+        jsonLength: jsonString.length,
+        blobSize: blob.size
       });
       
       const url = URL.createObjectURL(blob);
@@ -196,61 +282,472 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
     
     reader.onload = async (e) => {
       try {
+        console.log('🔥🔥🔥 IMPORTAÇÃO INICIADA - CÓDIGO ATUALIZADO v2 🔥🔥🔥');
         const jsonString = e.target?.result as string;
         if (!jsonString || jsonString.trim() === '') {
           throw new Error('Arquivo vazio');
         }
 
-        const data = JSON.parse(jsonString);
+        let data;
+        try {
+          data = JSON.parse(jsonString);
+        } catch (parseError) {
+          logger.error('Erro ao fazer parse do JSON:', parseError);
+          throw new Error(`Arquivo JSON inválido: ${parseError instanceof Error ? parseError.message : 'formato inválido'}`);
+        }
         
         // Validate data structure
         if (!data || typeof data !== 'object') {
           throw new Error('Estrutura de dados inválida');
         }
+        
+        logger.debug('Estrutura do arquivo carregado:', {
+          hasAccounts: 'accounts' in data,
+          hasTransactions: 'transactions' in data,
+          hasCategories: 'categories' in data,
+          hasSettings: 'settings' in data,
+          hasProfile: 'profile' in data,
+          backupVersion: data.backupVersion || 'Sem versão'
+        });
+        
+        // Validar versão do backup
+        if (data.backupVersion && data.backupVersion !== '2.0') {
+          logger.warn(`Versão de backup diferente detectada: ${data.backupVersion}. Esperado: 2.0`);
+        }
 
-        if (data.accounts && !Array.isArray(data.accounts)) {
-          throw new Error('Formato de contas inválido');
+        // Validações de tipo - apenas se o campo existir
+        if (data.accounts !== undefined && !Array.isArray(data.accounts)) {
+          throw new Error('Formato de contas inválido - deve ser um array');
         }
-        if (data.transactions && !Array.isArray(data.transactions)) {
-          throw new Error('Formato de transações inválido');
+        if (data.transactions !== undefined && !Array.isArray(data.transactions)) {
+          throw new Error('Formato de transações inválido - deve ser um array');
         }
+        if (data.categories !== undefined && !Array.isArray(data.categories)) {
+          throw new Error('Formato de categorias inválido - deve ser um array');
+        }
+        if (data.notification_settings !== undefined && !Array.isArray(data.notification_settings)) {
+          throw new Error('Formato de notificações inválido - deve ser um array');
+        }
+        if (data.push_subscriptions !== undefined && !Array.isArray(data.push_subscriptions)) {
+          throw new Error('Formato de subscrições push inválido - deve ser um array');
+        }
+        if (data.backup_schedules !== undefined && !Array.isArray(data.backup_schedules)) {
+          throw new Error('Formato de agendamentos inválido - deve ser um array');
+        }
+        if (data.period_closures !== undefined && !Array.isArray(data.period_closures)) {
+          throw new Error('Formato de períodos de encerramento inválido - deve ser um array');
+        }
+
+        // Normalizar dados para versões antigas de backup (v1.0 ou sem versão)
+        logger.debug('Normalizando dados do backup:', {
+          hasAccounts: 'accounts' in data,
+          accountsIsArray: Array.isArray(data.accounts),
+          accountsLength: Array.isArray(data.accounts) ? data.accounts.length : 0,
+          hasCategories: 'categories' in data,
+          categoriesIsArray: Array.isArray(data.categories),
+          categoriesLength: Array.isArray(data.categories) ? data.categories.length : 0,
+          hasTransactions: 'transactions' in data,
+          transactionsIsArray: Array.isArray(data.transactions),
+          transactionsLength: Array.isArray(data.transactions) ? data.transactions.length : 0
+        });
+
+        const normalizedData = {
+          accounts: Array.isArray(data.accounts) ? data.accounts : [],
+          transactions: Array.isArray(data.transactions) ? data.transactions : [],
+          categories: Array.isArray(data.categories) ? data.categories : [],
+          settings: data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings) ? data.settings : {},
+          profile: data.profile && typeof data.profile === 'object' ? data.profile : null,
+          notification_settings: Array.isArray(data.notification_settings) ? data.notification_settings : [],
+          push_subscriptions: Array.isArray(data.push_subscriptions) ? data.push_subscriptions : [],
+          backup_schedules: Array.isArray(data.backup_schedules) ? data.backup_schedules : [],
+          period_closures: Array.isArray(data.period_closures) ? data.period_closures : []
+        };
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        // Import data to Supabase
-        const results = await Promise.allSettled([
-          data.accounts?.length > 0 ? supabase.from('accounts').upsert(
-            data.accounts.map((acc: Record<string, unknown>) => ({ ...acc, user_id: user.id }))
-          ) : Promise.resolve(),
-          data.categories?.length > 0 ? supabase.from('categories').upsert(
-            data.categories.map((cat: Record<string, unknown>) => ({ ...cat, user_id: user.id }))
-          ) : Promise.resolve(),
-          data.transactions?.length > 0 ? supabase.from('transactions').upsert(
-            data.transactions.map((tx: Record<string, unknown>) => ({ ...tx, user_id: user.id }))
-          ) : Promise.resolve()
-        ]);
+        // Log detalhado dos dados normalizados para debug
+        logger.debug('Dados normalizados detalhados:', {
+          accounts: normalizedData.accounts.length,
+          categories: normalizedData.categories.length,
+          transactions: normalizedData.transactions.length,
+          settings: Object.keys(normalizedData.settings || {}).length,
+          hasProfile: normalizedData.profile !== null,
+          notification_settings: normalizedData.notification_settings.length,
+          push_subscriptions: normalizedData.push_subscriptions.length,
+          backup_schedules: normalizedData.backup_schedules.length,
+          period_closures: normalizedData.period_closures.length
+        });
 
-        const failed = results.filter(r => r.status === 'rejected');
+        // Validar se há QUALQUER dado para importar (não apenas accounts/categories/transactions)
+        const hasDataToImport = (
+          normalizedData.accounts.length > 0 || 
+          normalizedData.categories.length > 0 || 
+          normalizedData.transactions.length > 0 ||
+          Object.keys(normalizedData.settings || {}).length > 0 ||
+          normalizedData.profile !== null ||
+          normalizedData.notification_settings.length > 0 ||
+          normalizedData.push_subscriptions.length > 0 ||
+          normalizedData.backup_schedules.length > 0 ||
+          normalizedData.period_closures.length > 0
+        );
         
-        if (failed.length === 0) {
+        if (!hasDataToImport) {
+          logger.error('Arquivo de backup vazio - nenhum dado encontrado para importar');
+          throw new Error('O arquivo de backup não contém nenhum dado para importar');
+        }
+
+        logger.info('Iniciando importação com dados normalizados:', { 
+          accounts: normalizedData.accounts.length || 0, 
+          categories: normalizedData.categories.length || 0, 
+          transactions: normalizedData.transactions.length || 0,
+          totalItems: normalizedData.accounts.length + normalizedData.categories.length + normalizedData.transactions.length
+        });
+
+        // 🗑️ LIMPAR TODOS OS DADOS DO USUÁRIO ANTES DE IMPORTAR
+        console.log('🔥 INICIANDO LIMPEZA DE DADOS DO USUÁRIO');
+        logger.info('Limpando dados existentes do usuário...');
+        
+        // CRÍTICO: Primeiro obter TODOS os account IDs do usuário para deletar account_locks
+        const { data: userAccounts } = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('user_id', user.id);
+        
+        const accountIds = userAccounts?.map(a => a.id) || [];
+        console.log(`🔥 ENCONTRADAS ${accountIds.length} CONTAS DO USUÁRIO:`, accountIds);
+        logger.debug(`Encontradas ${accountIds.length} contas do usuário para limpar`);
+        
+        // PASSO 1: Deletar TODOS os account_locks das contas do usuário
+        // account_locks NÃO tem user_id, então precisamos deletar por account_id
+        if (accountIds.length > 0) {
+          console.log(`🔥 DELETANDO ACCOUNT_LOCKS PARA ${accountIds.length} CONTAS...`);
+          logger.debug(`Deletando account_locks para ${accountIds.length} contas...`);
+          
+          const { error: lockError, count: lockCount } = await supabase
+            .from('account_locks')
+            .delete()
+            .in('account_id', accountIds);
+          
+          if (lockError) {
+            if (lockError.code === 'PGRST116') {
+              console.log('✓ NENHUM ACCOUNT_LOCK ENCONTRADO');
+              logger.debug('✓ Nenhum account_lock encontrado para deletar');
+            } else {
+              console.error('❌ ERRO AO LIMPAR ACCOUNT_LOCKS:', lockError);
+              logger.error('❌ Erro ao limpar account_locks:', lockError);
+              throw new Error(`Falha ao limpar account_locks: ${lockError.message}`);
+            }
+          } else {
+            console.log(`✓ DELETADOS ${lockCount || 0} ACCOUNT_LOCKS`);
+            logger.debug(`✓ Deletados ${lockCount || 0} account_locks`);
+          }
+        } else {
+          console.log('⚠️ NENHUMA CONTA ENCONTRADA - PULANDO LIMPEZA DE ACCOUNT_LOCKS');
+        }
+        
+        // PASSO 2: Deletar dados em ordem respeitando foreign keys
+        const tablesToClear = [
+          'journal_entries',      // depende de chart_of_accounts
+          'financial_audit',      // auditoria
+          'audit_logs',           // logs de auditoria
+          'transactions',         // depende de accounts e categories
+          'period_closures',      // depende de accounts
+          'backup_schedules',     // agendamentos
+          'push_subscriptions',   // subscrições push
+          'notification_settings',// configurações de notificações
+          'accounts',             // contas
+          'categories'            // categorias
+        ];
+
+        for (const table of tablesToClear) {
+          try {
+            const { error, count } = await supabase
+              .from(table)
+              .delete()
+              .eq('user_id', user.id);
+            
+            if (error) {
+              if (error.code === 'PGRST116') {
+                logger.debug(`✓ ${table}: nenhum registro para deletar`);
+              } else {
+                logger.warn(`⚠️ Aviso ao limpar ${table}:`, error);
+              }
+            } else {
+              logger.debug(`✓ ${table}: ${count || 0} registros deletados`);
+            }
+          } catch (err) {
+            logger.warn(`⚠️ Erro ao limpar ${table}:`, err);
+          }
+        }
+        
+        // PASSO 3: Verificação final - garantir que não sobrou nenhum account_lock
+        console.log('🔥 VERIFICAÇÃO FINAL DE ACCOUNT_LOCKS...');
+        if (accountIds.length > 0) {
+          const { data: remainingLocks } = await supabase
+            .from('account_locks')
+            .select('account_id')
+            .in('account_id', accountIds);
+          
+          console.log(`🔥 ACCOUNT_LOCKS REMANESCENTES:`, remainingLocks?.length || 0, remainingLocks);
+          
+          if (remainingLocks && remainingLocks.length > 0) {
+            console.error(`❌ ERRO: AINDA EXISTEM ${remainingLocks.length} ACCOUNT_LOCKS!`);
+            logger.error(`❌ ERRO: Ainda existem ${remainingLocks.length} account_locks após limpeza!`);
+            // Tentar deletar novamente com força bruta
+            console.log('🔥 TENTANDO LIMPEZA FORÇADA...');
+            for (const lock of remainingLocks) {
+              const { error } = await supabase
+                .from('account_locks')
+                .delete()
+                .eq('account_id', lock.account_id);
+              console.log(`  - Deletando lock ${lock.account_id}:`, error ? 'ERRO' : 'OK');
+            }
+            console.log('✓ LIMPEZA FORÇADA CONCLUÍDA');
+            logger.debug('✓ Limpeza forçada de account_locks restantes concluída');
+          } else {
+            console.log('✓ VERIFICAÇÃO OK: NENHUM ACCOUNT_LOCK REMANESCENTE');
+            logger.debug('✓ Verificação: nenhum account_lock remanescente');
+          }
+        }
+        
+        console.log('✅ LIMPEZA DE DADOS CONCLUÍDA');
+        logger.info('✅ Limpeza de dados concluída')
+
+        // IMPORTAÇÃO NA ORDEM CORRETA DE DEPENDÊNCIAS
+        logger.info('Iniciando importação em sequência respeitando dependências...');
+
+        // Função auxiliar para inserir dados com tratamento de erro
+        const insertData = async (table: string, records: any[], isOptional: boolean = false) => {
+          if (!records || records.length === 0) {
+            logger.debug(`Nenhum dado para ${table}`);
+            return { success: true, count: 0 };
+          }
+          
+          try {
+            logger.debug(`Importando ${records.length} registros de ${table}...`);
+            const query = supabase.from(table).insert(records);
+            const result = await query;
+            
+            if (result.error) {
+              const errorMsg = `Erro ao importar ${table}: ${result.error.message}`;
+              logger.error(errorMsg, result.error);
+              
+              if (isOptional) {
+                logger.warn(`⚠️ Tabela opcional ${table} falhou, continuando...`);
+                return { success: false, count: 0, error: result.error.message };
+              }
+              throw result.error;
+            }
+            
+            logger.info(`✅ Importado ${records.length} registros de ${table}`);
+            return { success: true, count: records.length };
+          } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            logger.error(`❌ Erro ao importar ${table}:`, error);
+            
+            if (isOptional) {
+              logger.warn(`⚠️ Tabela opcional ${table} falhou, continuando...`);
+              return { success: false, count: 0, error: errorMsg };
+            }
+            throw error;
+          }
+        };
+
+        // IMPORTAÇÃO SEQUENCIAL (respeitando dependências)
+        const importResults = {
+          accounts: { success: false, count: 0 },
+          categories: { success: false, count: 0 },
+          transactions: { success: false, count: 0 },
+          settings: { success: false, count: 0 },
+          profile: { success: false, count: 0 },
+          notification_settings: { success: false, count: 0 },
+          push_subscriptions: { success: false, count: 0 },
+          backup_schedules: { success: false, count: 0 },
+          period_closures: { success: false, count: 0 }
+        };
+
+        // 1️⃣ PROFILE (Independente - Opcional)
+        if (normalizedData.profile && typeof normalizedData.profile === 'object') {
+          const profileToInsert = { ...normalizedData.profile, id: user.id };
+          importResults.profile = await insertData('profiles', [profileToInsert], true);
+        }
+
+        // 2️⃣ ACCOUNTS (Independente - Crítico)
+        // SOLUÇÃO DEFINITIVA: Gerar novos IDs para evitar colisão com account_locks órfãos
+        const accountIdMap = new Map<string, string>();
+        
+        if (normalizedData.accounts?.length > 0) {
+          console.log(`🔥 IMPORTANDO ${normalizedData.accounts.length} CONTAS COM NOVOS IDs...`);
+          let successCount = 0;
+          let errorCount = 0;
+          
+          for (const acc of normalizedData.accounts) {
+            try {
+              const oldId = acc.id;
+              // Gerar novo ID se não for fornecido (mas aqui sempre geramos para evitar colisão)
+              const newId = crypto.randomUUID();
+              accountIdMap.set(oldId, newId);
+              
+              console.log(`  - Processando: ${acc.name} (ID: ${oldId} -> ${newId})...`);
+              
+              // Inserir a conta com o NOVO ID
+              // Removemos o ID original e deixamos o Supabase usar o novo
+              const accountToInsert = { 
+                ...acc, 
+                id: newId,
+                user_id: user.id 
+              };
+              
+              // Usamos insert simples pois estamos criando novos IDs garantidamente únicos
+              const { error: insertError } = await supabase
+                .from('accounts')
+                .insert(accountToInsert);
+              
+              if (insertError) {
+                console.error(`    ❌ Erro: ${insertError.message}`);
+                errorCount++;
+              } else {
+                console.log(`    ✓ OK`);
+                successCount++;
+              }
+            } catch (err) {
+              console.error(`    ❌ Exceção:`, err);
+              errorCount++;
+            }
+          }
+          
+          console.log(`✓ CONTAS: ${successCount} sucesso, ${errorCount} erros`);
+          logger.info(`✅ Importado ${successCount} de ${normalizedData.accounts.length} contas`);
+          importResults.accounts = { success: errorCount === 0, count: successCount };
+          
+          // Não falhar se conseguiu importar PELO MENOS uma conta
+          if (successCount === 0) {
+            throw new Error(`Falha ao importar todas as ${normalizedData.accounts.length} contas`);
+          }
+        }
+
+        // 3️⃣ CATEGORIES (Independente - Crítico)
+        if (normalizedData.categories?.length > 0) {
+          const categoriesToInsert = normalizedData.categories.map((cat: any) => ({
+            ...cat,
+            user_id: user.id
+          }));
+          importResults.categories = await insertData('categories', categoriesToInsert, false);
+        }
+
+        // 4️⃣ TRANSACTIONS (Depende de: accounts, categories - Crítico)
+        if (normalizedData.transactions?.length > 0) {
+          const transactionsToInsert = normalizedData.transactions.map((tx: any) => {
+            // Mapear IDs de conta antigos para novos
+            const newAccountId = accountIdMap.get(tx.account_id) || tx.account_id;
+            const newToAccountId = tx.to_account_id ? (accountIdMap.get(tx.to_account_id) || tx.to_account_id) : tx.to_account_id;
+            
+            return {
+              ...tx,
+              account_id: newAccountId,
+              to_account_id: newToAccountId,
+              user_id: user.id
+            };
+          });
+          importResults.transactions = await insertData('transactions', transactionsToInsert, false);
+        }
+
+        // 5️⃣ SETTINGS (Independente - Opcional)
+        if (normalizedData.settings && Object.keys(normalizedData.settings).length > 0) {
+          const settingsToInsert = { ...normalizedData.settings, user_id: user.id };
+          importResults.settings = await insertData('user_settings', [settingsToInsert], true);
+        }
+
+        // 6️⃣ NOTIFICATION SETTINGS (Independente - Opcional)
+        if (normalizedData.notification_settings?.length > 0) {
+          const notifToInsert = normalizedData.notification_settings.map((notif: any) => ({
+            ...notif,
+            user_id: user.id
+          }));
+          importResults.notification_settings = await insertData('notification_settings', notifToInsert, true);
+        }
+
+        // 7️⃣ PUSH SUBSCRIPTIONS (Depende de: user - Opcional)
+        if (normalizedData.push_subscriptions?.length > 0) {
+          const pushToInsert = normalizedData.push_subscriptions.map((push: any) => ({
+            ...push,
+            user_id: user.id
+          }));
+          importResults.push_subscriptions = await insertData('push_subscriptions', pushToInsert, true);
+        }
+
+        // 8️⃣ BACKUP SCHEDULES (Independente - Opcional)
+        if (normalizedData.backup_schedules?.length > 0) {
+          const schedulesToInsert = normalizedData.backup_schedules.map((sched: any) => ({
+            ...sched,
+            user_id: user.id
+          }));
+          importResults.backup_schedules = await insertData('backup_schedules', schedulesToInsert, true);
+        }
+
+        // 9️⃣ PERIOD CLOSURES (Independente - Opcional)
+        if (normalizedData.period_closures?.length > 0) {
+          const periodsToInsert = normalizedData.period_closures.map((period: any) => {
+            const newAccountId = period.account_id ? (accountIdMap.get(period.account_id) || period.account_id) : period.account_id;
+            return {
+              ...period,
+              account_id: newAccountId,
+              user_id: user.id
+            };
+          });
+          importResults.period_closures = await insertData('period_closures', periodsToInsert, true);
+        }
+
+        // Contar sucessos e falhas
+        const totalImported = Object.values(importResults).reduce((sum, r) => sum + (r.success ? r.count : 0), 0);
+        const criticalTables = ['accounts', 'categories', 'transactions'];
+        const failedCriticalTables = Object.entries(importResults)
+          .filter(([table, r]) => criticalTables.includes(table) && !r.success)
+          .map(([t]) => t);
+        const failedOptionalTables = Object.entries(importResults)
+          .filter(([table, r]) => !criticalTables.includes(table) && !r.success)
+          .map(([t]) => t);
+        
+        logger.info('Resultado final da importação:', { 
+          totalImported, 
+          criticalTablesFailed: failedCriticalTables,
+          optionalTablesFailed: failedOptionalTables,
+          details: importResults 
+        });
+        
+        // Se tabelas críticas falharam, abortar
+        if (failedCriticalTables.length > 0) {
+          const errorMsg = `Falha ao importar tabelas críticas: ${failedCriticalTables.join(', ')}`;
+          logger.error(errorMsg);
+          throw new Error(errorMsg);
+        }
+        
+        if (totalImported > 0) {
+          const warningMsg = failedOptionalTables.length > 0 
+            ? `\n⚠️ Algumas tabelas opcionais falharam: ${failedOptionalTables.join(', ')}`
+            : '';
+            
           toast({
-            title: 'Dados importados',
-            description: 'Seus dados foram importados com sucesso',
+            title: '✅ Importação concluída com sucesso!',
+            description: `
+${importResults.accounts.count} contas | 
+${importResults.categories.count} categorias | 
+${importResults.transactions.count} transações |
+${importResults.notification_settings.count} notificações |
+${importResults.backup_schedules.count} agendamentos${warningMsg}`,
           });
           setTimeout(() => window.location.reload(), 1500);
         } else {
-          toast({
-            title: 'Erro na importação',
-            description: 'Alguns dados não puderam ser importados',
-            variant: "destructive"
-          });
+          throw new Error('Nenhum dado foi importado do arquivo');
         }
       } catch (error) {
         logger.error('Import error:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Arquivo inválido ou corrompido';
+        
         toast({
           title: 'Erro na importação',
-          description: error instanceof Error ? error.message : 'Arquivo inválido ou corrompido',
+          description: errorMsg,
           variant: "destructive"
         });
       } finally {

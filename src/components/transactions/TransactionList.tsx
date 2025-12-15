@@ -119,11 +119,11 @@ export const TransactionList = memo(function TransactionList({
                     <ArrowRight className="h-3 w-3" />
                     {getAccountName(transaction.to_account_id)}
                   </span>
-                ) : transaction.type === 'income' && transaction.linked_transaction_id && transaction.linked_transactions?.accounts ? (
+                ) : transaction.type === 'income' && transaction.linked_transaction_id && transaction.linked_transactions?.accounts?.name ? (
                   <span className="truncate flex items-center gap-1">
                     {getAccountName(transaction.account_id)}
                     <ArrowLeft className="h-3 w-3" />
-                    {transaction.linked_transactions.accounts.name}
+                    {transaction.linked_transactions?.accounts?.name || 'Conta Desconhecida'}
                   </span>
                 ) : (
                   <span className="truncate">{getAccountName(transaction.account_id)}</span>
