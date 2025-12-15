@@ -22,6 +22,91 @@ export function useOfflineTransactionMutations() {
   const queryClient = useQueryClient();
   const { invalidateTransactions } = useQueryInvalidation();
 
+  // ✅ Helper para descontar provisão em modo offline
+  const deductProvisionOffline = useCallback(async (
+    categoryId: string,
+    transactionAmount: number,
+    transactionDate: Date | string
+  ) => {
+    try {
+      const dateObj = typeof transactionDate === 'string' ? new Date(transactionDate) : transactionDate;
+      const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+      const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
+
+      // Buscar provisões do offlineDatabase
+      const allTransactions = await offlineDatabase.getTransactions();
+      const provisions = allTransactions.filter(t =>
+        t.user_id === user?.id &&
+        t.category_id === categoryId &&
+        t.is_provision === true &&
+        new Date(t.date) >= startOfMonth &&
+        new Date(t.date) <= endOfMonth
+      );
+
+      if (provisions.length === 0) return;
+
+      const provision = provisions[0];
+      const newAmount = (provision.amount ?? 0) - transactionAmount;
+
+      // Atualizar no offlineDatabase
+      const updated = { ...provision, amount: newAmount };
+      await offlineDatabase.saveTransactions([updated]);
+
+      // Atualizar no cache React Query
+      queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) return oldData;
+        return oldData.map((t: any) =>
+          t.id === provision.id ? { ...t, amount: newAmount } : t
+        );
+      });
+
+      logger.info(`✅ Provisão descontada offline: ${categoryId} -${transactionAmount}`);
+    } catch (error) {
+      logger.error('Erro ao descontar provisão offline:', error);
+    }
+  }, [user, queryClient]);
+
+  // ✅ Helper para reembolsar provisão em modo offline
+  const refundProvisionOffline = useCallback(async (
+    categoryId: string,
+    transactionAmount: number,
+    transactionDate: Date | string
+  ) => {
+    try {
+      const dateObj = typeof transactionDate === 'string' ? new Date(transactionDate) : transactionDate;
+      const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+      const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
+
+      const allTransactions = await offlineDatabase.getTransactions();
+      const provisions = allTransactions.filter(t =>
+        t.user_id === user?.id &&
+        t.category_id === categoryId &&
+        t.is_provision === true &&
+        new Date(t.date) >= startOfMonth &&
+        new Date(t.date) <= endOfMonth
+      );
+
+      if (provisions.length === 0) return;
+
+      const provision = provisions[0];
+      const newAmount = (provision.amount ?? 0) + transactionAmount;
+
+      const updated = { ...provision, amount: newAmount };
+      await offlineDatabase.saveTransactions([updated]);
+
+      queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData)) return oldData;
+        return oldData.map((t: any) =>
+          t.id === provision.id ? { ...t, amount: newAmount } : t
+        );
+      });
+
+      logger.info(`✅ Provisão reembolsada offline: ${categoryId} +${transactionAmount}`);
+    } catch (error) {
+      logger.error('Erro ao reembolsar provisão offline:', error);
+    }
+  }, [user, queryClient]);
+
   const handleAddTransaction = useCallback(async (transactionData: TransactionInput) => {
     const processOfflineAdd = async () => {
       try {
@@ -104,6 +189,15 @@ export function useOfflineTransactionMutations() {
               return acc;
             });
           });
+        }
+
+        // ✅ Desconto automático de provisão em modo offline
+        if (transactionData.category_id && transactionData.type !== 'transfer') {
+          await deductProvisionOffline(
+            transactionData.category_id,
+            Math.abs(transactionData.amount),
+            transactionData.date
+          );
         }
 
         // ✅ Invalidar queries para garantir consistência eventual
@@ -229,6 +323,34 @@ export function useOfflineTransactionMutations() {
             });
           });
 
+          // ✅ Ajuste automático de provisões ao editar transação em modo offline
+          if (updates.category_id || updates.amount || updates.date) {
+            const allTransactions = await offlineDatabase.getTransactions();
+            const originalTx = allTransactions.find(t => t.id === updatedTransaction.id);
+            
+            if (originalTx && originalTx.type !== 'transfer') {
+              const newCategoryId = updates.category_id || originalTx.category_id;
+              const oldCategoryId = originalTx.category_id;
+              const newAmount = updates.amount ?? originalTx.amount;
+              const oldAmount = originalTx.amount;
+              const newDate = updates.date ? new Date(updates.date) : originalTx.date;
+
+              // Se categoria mudou, reembolsar da antiga e descontar da nova
+              if (newCategoryId !== oldCategoryId) {
+                if (oldCategoryId) {
+                  await refundProvisionOffline(oldCategoryId, oldAmount, originalTx.date);
+                }
+                if (newCategoryId) {
+                  await deductProvisionOffline(newCategoryId, newAmount, newDate);
+                }
+              } else if (newAmount !== oldAmount && newCategoryId) {
+                // Se apenas o valor mudou, reajustar o desconto
+                const difference = newAmount - oldAmount;
+                await deductProvisionOffline(newCategoryId, difference, newDate);
+              }
+            }
+          }
+
         } catch (error) {
           logger.error('Failed to queue edit:', error);
           toast({
@@ -276,7 +398,7 @@ export function useOfflineTransactionMutations() {
       // ✅ Invalidar queries para refetch imediato
       await invalidateTransactions();
     },
-    [isOnline, onlineMutations, toast, user, invalidateTransactions]
+    [isOnline, onlineMutations, toast, user, queryClient, invalidateTransactions, deductProvisionOffline]
   );
 
   const handleDeleteTransaction = useCallback(
@@ -306,6 +428,11 @@ export function useOfflineTransactionMutations() {
               p_scope: editScope || 'current',
             },
           });
+
+          // ✅ Reembolsar provisão ao deletar em modo offline
+          if (tx && tx.category_id && tx.type !== 'transfer') {
+            await refundProvisionOffline(tx.category_id, tx.amount, tx.date);
+          }
 
           // ✅ Optimistic Update para Exclusão
           queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
@@ -380,7 +507,7 @@ export function useOfflineTransactionMutations() {
         notifyFixedTransactionsChange();
       }
     },
-    [isOnline, onlineMutations, toast, user, invalidateTransactions]
+    [isOnline, onlineMutations, toast, user, invalidateTransactions, refundProvisionOffline]
   );
 
   return {

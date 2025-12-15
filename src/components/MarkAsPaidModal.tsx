@@ -31,6 +31,7 @@ export function MarkAsPaidModal({
   const [date, setDate] = useState<Date>(new Date());
   const [amount, setAmount] = useState<number>(0); // Em centavos
   const [accountId, setAccountId] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quando o modal abre, pré-preenche os valores
   useEffect(() => {
@@ -39,15 +40,30 @@ export function MarkAsPaidModal({
       // transaction.amount já está em centavos
       setAmount(Math.abs(transaction.amount));
       setAccountId(transaction.account_id);
+      setIsSubmitting(false);  // ⚠️ Reset isSubmitting ao abrir modal
     }
   }, [open, transaction]);
 
   const handleConfirm = () => {
-    if (!transaction || !accountId) return;
+    // ⚠️ CRÍTICO: Evitar submissões duplicadas
+    if (isSubmitting) {
+      return;
+    }
     
-    // Amount já está em centavos (valor do CurrencyInput)
-    onConfirm(transaction.id, date, amount, accountId);
-    onOpenChange(false);
+    if (!transaction || !accountId) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Amount já está em centavos (valor do CurrencyInput)
+      onConfirm(transaction.id, date, amount, accountId);
+      onOpenChange(false);
+    } finally {
+      // ⚠️ CRÍTICO: Sempre resetar isSubmitting
+      setIsSubmitting(false);
+    }
   };
 
   const handleAmountChange = (value: number) => {
@@ -114,14 +130,14 @@ export function MarkAsPaidModal({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancelar
           </Button>
           <Button 
             onClick={handleConfirm}
-            disabled={!accountId || amount <= 0}
+            disabled={!accountId || amount <= 0 || isSubmitting}
           >
-            Confirmar
+            {isSubmitting ? "Processando..." : "Confirmar"}
           </Button>
         </DialogFooter>
       </DialogContent>

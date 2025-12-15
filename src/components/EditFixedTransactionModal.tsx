@@ -40,6 +40,7 @@ export function EditFixedTransactionModal({
     status: "pending" as "pending" | "completed",
     invoiceMonth: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { categories } = useCategories();
 
@@ -72,6 +73,13 @@ export function EditFixedTransactionModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ⚠️ CRÍTICO: Evitar submissões duplicadas
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
 
     if (!formData.description.trim()) {
       toast({
@@ -79,6 +87,7 @@ export function EditFixedTransactionModal({
         description: "Por favor, preencha a descrição.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -88,6 +97,7 @@ export function EditFixedTransactionModal({
         description: "O valor deve ser maior que zero.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -97,26 +107,28 @@ export function EditFixedTransactionModal({
         description: "Por favor, selecione uma conta.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
-    // Lógica para preservar mês e ano da transação original, alterando apenas o dia
-    const originalDateObj = typeof transaction.date === 'string' 
-      ? createDateFromString(transaction.date) 
-      : transaction.date;
+    try {
+      // Lógica para preservar mês e ano da transação original, alterando apenas o dia
+      const originalDateObj = typeof transaction.date === 'string' 
+        ? createDateFromString(transaction.date) 
+        : transaction.date;
 
-    const year = originalDateObj.getFullYear();
-    const month = String(originalDateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(formData.date.getDate()).padStart(2, '0');
-    const dateString = `${year}-${month}-${day}`;
+      const year = originalDateObj.getFullYear();
+      const month = String(originalDateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(formData.date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
 
-    // Ensure amount has correct sign based on type
-    // Valor já vem em centavos do formulário
-    let finalAmount = formData.amountInCents;
-    if (formData.type === "expense") {
-      finalAmount = -Math.abs(finalAmount);
-    } else {
-      finalAmount = Math.abs(finalAmount);
+      // Ensure amount has correct sign based on type
+      // Valor já vem em centavos do formulário
+      let finalAmount = formData.amountInCents;
+      if (formData.type === "expense") {
+        finalAmount = -Math.abs(finalAmount);
+      } else {
+        finalAmount = Math.abs(finalAmount);
     }
 
     const transactionUpdate = {
@@ -139,7 +151,11 @@ export function EditFixedTransactionModal({
       transactionUpdate.invoice_month_overridden = false;
     }
     
-    onEditTransaction(transactionUpdate);
+      onEditTransaction(transactionUpdate);
+    } finally {
+      // ⚠️ CRÍTICO: Sempre resetar isSubmitting
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -169,12 +185,13 @@ export function EditFixedTransactionModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
               className="flex-1 text-body"
             >
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 text-body">
-              Salvar Alterações
+            <Button type="submit" disabled={isSubmitting} className="flex-1 text-body">
+              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         </form>

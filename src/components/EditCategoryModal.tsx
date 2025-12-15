@@ -15,6 +15,7 @@ export function EditCategoryModal({ open, onOpenChange, onEditCategory, category
     type: "" as Category["type"] | "",
     color: PREDEFINED_COLORS[0]
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,7 +31,17 @@ export function EditCategoryModal({ open, onOpenChange, onEditCategory, category
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!category) return;
+    // ⚠️ CRÍTICO: Evitar submissões duplicadas
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    if (!category) {
+      setIsSubmitting(false);
+      return;
+    }
     
     if (!formData.name.trim() || !formData.type) {
       toast({
@@ -38,6 +49,7 @@ export function EditCategoryModal({ open, onOpenChange, onEditCategory, category
         description: "Preencha todos os campos obrigatórios",
         variant: "destructive"
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -63,12 +75,16 @@ export function EditCategoryModal({ open, onOpenChange, onEditCategory, category
             description: "Nenhuma alteração detectada",
         });
         onOpenChange(false);
+        setIsSubmitting(false);
         return;
     }
 
-    onEditCategory(updates);
-
-    onOpenChange(false);
+    try {
+      onEditCategory(updates);
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -127,11 +143,11 @@ export function EditCategoryModal({ open, onOpenChange, onEditCategory, category
           />
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={handleCancel} className="flex-1 text-body">
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting} className="flex-1 text-body">
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 text-body">
-              Salvar Alterações
+            <Button type="submit" disabled={isSubmitting} className="flex-1 text-body">
+              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         </form>

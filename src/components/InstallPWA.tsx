@@ -44,10 +44,10 @@ export function InstallPWA() {
     <Button 
       variant="outline" 
       size="sm" 
-      className="w-full gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
+      className="w-full gap-2 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/15 hover:to-primary/10 border-primary/30 text-primary font-medium transition-all duration-200 hover:scale-105 hover:shadow-md"
       onClick={handleInstallClick}
     >
-      <Download className="h-4 w-4" />
+      <Download className="h-5 w-5" />
       Instalar App
     </Button>
   );

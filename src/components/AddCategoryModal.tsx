@@ -15,10 +15,18 @@ export function AddCategoryModal({ open, onOpenChange, onAddCategory }: AddCateg
     type: "" as Category["type"] | "",
     color: PREDEFINED_COLORS[0]
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ⚠️ CRÍTICO: Evitar submissões duplicadas ao clicar múltiplas vezes
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     
     if (!formData.name.trim() || !formData.type) {
       toast({
@@ -29,20 +37,25 @@ export function AddCategoryModal({ open, onOpenChange, onAddCategory }: AddCateg
       return;
     }
 
-    onAddCategory({
-      name: formData.name.trim(),
-      type: formData.type,
-      color: formData.color
-    });
+    try {
+      onAddCategory({
+        name: formData.name.trim(),
+        type: formData.type,
+        color: formData.color
+      });
 
-    // Reset form
-    setFormData({
-      name: "",
-      type: "",
-      color: PREDEFINED_COLORS[0]
-    });
-    
-    onOpenChange(false);
+      // Reset form
+      setFormData({
+        name: "",
+        type: "",
+        color: PREDEFINED_COLORS[0]
+      });
+      
+      onOpenChange(false);
+    } finally {
+      // ⚠️ CRÍTICO: Sempre resetar isSubmitting (sucesso ou erro)
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -97,11 +110,11 @@ export function AddCategoryModal({ open, onOpenChange, onAddCategory }: AddCateg
           />
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={handleCancel} className="flex-1 text-body">
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting} className="flex-1 text-body">
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 text-body">
-              Adicionar
+            <Button type="submit" disabled={isSubmitting} className="flex-1 text-body">
+              {isSubmitting ? "Adicionando..." : "Adicionar"}
             </Button>
           </div>
         </form>

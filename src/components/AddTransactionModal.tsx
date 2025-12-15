@@ -40,6 +40,7 @@ export function AddTransactionModal({
     handleSubmit,
     setManualStatusChange,
     setManualInvoiceMonthChange,
+    isSubmitting,
   } = useAddTransactionForm({
     open,
     initialType,
@@ -156,12 +157,17 @@ export function AddTransactionModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
               className="flex-1 text-body"
             >
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 text-body">
-              Adicionar
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="flex-1 text-body"
+            >
+              {isSubmitting ? "Adicionando..." : "Adicionar"}
             </Button>
           </div>
         </form>

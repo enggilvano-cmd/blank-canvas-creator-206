@@ -63,6 +63,7 @@ export function AddFixedTransactionModal({
     is_provision: false,
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { categories } = useCategories();
 
@@ -91,6 +92,13 @@ export function AddFixedTransactionModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ⚠️ CRÍTICO: Evitar submissões duplicadas
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     const errors: Record<string, string> = {};
 
     if (!formData.description.trim()) {
@@ -126,20 +134,26 @@ export function AddFixedTransactionModal({
         description: "Por favor, corrija os erros no formulário.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
-    onAddTransaction({
-      description: formData.description,
-      amount: formData.amount,
-      date: formData.date,
-      type: formData.type as "income" | "expense",
-      category_id: formData.category_id || null,
-      account_id: formData.account_id,
-      status: formData.status,
-      is_fixed: true,
-      is_provision: formData.is_provision,
-    });
+    try {
+      onAddTransaction({
+        description: formData.description,
+        amount: formData.amount,
+        date: formData.date,
+        type: formData.type as "income" | "expense",
+        category_id: formData.category_id || null,
+        account_id: formData.account_id,
+        status: formData.status,
+        is_fixed: true,
+        is_provision: formData.is_provision,
+      });
+    } finally {
+      // ⚠️ CRÍTICO: Sempre resetar isSubmitting
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -352,12 +366,13 @@ export function AddFixedTransactionModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
               className="flex-1 text-body"
             >
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 text-body">
-              Adicionar
+            <Button type="submit" disabled={isSubmitting} className="flex-1 text-body">
+              {isSubmitting ? "Adicionando..." : "Adicionar"}
             </Button>
           </div>
         </form>

@@ -67,6 +67,7 @@ export function useAddTransactionForm({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [manualStatusChange, setManualStatusChange] = useState(false);
   const [manualInvoiceMonthChange, setManualInvoiceMonthChange] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form quando o modal abre ou fecha
   useEffect(() => {
@@ -81,6 +82,7 @@ export function useAddTransactionForm({
       setValidationErrors({});
       setManualStatusChange(false);
       setManualInvoiceMonthChange(false);
+      setIsSubmitting(false);  // ⚠️ Reset isSubmitting ao abrir modal
     } else {
       // Cleanup: Reseta o formulário APÓS modal fechar (evita flash visual)
       const timer = setTimeout(() => {
@@ -91,6 +93,7 @@ export function useAddTransactionForm({
         });
         setCustomInstallments("");
         setValidationErrors({});
+        setIsSubmitting(false);  // ⚠️ Reset isSubmitting ao fechar modal
       }, 200); // Aguarda animação de fechamento
       return () => clearTimeout(timer);
     }
@@ -164,6 +167,13 @@ export function useAddTransactionForm({
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ⚠️ CRÍTICO: Evitar submissões duplicadas ao clicar múltiplas vezes
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     setValidationErrors({});
 
     // Validação com Zod
@@ -271,8 +281,11 @@ export function useAddTransactionForm({
         description: getErrorMessage(error) || "Erro ao criar transação",
         variant: "destructive",
       });
+    } finally {
+      // ⚠️ CRÍTICO: Sempre resetar isSubmitting (sucesso ou erro)
+      setIsSubmitting(false);
     }
-  }, [formData, customInstallments, selectedAccount, toast, onClose]);
+  }, [formData, customInstallments, selectedAccount, toast, onClose, isSubmitting]);
 
   const handleInstallmentTransaction = async (installments: number) => {
     if (!onAddInstallmentTransactions) {
@@ -467,5 +480,6 @@ export function useAddTransactionForm({
     handleSubmit,
     setManualStatusChange,
     setManualInvoiceMonthChange,
+    isSubmitting,  // ⚠️ Exportar state de submissão
   };
 }

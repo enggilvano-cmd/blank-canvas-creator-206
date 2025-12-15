@@ -1,4 +1,4 @@
-import { useFixedTransactions } from "@/hooks/useFixedTransactions";
+import { useFixedTransactions, notifyFixedTransactionsChange } from "@/hooks/useFixedTransactions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useQueryInvalidation } from "@/hooks/useQueryInvalidation";
 import { offlineQueue } from "@/lib/offlineQueue";
@@ -286,6 +286,7 @@ export function FixedTransactionsPage({
       });
 
       loadFixedTransactions();
+      notifyFixedTransactionsChange();
       setAddModalOpen(false);
     };
 
@@ -336,10 +337,22 @@ export function FixedTransactionsPage({
         description: `${result.created_count || 1} transações foram geradas com sucesso`,
       });
 
+      // 🔄 Buscar dados atualizados do servidor para cache offline
+      const { data: allFixedTransactions } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_fixed", true);
+
+      if (allFixedTransactions && allFixedTransactions.length > 0) {
+        await offlineDatabase.saveTransactions(allFixedTransactions as any);
+      }
+
       // 🔄 Sincronizar listas e dashboard imediatamente
       await invalidateTransactions();
 
       loadFixedTransactions(); // Refetch fixed transactions
+      notifyFixedTransactionsChange();
       setAddModalOpen(false);
     } catch (error) {
       // Catch também para exceções de rede lançadas pelo invoke
@@ -435,6 +448,7 @@ export function FixedTransactionsPage({
     
     // 3. Refresh UI immediately
     loadFixedTransactions();
+    notifyFixedTransactionsChange();
     
     toast({
         title: "Salvando...",
@@ -549,6 +563,32 @@ export function FixedTransactionsPage({
         }
       }
 
+      // 🔄 Buscar dados atualizados do servidor para cache offline
+      const { data: updatedMainTx } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("id", transaction.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Atualizar também as transações filhas que foram editadas
+      let updatedChildren: Transaction[] = [];
+      if (childTransactions && childTransactions.length > 0) {
+        const { data: freshChildren } = await supabase
+          .from("transactions")
+          .select("*")
+          .in("id", childTransactions.map(c => c.id));
+        updatedChildren = freshChildren || [];
+      }
+
+      // Salvar tudo no cache offline
+      const allUpdated = [];
+      if (updatedMainTx) allUpdated.push(updatedMainTx);
+      allUpdated.push(...updatedChildren);
+      if (allUpdated.length > 0) {
+        await offlineDatabase.saveTransactions(allUpdated as any);
+      }
+
       toast({
         title: "Transações atualizadas",
         description: "A transação fixa e todas as ocorrências pendentes foram atualizadas. As concluídas foram preservadas.",
@@ -558,6 +598,7 @@ export function FixedTransactionsPage({
       await invalidateTransactions();
 
       loadFixedTransactions();
+      notifyFixedTransactionsChange();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes("Failed to send a request") || 
@@ -606,6 +647,7 @@ export function FixedTransactionsPage({
 
       toast({ title: "Removido offline", description: "Sincronizará quando online." });
       loadFixedTransactions();
+      notifyFixedTransactionsChange();
       setTransactionToDelete(null);
       setDeleteDialogOpen(false);
     };
@@ -720,6 +762,7 @@ export function FixedTransactionsPage({
       await invalidateTransactions();
 
       loadFixedTransactions();
+      notifyFixedTransactionsChange();
       setTransactionToDelete(null);
       setDeleteDialogOpen(false);
     } catch (error) {
@@ -839,10 +882,23 @@ export function FixedTransactionsPage({
         description: `12 novos meses foram gerados com sucesso.`,
       });
 
+      // 🔄 Buscar dados atualizados (inclusão dos 12 novos meses)
+      const { data: updatedFixedTx } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("id", transactionId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (updatedFixedTx) {
+        await offlineDatabase.saveTransactions([updatedFixedTx as any]);
+      }
+
       // 🔄 Sincronizar listas e dashboard
       await invalidateTransactions();
 
       loadFixedTransactions();
+      notifyFixedTransactionsChange();
     } catch (error) {
       logger.error("Error generating next 12 months:", error);
       toast({

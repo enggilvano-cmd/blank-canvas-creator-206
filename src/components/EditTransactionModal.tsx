@@ -21,6 +21,7 @@ export function EditTransactionModal({
 }: EditTransactionModalProps) {
   const { toast } = useToast();
   const { categories } = useCategories();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Detectar se é uma transação de transferência
   const isTransfer = Boolean(transaction?.to_account_id || transaction?.linked_transaction_id);
@@ -81,13 +82,27 @@ export function EditTransactionModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!transaction) return;
+    // ⚠️ CRÍTICO: Evitar submissões duplicadas ao clicar múltiplas vezes
+    if (isSubmitting) {
+      return;
+    }
     
-    if (!await validateForm()) return;
+    setIsSubmitting(true);
+    
+    if (!transaction) {
+      setIsSubmitting(false);
+      return;
+    }
+    
+    if (!await validateForm()) {
+      setIsSubmitting(false);
+      return;
+    }
     
     const requiresScope = await checkScopeRequired();
     if (requiresScope) {
       setScopeDialogOpen(true);
+      setIsSubmitting(false);
       return;
     }
 
@@ -95,27 +110,35 @@ export function EditTransactionModal({
   };
 
   const processEdit = async (editScope: EditScope) => {
-    if (!transaction) return;
-
-    const updates = getUpdates();
-    if (!updates) {
-      onOpenChange(false);
+    if (!transaction) {
+      setIsSubmitting(false);
       return;
     }
 
-    onEditTransaction({ id: transaction.id, ...updates } as TransactionUpdate, editScope);
-    
-    const scopeDescription = editScope === "current" ? "Transação atual atualizada com sucesso" : 
-                             editScope === "all" ? "Todas as parcelas atualizadas com sucesso" :
-                             "Parcelas selecionadas atualizadas com sucesso";
-    
-    toast({
-      title: "Sucesso",
-      description: scopeDescription,
-    });
+    try {
+      const updates = getUpdates();
+      if (!updates) {
+        onOpenChange(false);
+        return;
+      }
 
-    onOpenChange(false);
-    setScopeDialogOpen(false);
+      onEditTransaction({ id: transaction.id, ...updates } as TransactionUpdate, editScope);
+      
+      const scopeDescription = editScope === "current" ? "Transação atual atualizada com sucesso" : 
+                               editScope === "all" ? "Todas as parcelas atualizadas com sucesso" :
+                               "Parcelas selecionadas atualizadas com sucesso";
+      
+      toast({
+        title: "Sucesso",
+        description: scopeDescription,
+      });
+
+      onOpenChange(false);
+      setScopeDialogOpen(false);
+    } finally {
+      // ⚠️ CRÍTICO: Sempre resetar isSubmitting
+      setIsSubmitting(false);
+    }
   };
 
   const filteredCategories = categories.filter(cat => 
@@ -155,11 +178,11 @@ export function EditTransactionModal({
             />
 
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 text-body">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting} className="flex-1 text-body">
                 Cancelar
               </Button>
-              <Button type="submit" className="flex-1 text-body">
-                Salvar Alterações
+              <Button type="submit" disabled={isSubmitting} className="flex-1 text-body">
+                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </div>
           </form>
