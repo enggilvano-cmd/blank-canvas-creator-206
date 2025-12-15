@@ -256,7 +256,7 @@ export function AddFixedTransactionModal({
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredCategories.map((category) => (
+                  {[...filteredCategories].sort((a, b) => a.name.localeCompare(b.name)).map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
                         <div
@@ -313,7 +313,7 @@ export function AddFixedTransactionModal({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {accounts.map((account) => (
+                {[...accounts].sort((a, b) => a.name.localeCompare(b.name)).map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     <div className="flex flex-col gap-1 w-full">
                       <div className="flex justify-between items-center w-full">

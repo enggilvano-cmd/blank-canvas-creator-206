@@ -181,7 +181,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {sourceAccounts.map((account) => {
+                  {[...sourceAccounts].sort((a, b) => a.name.localeCompare(b.name)).map((account) => {
                     const hasLimit = account.limit_amount && account.limit_amount > 0;
                     
                     return (
@@ -251,7 +251,8 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {destinationAccounts
+                  {[...destinationAccounts]
+                    .sort((a, b) => a.name.localeCompare(b.name))
                     .map((account) => {
                       const hasLimit = account.limit_amount && account.limit_amount > 0;
                       

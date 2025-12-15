@@ -99,7 +99,7 @@ export function FixedTransactionFilterDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as categorias</SelectItem>
-                {categories.map((category) => (
+                {[...categories].sort((a, b) => a.name.localeCompare(b.name)).map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
@@ -118,7 +118,7 @@ export function FixedTransactionFilterDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as contas</SelectItem>
-                {accounts.map((account) => (
+                {[...accounts].sort((a, b) => a.name.localeCompare(b.name)).map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.name}
                   </SelectItem>
