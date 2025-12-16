@@ -108,7 +108,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
         // Esta chamada única assume que o backend abstrai essa complexidade.
         formData.fromAccountId,
         formData.toAccountId,
-        formData.amountInCents / 100,
+        formData.amountInCents,
         createDateFromString(formData.date)
       );
 
