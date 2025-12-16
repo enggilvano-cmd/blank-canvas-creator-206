@@ -32,17 +32,25 @@ export const isTransferOutgoing = (transaction: Transaction): boolean => {
 };
 
 /**
+ * Verifica se a transação deve ser excluída de agregações de receita/despesa
+ * cobrindo TODAS as formas de transferência:
+ *  - tipo 'transfer'
+ *  - saída com to_account_id
+ *  - receita espelho com linked_transaction_id
+ */
+export const isTransferLike = (transaction: Transaction): boolean => {
+  if (transaction.type === 'transfer') return true;
+  if (isTransferOutgoing(transaction)) return true;
+  if (isTransferMirror(transaction)) return true;
+  return false;
+};
+
+/**
  * Filtra transações para contar apenas aquelas que devem aparecer
  * em cálculos de receita/despesa (excluindo espelhos de transferência).
  */
 export const filterForAggregation = (transactions: Transaction[]): Transaction[] => {
-  return transactions.filter(t => {
-    // Excluir APENAS receitas espelho de transferências
-    if (isTransferMirror(t)) {
-      return false;
-    }
-    return true;
-  });
+  return transactions.filter(t => !isTransferLike(t));
 };
 
 /**

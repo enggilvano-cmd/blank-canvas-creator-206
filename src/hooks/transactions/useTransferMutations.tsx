@@ -67,7 +67,72 @@ export function useTransferMutations() {
     }
   }, [user, accounts, queryClient, toast]);
 
+  const handleDeleteTransfer = useCallback(async (transferId: string) => {
+    if (!user) throw new Error('Usuário não autenticado');
+
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('transfer_id', transferId);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+
+      toast({
+        title: 'Sucesso',
+        description: 'Transferência excluída com sucesso.',
+      });
+
+    } catch (error: unknown) {
+      logger.error('Error deleting transfer:', error);
+      const errorMessage = getErrorMessage(error);
+      toast({
+        title: 'Erro ao excluir transferência',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  }, [user, queryClient, toast]);
+
+  const handleEditTransfer = useCallback(async (transferId: string, updates: { amount?: number; date?: string, description?: string }) => {
+    if (!user) throw new Error('Usuário não autenticado');
+
+    try {
+      const { error } = await supabase.rpc('atomic_update_transfer', {
+        p_transfer_id: transferId,
+        p_amount: updates.amount,
+        p_date: updates.date,
+        p_description: updates.description,
+      });
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+
+      toast({
+        title: 'Sucesso',
+        description: 'Transferência atualizada com sucesso.',
+      });
+    } catch (error: unknown) {
+      logger.error('Error updating transfer:', error);
+      const errorMessage = getErrorMessage(error);
+      toast({
+        title: 'Erro ao atualizar transferência',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  }, [user, queryClient, toast]);
+
   return {
     handleTransfer,
+    handleDeleteTransfer,
+    handleEditTransfer,
   };
 }

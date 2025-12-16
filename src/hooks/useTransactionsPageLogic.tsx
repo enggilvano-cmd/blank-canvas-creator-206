@@ -332,19 +332,29 @@ export function useTransactionsPageLogic({
         }
       } catch (error) {
         logger.error("Error fetching aggregated totals:", error);
-        // Em caso de erro, tenta calcular localmente
-        const localIncome = transactions
+        // Em caso de erro, calcular localmente EXCLUINDO TRANSFERÊNCIAS
+        const isTransferLike = (t: typeof transactions[number]) => {
+          if (t.type === 'transfer') return true;
+          if ((t as any).to_account_id) return true;
+          // Excluir receitas espelho de transferências (income + linked_transaction_id)
+          if (t.type === 'income' && (t as any).linked_transaction_id) return true;
+          return false;
+        };
+
+        const nonTransfer = transactions.filter(t => !isTransferLike(t));
+        const localIncome = nonTransfer
           .filter(t => t.type === 'income')
           .reduce((sum, t) => sum + t.amount, 0);
-        const localExpenses = transactions
+        const localExpenses = nonTransfer
           .filter(t => t.type === 'expense')
           .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
         setAggregatedTotals({
           income: localIncome,
           expenses: localExpenses,
           balance: localIncome - localExpenses,
         });
-        logger.info("Using local calculation for totals:", { localIncome, localExpenses });
+        logger.info("Using local calculation for totals (excluding transfers):", { localIncome, localExpenses });
       }
     };
 
