@@ -27,21 +27,27 @@ export function useTransferMutations() {
       const toAccount = accounts.find((acc) => acc.id === toAccountId);
       if (!fromAccount || !toAccount) throw new Error('Contas não encontradas');
 
-      const { error } = await supabase.functions.invoke('atomic-transfer', {
-        body: {
-          transfer: {
-            from_account_id: fromAccountId,
-            to_account_id: toAccountId,
-            amount: amount,
-            date: date.toISOString().split('T')[0],
-            outgoing_description: `Transferência para ${toAccount.name}`,
-            incoming_description: `Transferência de ${fromAccount.name}`,
-            status: 'completed' as const,
-          }
-        }
+      // Chamada direta RPC para evitar problemas com Edge Function
+      const { data, error } = await supabase.rpc('atomic_create_transfer', {
+        p_user_id: user.id,
+        p_from_account_id: fromAccountId,
+        p_to_account_id: toAccountId,
+        p_amount: amount,
+        p_date: date.toISOString().split('T')[0],
+        p_outgoing_description: `Transferência para ${toAccount.name}`,
+        p_incoming_description: `Transferência de ${fromAccount.name}`,
+        p_status: 'completed',
       });
 
       if (error) throw error;
+
+      // Verificar sucesso retornado pela função SQL
+      // A função retorna uma tabela, então data é um array
+      const result = Array.isArray(data) ? data[0] : data;
+      
+      if (result && result.success === false) {
+        throw new Error(result.error_message || 'Erro desconhecido ao processar transferência');
+      }
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
       queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });

@@ -47,7 +47,7 @@ export function useEditTransactionForm(
       
       const initialData: FormData = {
         description: transaction.description || "",
-        amountInCents: Math.round(Math.abs(transaction.amount)),
+        amountInCents: Math.round(Math.abs(transaction.amount) * 100),
         date: transactionDate,
         type: transactionType as "income" | "expense",
         category_id: transaction.category_id || "",
@@ -128,7 +128,7 @@ export function useEditTransactionForm(
       } else {
         finalAmount = Math.abs(finalAmount);
       }
-      updates.amount = finalAmount;
+      updates.amount = finalAmount / 100;
     }
     
     if (formData.date.getTime() !== originalData.date.getTime()) {

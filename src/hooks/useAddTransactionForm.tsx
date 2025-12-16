@@ -394,7 +394,7 @@ export function useAddTransactionForm({
       const { data, error } = await supabase.functions.invoke('atomic-create-fixed', {
         body: {
           description: formData.description,
-          amount: formData.amount,
+          amount: formData.amount / 100,
           date: formData.date,
           type: formData.type,
           category_id: formData.category_id,
@@ -448,7 +448,7 @@ export function useAddTransactionForm({
     // Transação simples
     const transactionPayload = {
       description: formData.description,
-      amount: Math.abs(formData.amount),
+      amount: Math.abs(formData.amount) / 100,
       date: createDateFromString(formData.date),
       type: formData.type as "income" | "expense",
       category_id: formData.category_id,

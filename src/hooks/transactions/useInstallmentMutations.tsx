@@ -30,7 +30,7 @@ export function useInstallmentMutations() {
           const { data: rpcData, error } = await supabase.rpc('atomic_create_transaction', {
             p_user_id: user.id,
             p_description: data.description,
-            p_amount: data.amount,
+            p_amount: data.amount / 100,
             p_date: dateStr,
             p_type: data.type,
             p_category_id: data.category_id,
