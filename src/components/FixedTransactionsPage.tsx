@@ -1060,7 +1060,7 @@ export function FixedTransactionsPage({
                   Receitas Mensais
                 </p>
                 <div className="balance-text balance-positive">
-                  {formatCurrency(stats.monthlyIncome)}
+                  {formatCurrency(stats.monthlyIncome * 100)}
                 </div>
               </div>
             </div>
@@ -1078,7 +1078,7 @@ export function FixedTransactionsPage({
                   Despesas Mensais
                 </p>
                 <div className="balance-text balance-negative">
-                  {formatCurrency(stats.monthlyExpenses)}
+                  {formatCurrency(stats.monthlyExpenses * 100)}
                 </div>
               </div>
             </div>
@@ -1102,7 +1102,7 @@ export function FixedTransactionsPage({
                       : "balance-negative"
                   }`}
                 >
-                  {formatCurrency(stats.monthlyBalance)}
+                  {formatCurrency(stats.monthlyBalance * 100)}
                 </div>
               </div>
             </div>

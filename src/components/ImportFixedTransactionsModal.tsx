@@ -253,10 +253,11 @@ export function ImportFixedTransactionsModal({
     let existingTransactionId: string | undefined;
 
     if (isValid && account) {
-      const valorInCents = Math.round(Math.abs(valor) * 100);
+      // valor está em REAIS, tx.amount também está em REAIS (do banco)
+      const valorInReais = Math.abs(valor);
       const existing = existingTransactions.find(tx => {
         const isSameDescription = normalizeString(tx.description) === normalizeString(descricao);
-        const isSameAmount = Math.abs(tx.amount) === valorInCents;
+        const isSameAmount = Math.abs(tx.amount) === valorInReais;
         const isSameAccount = tx.account_id === account.id;
         
         // Comparação de data segura (string split)
@@ -551,7 +552,9 @@ export function ImportFixedTransactionsModal({
           // Como a primeira transação (pai) já conta, subtraímos 1 para as filhas
           const monthsToGenerate = (12 - currentMonth) + 12 - 1;
 
-          const amount = Math.round(Math.abs(t.valor) * 100);
+          // t.valor está em REAIS (não é multiplicado por 100 no parsing)
+          // Enviar diretamente em REAIS para a API
+          const amountInReais = Math.abs(t.valor);
           const categoryId = categoryMap.get(normalizeString(t.categoria)) || null;
 
           // Log para debug da provisão
@@ -562,7 +565,7 @@ export function ImportFixedTransactionsModal({
           const { data, error } = await supabase.functions.invoke('atomic-create-fixed', {
             body: {
               description: t.descricao.trim(),
-              amount: amount,
+              amount: amountInReais,
               date: initialDate.toISOString().split('T')[0],
               type: t.parsedType,
               category_id: categoryId,
@@ -626,7 +629,7 @@ export function ImportFixedTransactionsModal({
 
                         transactionsToGenerate.push({
                           description: t.descricao.trim(),
-                          amount: amount,
+                          amount: amountInReais,
                           date: nextDate.toISOString().split("T")[0],
                           type: t.parsedType!,
                           category_id: categoryId,

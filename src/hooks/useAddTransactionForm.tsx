@@ -446,9 +446,11 @@ export function useAddTransactionForm({
 
   const handleSingleTransaction = async () => {
     // Transação simples
+    // formData.amount está em CENTAVOS (do CurrencyInput)
+    // Converter para REAIS (dividir por 100) para enviar ao banco
     const transactionPayload = {
       description: formData.description,
-      amount: Math.abs(formData.amount) / 100,
+      amount: Math.abs(formData.amount) / 100, // Converter centavos → reais
       date: createDateFromString(formData.date),
       type: formData.type as "income" | "expense",
       category_id: formData.category_id,

@@ -340,7 +340,7 @@ function exportDREtoPDF(doc: jsPDF, data: DREReport, startY: number, t: Translat
   doc.setFont("helvetica", "normal");
   data.revenueByCategory.forEach((item) => {
     doc.text(`  ${item.category}`, 25, y);
-    doc.text(formatCurrency(item.amount), 170, y, { align: "right" });
+    doc.text(formatCurrency(item.amount * 100), 170, y, { align: "right" });
     y += 5;
   });
 
@@ -357,7 +357,7 @@ function exportDREtoPDF(doc: jsPDF, data: DREReport, startY: number, t: Translat
   doc.setFont("helvetica", "normal");
   data.expensesByCategory.forEach((item) => {
     doc.text(`  ${item.category}`, 25, y);
-    doc.text(formatCurrency(item.amount), 170, y, { align: "right" });
+    doc.text(formatCurrency(item.amount * 100), 170, y, { align: "right" });
     y += 5;
   });
 
@@ -388,7 +388,7 @@ function exportBalanceSheetToPDF(doc: jsPDF, data: BalanceSheetReport, startY: n
   doc.setFont("helvetica", "normal");
   data.currentAssets.forEach((item) => {
     doc.text(`  ${item.account}`, 30, y);
-    doc.text(formatCurrency(item.balance), 90, y, { align: "right" });
+    doc.text(formatCurrency(item.balance * 100), 90, y, { align: "right" });
     y += 5;
   });
 
@@ -401,7 +401,7 @@ function exportBalanceSheetToPDF(doc: jsPDF, data: BalanceSheetReport, startY: n
     doc.setFont("helvetica", "normal");
     data.investments.forEach((item) => {
       doc.text(`  ${item.account}`, 30, y);
-      doc.text(formatCurrency(item.balance), 90, y, { align: "right" });
+      doc.text(formatCurrency(item.balance * 100), 90, y, { align: "right" });
       y += 5;
     });
   }

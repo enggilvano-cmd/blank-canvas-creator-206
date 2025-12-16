@@ -199,9 +199,9 @@ export function TransactionsPage({
       ) : (
         <TransactionStatsCards
           totalCount={totalCount}
-          income={aggregatedTotals.income}
-          expenses={aggregatedTotals.expenses}
-          balance={aggregatedTotals.balance}
+          income={aggregatedTotals.income * 100}
+          expenses={aggregatedTotals.expenses * 100}
+          balance={aggregatedTotals.balance * 100}
           formatCurrency={formatCurrency}
         />
       )}

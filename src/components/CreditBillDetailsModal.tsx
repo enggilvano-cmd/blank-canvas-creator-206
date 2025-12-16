@@ -90,11 +90,11 @@ export function CreditBillDetailsModal({ bill, onClose }: CreditBillDetailsModal
         <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg border">
           <div>
             <div className="text-sm text-muted-foreground">Valor Total</div>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(bill.total_amount)}</div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(bill.total_amount * 100)}</div>
           </div>
           <div className="text-right">
-            <div className="text-sm font-medium text-success">Pago: {formatCurrency(paidAmount)}</div>
-            <div className="text-sm font-medium text-destructive">Restante: {formatCurrency(remainingAmount)}</div>
+            <div className="text-sm font-medium text-success">Pago: {formatCurrency(paidAmount * 100)}</div>
+            <div className="text-sm font-medium text-destructive">Restante: {formatCurrency(remainingAmount * 100)}</div>
           </div>
         </div>
         <div className="max-h-[400px] overflow-y-auto">
@@ -114,7 +114,7 @@ export function CreditBillDetailsModal({ bill, onClose }: CreditBillDetailsModal
                   <TableRow key={transaction.id}>
                     <TableCell>{format(new Date(transaction.date), 'dd/MM/yy', { locale: ptBR })}</TableCell>
                     <TableCell>{transaction.description}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(transaction.amount)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(transaction.amount * 100)}</TableCell>
                   </TableRow>
                 ))}
             </TableBody>

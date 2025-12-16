@@ -336,7 +336,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                   Fatura Atual
                 </p>
                 <div className="balance-text">
-                  {formatCents(totalSummary.currentBill)}
+                  {formatCents(totalSummary.currentBill * 100)}
                 </div>
               </div>
             </div>
@@ -354,7 +354,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                   Próxima Fatura
                 </p>
                 <div className="balance-text balance-warning">
-                  {formatCents(totalSummary.nextBill)}
+                  {formatCents(totalSummary.nextBill * 100)}
                 </div>
               </div>
             </div>
@@ -372,7 +372,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                   Limite Usado
                 </p>
                 <div className="balance-text balance-negative">
-                  {formatCents(totalSummary.usedLimit)}
+                  {formatCents(totalSummary.usedLimit * 100)}
                 </div>
               </div>
             </div>

@@ -208,7 +208,7 @@ export function CreditCardBillCard({
           <p className="text-sm text-muted-foreground">{billLabel}</p>
           <div className="flex items-center gap-2">
             <p className={cn("text-2xl font-bold", billAmountColor)}>
-              {formatCents(currentBillAmount)}
+              {formatCents(currentBillAmount * 100)}
             </p>
             {isOverdue && (
               <AlertTriangle className="h-6 w-6 text-destructive animate-pulse" />
@@ -220,12 +220,12 @@ export function CreditCardBillCard({
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Usado</span>
-            <span>{formatCents(totalBalance)} / {formatCents(limit_amount ?? 0)}</span>
+            <span>{formatCents(totalBalance * 100)} / {formatCents((limit_amount ?? 0) * 100)}</span>
           </div>
           <Progress value={limitUsedPercentage} className="h-2" />
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Próxima Fatura</span>
-            <span className="font-medium text-muted-foreground">{formatCents(nextBillAmount)}</span>
+            <span className="font-medium text-muted-foreground">{formatCents(nextBillAmount * 100)}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Disponível</span>

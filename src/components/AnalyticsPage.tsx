@@ -1088,9 +1088,9 @@ export default function AnalyticsPage({
     () => (value: number, _name: string, props: any) => {
       // Show only the actual balance value, not the split values
       if (props?.payload?.balance !== undefined) {
-        return [formatCurrency(props.payload.balance), " - Saldo"];
+        return [formatCurrency(props.payload.balance * 100), " - Saldo"];
       }
-      return [formatCurrency(value), " - Saldo"];
+      return [formatCurrency(value * 100), " - Saldo"];
     },
     [formatCurrency]
   );
@@ -1309,7 +1309,7 @@ export default function AnalyticsPage({
                 <p className="text-caption text-muted-foreground">Período filtrado</p>
               </div>
               <div className="balance-text balance-positive">
-                {formatCurrency(totalsByType.income)}
+                {formatCurrency(totalsByType.income * 100)}
               </div>
             </div>
           </CardContent>
@@ -1326,7 +1326,7 @@ export default function AnalyticsPage({
                 <p className="text-caption text-muted-foreground">Período filtrado</p>
               </div>
               <div className="balance-text balance-negative">
-                {formatCurrency(totalsByType.expenses)}
+                {formatCurrency(totalsByType.expenses * 100)}
               </div>
             </div>
           </CardContent>
@@ -1345,7 +1345,7 @@ export default function AnalyticsPage({
               <div className={`balance-text ${
                 totalsByType.income - totalsByType.expenses >= 0 ? "balance-positive" : "balance-negative"
               }`}>
-                {formatCurrency(totalsByType.income - totalsByType.expenses)}
+                {formatCurrency((totalsByType.income - totalsByType.expenses) * 100)}
               </div>
             </div>
           </CardContent>
@@ -2003,7 +2003,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       account.balance >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(account.balance)}
+                      {formatCurrency(account.balance * 100)}
                     </span>
                   </div>
                 ))}
@@ -2012,7 +2012,7 @@ export default function AnalyticsPage({
                   <span className={`font-medium flex-shrink-0 ${
                     accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                   }`}>
-                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                   </span>
                 </div>
               </div>
@@ -2044,7 +2044,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       account.balance >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(account.balance)}
+                      {formatCurrency(account.balance * 100)}
                     </span>
                   </div>
                 ))}
@@ -2053,7 +2053,7 @@ export default function AnalyticsPage({
                   <span className={`font-medium flex-shrink-0 ${
                     accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                   }`}>
-                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                   </span>
                 </div>
               </div>
@@ -2178,7 +2178,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2219,7 +2219,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2353,7 +2353,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2394,7 +2394,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2530,7 +2530,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2571,7 +2571,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2705,7 +2705,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2746,7 +2746,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2807,7 +2807,7 @@ export default function AnalyticsPage({
                       content={<ChartTooltipContent />}
                       formatter={(value: number, _name: string, props: any) => {
                         if (props?.payload?.balance !== undefined) {
-                          return [formatCurrency(props.payload.balance), " - Crédito Disponível"];
+                          return [formatCurrency(props.payload.balance * 100), " - Crédito Disponível"];
                         }
                         return [formatCurrency(value), " - Crédito Disponível"];
                       }}
@@ -2885,7 +2885,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       card.balance >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(card.balance)}
+                      {formatCurrency(card.balance * 100)}
                     </span>
                   </div>
                 ))}
@@ -2926,7 +2926,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         card.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(card.balance)}
+                        {formatCurrency(card.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2987,7 +2987,7 @@ export default function AnalyticsPage({
                       content={<ChartTooltipContent />}
                       formatter={(value: number, _name: string, props: any) => {
                         if (props?.payload?.balance !== undefined) {
-                          return [formatCurrency(props.payload.balance), " - Limite Usado"];
+                          return [formatCurrency(props.payload.balance * 100), " - Limite Usado"];
                         }
                         return [formatCurrency(value), " - Limite Usado"];
                       }}
@@ -3043,7 +3043,7 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(card.balance)}
+                        {formatCurrency(card.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -3080,7 +3080,7 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(card.balance)}
+                        {formatCurrency(card.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -3139,7 +3139,7 @@ export default function AnalyticsPage({
                       content={<ChartTooltipContent />}
                       formatter={(value: number, _name: string, props: any) => {
                         if (props?.payload?.balance !== undefined) {
-                          return [formatCurrency(props.payload.balance), "Disponível"];
+                          return [formatCurrency(props.payload.balance * 100), "Disponível"];
                         }
                         return [formatCurrency(value), "Disponível"];
                       }}
@@ -3217,7 +3217,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         acc.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(acc.balance)}
+                        {formatCurrency(acc.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -3226,7 +3226,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       overdraftBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(overdraftBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(overdraftBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -3258,7 +3258,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         acc.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(acc.balance)}
+                        {formatCurrency(acc.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -3267,7 +3267,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       overdraftBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(overdraftBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(overdraftBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -3319,7 +3319,7 @@ export default function AnalyticsPage({
                       content={<ChartTooltipContent />}
                       formatter={(value: number, _name: string, props: any) => {
                         if (props?.payload?.balance !== undefined) {
-                          return [formatCurrency(props.payload.balance), " - Limite Usado"];
+                          return [formatCurrency(props.payload.balance * 100), " - Limite Usado"];
                         }
                         return [formatCurrency(value), " - Limite Usado"];
                       }}
@@ -3375,7 +3375,7 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(acc.balance)}
+                        {formatCurrency(acc.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -3412,7 +3412,7 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(acc.balance)}
+                        {formatCurrency(acc.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -3481,7 +3481,7 @@ export default function AnalyticsPage({
                       </td>
                       <td className="text-right py-2 sm:py-3 font-medium text-body">
                         <div className="flex flex-col sm:block">
-                          <span>{formatCurrency(item.amount)}</span>
+                          <span>{formatCurrency(item.amount * 100)}</span>
                           <span className="text-caption text-muted-foreground sm:hidden">
                             {item.percentage.toFixed(1)}%
                           </span>
@@ -3549,7 +3549,7 @@ export default function AnalyticsPage({
                       </td>
                       <td className="text-right py-2 sm:py-3 font-medium text-body">
                         <div className="flex flex-col sm:block">
-                          <span>{formatCurrency(item.amount)}</span>
+                          <span>{formatCurrency(item.amount * 100)}</span>
                           <span className="text-caption text-muted-foreground sm:hidden">
                             {item.percentage.toFixed(1)}%
                           </span>

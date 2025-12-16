@@ -154,10 +154,10 @@ export function ProvisionedTransactionsByCategory({
                     </div>
                     <div className="flex flex-col items-end ml-2">
                       <span className={`font-medium text-xs ${isOverBudget ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'}`}>
-                        {formatCurrency(category.totalCompleted)}
+                        {formatCurrency(category.totalCompleted * 100)}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        de {formatCurrency(category.totalProvisioned)}
+                        de {formatCurrency(category.totalProvisioned * 100)}
                       </span>
                     </div>
                   </div>

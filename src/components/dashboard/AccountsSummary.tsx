@@ -140,7 +140,7 @@ export const AccountsSummary = memo(function AccountsSummary({
                       : 'text-destructive'
                   }`}
                 >
-                  {formatCurrency(account.balance)}
+                  {formatCurrency(account.balance * 100)}
                 </div>
               </div>
             ))}
@@ -159,7 +159,7 @@ export const AccountsSummary = memo(function AccountsSummary({
                         : 'text-destructive'
                     }`}
                   >
-                    {formatCurrency(totalBalance)}
+                    {formatCurrency(totalBalance * 100)}
                   </span>
                 </div>
               </div>

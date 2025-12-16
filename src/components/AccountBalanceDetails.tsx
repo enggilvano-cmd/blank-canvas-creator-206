@@ -21,25 +21,25 @@ export function AccountBalanceDetails({ account }: AccountBalanceDetailsProps) {
         {hasCredit ? (
           <>
             <p className="text-emerald-600 font-medium">
-              Crédito a favor: {formatCurrency(account.balance)}
+              Crédito a favor: {formatCurrency(account.balance * 100)}
             </p>
             <p>
-              Disponível: {formatCurrency(available)}
+              Disponível: {formatCurrency(available * 100)}
             </p>
           </>
         ) : (
           <>
             <p className={debt > 0 ? "text-destructive font-medium" : ""}>
-              Dívida: {formatCurrency(debt)}
+              Dívida: {formatCurrency(debt * 100)}
             </p>
             <p>
-              Disponível: {formatCurrency(available)}
+              Disponível: {formatCurrency(available * 100)}
             </p>
           </>
         )}
         {account.limit_amount && account.limit_amount > 0 && (
           <span className="block text-xs text-muted-foreground">
-            (Limite: {formatCurrency(account.limit_amount)})
+            (Limite: {formatCurrency(account.limit_amount * 100)})
           </span>
         )}
       </div>
@@ -49,10 +49,10 @@ export function AccountBalanceDetails({ account }: AccountBalanceDetailsProps) {
   // Outras contas
   return (
     <p className="text-sm text-muted-foreground">
-      Disponível: {formatCurrency(getAvailableBalance(account))}
+      Disponível: {formatCurrency(getAvailableBalance(account) * 100)}
       {account.limit_amount && account.limit_amount > 0 ? (
         <span className="block text-xs text-primary">
-          (Saldo: {formatCurrency(account.balance)} + Limite: {formatCurrency(account.limit_amount)})
+          (Saldo: {formatCurrency(account.balance * 100)} + Limite: {formatCurrency(account.limit_amount * 100)})
         </span>
       ) : null}
     </p>

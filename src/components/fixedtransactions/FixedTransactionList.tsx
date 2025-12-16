@@ -128,7 +128,7 @@ export const FixedTransactionList = memo(function FixedTransactionList({
               }`}
             >
               {transaction.type === "income" ? "+" : "-"}
-              {formatCurrency(Math.abs(transaction.amount))}
+              {formatCurrency(Math.abs(transaction.amount) * 100)}
             </span>
 
             <DropdownMenu>

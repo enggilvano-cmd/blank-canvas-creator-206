@@ -90,7 +90,7 @@ export function FinancialEvolutionChart({
   // Memoize tooltip formatter to prevent re-renders
   const tooltipFormatter = useMemo(
     () => (value: number, name: string) => [
-      formatCurrency(value),
+      formatCurrency(value * 100),
       name === 'receitas'
         ? ' - Receitas'
         : name === 'despesas'
@@ -247,7 +247,7 @@ export function FinancialEvolutionChart({
                       fill: 'hsl(var(--muted-foreground))',
                     }}
                     tickFormatter={(value) => {
-                      const formatted = formatCurrencyForAxis(value / 100, isMobile);
+                      const formatted = formatCurrencyForAxis(value * 100, isMobile);
                       return isMobile ? formatted.replace('R$', '').trim() : formatted;
                     }}
                     width={isMobile ? 35 : 80}

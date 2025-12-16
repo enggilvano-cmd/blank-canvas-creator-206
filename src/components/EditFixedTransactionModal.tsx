@@ -50,9 +50,13 @@ export function EditFixedTransactionModal({
         ? createDateFromString(transaction.date) 
         : transaction.date;
 
+      // transaction.amount vem em REAIS do banco, converter para CENTAVOS
+      const amountInReais = Math.abs(Number(transaction.amount));
+      const amountInCents = Math.round(amountInReais * 100);
+
       setFormData({
         description: transaction.description,
-        amountInCents: Math.round(Math.abs(Number(transaction.amount))),
+        amountInCents: amountInCents,
         date: dateObj,
         type: transaction.type as "income" | "expense",
         category_id: transaction.category_id || "",
@@ -123,18 +127,21 @@ export function EditFixedTransactionModal({
       const dateString = `${year}-${month}-${day}`;
 
       // Ensure amount has correct sign based on type
-      // Valor já vem em centavos do formulário
-      let finalAmount = formData.amountInCents;
+      // formData.amountInCents está em CENTAVOS, converter para REAIS
+      let finalAmountInCents = formData.amountInCents;
       if (formData.type === "expense") {
-        finalAmount = -Math.abs(finalAmount);
+        finalAmountInCents = -Math.abs(finalAmountInCents);
       } else {
-        finalAmount = Math.abs(finalAmount);
-    }
+        finalAmountInCents = Math.abs(finalAmountInCents);
+      }
+      
+      // Converter centavos → reais para enviar ao banco
+      const finalAmountInReais = finalAmountInCents / 100;
 
     const transactionUpdate = {
       ...transaction, // Keep other fields
       description: formData.description,
-      amount: finalAmount,
+      amount: finalAmountInReais,
       date: dateString,
       type: formData.type,
       category_id: formData.category_id || "",

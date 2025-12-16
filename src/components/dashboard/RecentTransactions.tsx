@@ -104,7 +104,7 @@ export function RecentTransactions({
                           ? '⇄'
                           : '-'}
                       </span>
-                      <span>{formatCurrency(Math.abs(Number(transaction.amount) || 0))}</span>
+                      <span>{formatCurrency(Math.abs(Number(transaction.amount) || 0) * 100)}</span>
                     </div>
                   </div>
                 </div>

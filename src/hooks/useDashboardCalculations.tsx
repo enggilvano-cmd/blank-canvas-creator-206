@@ -107,16 +107,17 @@ export function useDashboardCalculations(
       return t.type === 'expense' && account?.type === 'credit';
     });
 
-    const periodIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const periodExpenses = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const creditCardExpenses = creditTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    // t.amount vem em REAIS do banco, converter para CENTAVOS para formatCurrency
+    const periodIncome = incomeTransactions.reduce((sum, t) => sum + (t.amount * 100), 0);
+    const periodExpenses = expenseTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
+    const creditCardExpenses = creditTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
 
     // Pendentes
     const pendingExpTransactions = filteredTransactions.filter(t => t.type === 'expense' && t.status === 'pending');
     const pendingIncTransactions = filteredTransactions.filter(t => t.type === 'income' && t.status === 'pending');
 
-    const pendingExpenses = pendingExpTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const pendingIncome = pendingIncTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const pendingExpenses = pendingExpTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
+    const pendingIncome = pendingIncTransactions.reduce((sum, t) => sum + (t.amount * 100), 0);
 
     return {
       periodIncome,
@@ -129,6 +130,7 @@ export function useDashboardCalculations(
       pendingIncomeCount: pendingIncTransactions.length,
     };
   }, [allTransactions, dateRange, accounts]);
+  // acc.balance vem em REAIS do banco, converter para CENTAVOS para formatCurrency
   const totalBalance = useMemo(() => 
     accounts
       .filter((acc) => 
@@ -136,29 +138,32 @@ export function useDashboardCalculations(
         acc.type === 'savings' || 
         acc.type === 'meal_voucher'
       )
-      .reduce((sum, acc) => sum + acc.balance, 0),
+      .reduce((sum, acc) => sum + (acc.balance * 100), 0),
     [accounts]
   );
 
+  // acc.balance e acc.limit_amount vêm em REAIS do banco, converter para CENTAVOS
   const creditAvailable = useMemo(() => 
     accounts
       .filter((acc) => acc.type === 'credit')
       .reduce((sum, acc) => {
         const limit = acc.limit_amount || 0;
+        const balance = acc.balance;
         // Se balance é negativo: dívida = abs(balance), disponível = limit - dívida
         // Se balance é positivo: crédito a favor, disponível = limit + crédito
-        if (acc.balance < 0) {
-          const debt = Math.abs(acc.balance);
+        if (balance < 0) {
+          const debt = Math.abs(balance);
           return sum + (limit - debt);
         } else {
           // Tem crédito a favor do cliente
-          return sum + (limit + acc.balance);
+          return sum + (limit + balance);
         }
       }, 0),
     [accounts]
   );
 
   // Limite utilizado total dos cartões de crédito (soma das dívidas)
+  // acc.balance vem em REAIS, converter para CENTAVOS
   const creditLimitUsed = useMemo(() => 
     accounts
       .filter((acc) => acc.type === 'credit')

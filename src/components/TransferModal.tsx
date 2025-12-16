@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/formatters";
 import { getErrorMessage } from "@/types/errors";
 import { ArrowRight } from "lucide-react";
-import { AccountBalanceDetails } from "./AccountBalanceDetails";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { logger } from "@/lib/logger";
 import { transferSchema } from "@/lib/validationSchemas";
@@ -101,6 +100,10 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
 
     setIsSubmitting(true);
     try {
+      // formData.amountInCents está em CENTAVOS (do CurrencyInput)
+      // Converter para REAIS antes de enviar para a API
+      const amountInReais = formData.amountInCents / 100;
+      
       await onTransfer(
         // Uma transferência deve ser tratada no backend como duas transações atômicas:
         // 1. Uma despesa na conta de origem (fromAccountId)
@@ -108,7 +111,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
         // Esta chamada única assume que o backend abstrai essa complexidade.
         formData.fromAccountId,
         formData.toAccountId,
-        formData.amountInCents,
+        amountInReais,
         createDateFromString(formData.date)
       );
 
@@ -170,7 +173,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                             <span className="text-body font-medium">{selectedAccount.name}</span>
                           </div>
                           <div className="text-caption text-muted-foreground pl-5">
-                            {formatCurrency(selectedAccount.balance)}
+                            {formatCurrency(selectedAccount.balance * 100)}
                             {hasLimit && (
                               <span className="text-primary font-semibold"> + {formatCurrency(selectedAccount.limit_amount || 0)} limite</span>
                             )}
@@ -194,7 +197,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                             <div className="flex flex-col flex-1 min-w-0">
                               <span className="font-medium truncate text-body">{account.name}</span>
                               <span className="text-caption text-muted-foreground">
-                                {formatCurrency(account.balance)}
+                                {formatCurrency(account.balance * 100)}
                                 {hasLimit && (
                                   <span className="text-primary ml-1">
                                     + {formatCurrency(account.limit_amount || 0)} limite
@@ -208,9 +211,6 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                   })}
                 </SelectContent>
               </Select>
-              {formData.fromAccountId && (
-                <AccountBalanceDetails account={accounts.find(acc => acc.id === formData.fromAccountId)} />
-              )}
             </div>
 
             <div className="flex justify-center">
@@ -240,7 +240,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                             <span className="text-body font-medium">{selectedAccount.name}</span>
                           </div>
                           <div className="text-caption text-muted-foreground pl-5">
-                            {formatCurrency(selectedAccount.balance)}
+                            {formatCurrency(selectedAccount.balance * 100)}
                             {hasLimit && (
                               <span className="text-primary font-semibold"> + {formatCurrency(selectedAccount.limit_amount || 0)} limite</span>
                             )}
@@ -266,7 +266,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                             <div className="flex flex-col flex-1 min-w-0">
                               <span className="font-medium truncate text-body">{account.name}</span>
                               <span className="text-caption text-muted-foreground">
-                                {formatCurrency(account.balance)}
+                                {formatCurrency(account.balance * 100)}
                                 {hasLimit && (
                                   <span className="text-primary ml-1">
                                     + {formatCurrency(account.limit_amount || 0)} limite

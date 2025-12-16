@@ -139,9 +139,13 @@ export function AddFixedTransactionModal({
     }
 
     try {
+      // formData.amount está em CENTAVOS (do CurrencyInput)
+      // Converter para REAIS antes de enviar
+      const amountInReais = formData.amount / 100;
+      
       onAddTransaction({
         description: formData.description,
-        amount: formData.amount,
+        amount: amountInReais,
         date: formData.date,
         type: formData.type as "income" | "expense",
         category_id: formData.category_id || null,
@@ -302,7 +306,7 @@ export function AddFixedTransactionModal({
                           </span>
                         </div>
                         <div className="text-caption text-muted-foreground pl-5">
-                          {formatCurrency(selectedAccount.balance)}
+                          {formatCurrency(selectedAccount.balance * 100)}
                           {selectedAccount.limit_amount && selectedAccount.limit_amount > 0 && (
                             <span className="text-primary font-semibold"> + {formatCurrency(selectedAccount.limit_amount)} limite</span>
                           )}
@@ -331,7 +335,7 @@ export function AddFixedTransactionModal({
                         </span>
                       </div>
                       <div className="text-caption text-muted-foreground">
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                         {account.limit_amount && account.limit_amount > 0 && (
                           <span className="text-primary"> + {formatCurrency(account.limit_amount)} limite</span>
                         )}

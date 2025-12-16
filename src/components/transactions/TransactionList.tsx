@@ -161,7 +161,7 @@ export const TransactionList = memo(function TransactionList({
               {(transaction.is_provision && transaction.type === "expense" && transaction.amount >= 0) ||
                (transaction.is_provision && transaction.type === "income" && transaction.amount <= 0)
                 ? formatCurrency(0, currency)
-                : formatCurrency(Math.abs(transaction.amount), currency)}
+                : formatCurrency(Math.abs(transaction.amount) * 100, currency)}
             </span>
 
             <TransactionActions

@@ -45,9 +45,14 @@ export function useEditTransactionForm(
       
       const transactionType = transaction.type === "transfer" ? "expense" : transaction.type;
       
+      // O banco armazena em REAIS (DECIMAL), converter para CENTAVOS para o CurrencyInput
+      // transaction.amount já vem em reais do banco, multiplicar por 100 para converter para centavos
+      const amountInReais = Math.abs(transaction.amount);
+      const amountInCents = Math.round(amountInReais * 100);
+      
       const initialData: FormData = {
         description: transaction.description || "",
-        amountInCents: Math.round(Math.abs(transaction.amount) * 100),
+        amountInCents: amountInCents,
         date: transactionDate,
         type: transactionType as "income" | "expense",
         category_id: transaction.category_id || "",
@@ -122,13 +127,15 @@ export function useEditTransactionForm(
     const amountChanged = formData.amountInCents !== originalData.amountInCents;
 
     if (amountChanged || typeChanged) {
+      // formData.amountInCents está em CENTAVOS (do CurrencyInput)
+      // Converter para REAIS (dividir por 100) para salvar no banco
       let finalAmount = formData.amountInCents;
       if (formData.type === "expense") {
         finalAmount = -Math.abs(finalAmount);
       } else {
         finalAmount = Math.abs(finalAmount);
       }
-      updates.amount = finalAmount / 100;
+      updates.amount = finalAmount / 100; // Converter centavos → reais para o banco
     }
     
     if (formData.date.getTime() !== originalData.date.getTime()) {

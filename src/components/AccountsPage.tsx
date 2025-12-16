@@ -280,7 +280,7 @@ export function AccountsPage({
                 <div className={`balance-text ${
                   totalBalance >= 0 ? "balance-positive" : "balance-negative"
                 }`}>
-                  {formatCurrency(totalBalance)}
+                  {formatCurrency(totalBalance * 100)}
                 </div>
               </div>
             </div>
@@ -296,7 +296,7 @@ export function AccountsPage({
               <div className="w-full text-center">
                 <p className="text-caption font-medium mb-1">Dívida Total</p>
                 <div className="balance-text balance-negative">
-                  {formatCurrency(creditUsed)}
+                  {formatCurrency(creditUsed * 100)}
                 </div>
               </div>
             </div>
@@ -470,7 +470,7 @@ export function AccountsPage({
                                 account.balance < 0 ? "text-destructive" : "text-success"
                               }`}
                             >
-                              {formatCurrency(Math.abs(account.balance))}
+                              {formatCurrency(Math.abs(account.balance) * 100)}
                             </span>
                           </div>
                           {(account.limit_amount || 0) > 0 && (
@@ -522,7 +522,7 @@ export function AccountsPage({
                               account.balance >= 0 ? "balance-positive" : "balance-negative"
                             }`}
                           >
-                            {formatCurrency(account.balance)}
+                            {formatCurrency(account.balance * 100)}
                           </span>
                         </div>
                         {(account.limit_amount || 0) > 0 && (

@@ -666,8 +666,10 @@ export function ImportTransactionsModal({
         (t.resolution === 'add' || t.resolution === 'replace')
       )
       .map(t => {
-        // Valores já estão em centavos e sempre positivos na validação
-        const amount = Math.round(Math.abs(t.valor));
+        // t.valor está em CENTAVOS (convertido na validação)
+        // Converter para REAIS antes de enviar para a API
+        const amountInCents = Math.round(Math.abs(t.valor));
+        const amountInReais = amountInCents / 100; // Converter centavos → reais
         
         // Se é transferência mas não tem conta destino, é a transação de entrada (income)
         let finalType = t.parsedType as 'income' | 'expense' | 'transfer';
@@ -678,8 +680,8 @@ export function ImportTransactionsModal({
         return {
           description: t.descricao.trim(),        
           // Edge function + função SQL definem o sinal com base no tipo
-          // Portanto, SEMPRE enviamos amount positivo para passar na validação Zod
-          amount,
+          // Portanto, SEMPRE enviamos amount positivo (em REAIS) para passar na validação Zod
+          amount: amountInReais,
           category: t.categoria.trim(),
           type: finalType,
           account_id: t.accountId as string,
