@@ -132,6 +132,7 @@ export function useAddTransactionForm({
   // Reset flag de alteração manual quando a data muda
   useEffect(() => {
     setManualStatusChange(false);
+    setManualInvoiceMonthChange(false);
   }, [formData.date]);
 
   // Reset flag de alteração manual do invoice month quando a conta muda
@@ -455,7 +456,7 @@ export function useAddTransactionForm({
       account_id: formData.account_id,
       status: formData.status,
       invoiceMonth: formData.invoiceMonth || undefined,
-      invoiceMonthOverridden: Boolean(formData.invoiceMonth),
+      invoiceMonthOverridden: manualInvoiceMonthChange,
     };
 
     await onAddTransaction(transactionPayload);

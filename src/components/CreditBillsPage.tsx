@@ -215,11 +215,19 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
               : t.date,
         })) as AppTransaction[];
 
+      // Ajuste do offset para alinhar com o Mês de Vencimento (Invoice Month)
+      // Se due_date < closing_date, o vencimento é no mês seguinte ao fechamento.
+      // Para exibir a fatura com vencimento em X, precisamos calcular com base no fechamento em X-1.
+      let adjustedOffset = selectedMonthOffset;
+      if (account.due_date && account.closing_date && account.due_date < account.closing_date) {
+        adjustedOffset -= 1;
+      }
+
       // Base (limite, saldo total, meses de referência)
       const base = calculateBillDetails(
         accountTransactions,
         account,
-        selectedMonthOffset
+        adjustedOffset
       );
 
       // Usar os valores calculados pela função base (que já considera invoice_month_overridden)

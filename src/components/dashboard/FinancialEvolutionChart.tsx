@@ -278,8 +278,6 @@ export function FinancialEvolutionChart({
                     radius={[4, 4, 0, 0]}
                     name="Receitas"
                     isAnimationActive={false}
-                    minPointSize={2}
-                    yAxisId="left"
                   />
 
                   <Bar
@@ -289,8 +287,6 @@ export function FinancialEvolutionChart({
                     radius={[4, 4, 0, 0]}
                     name="Despesas"
                     isAnimationActive={false}
-                    minPointSize={2}
-                    yAxisId="left"
                   />
 
                   <Line

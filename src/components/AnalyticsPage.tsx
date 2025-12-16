@@ -307,10 +307,14 @@ export default function AnalyticsPage({
   ]);
 
   // Helper para identificar transações de transferência (ambos os lados)
-  const isTransferLike = (transaction: Transaction) =>
-    transaction.type === "transfer" ||
-    Boolean(transaction.to_account_id) ||
-    Boolean(transaction.linked_transaction_id);
+  const isTransferLike = (transaction: Transaction) => {
+    if (transaction.type === 'transfer') return true;
+    if (transaction.to_account_id) return true;
+    // Apenas excluir receitas espelho de transferências (income + linked_transaction_id)
+    // Manter despesas com linked_transaction_id (elas são reais, ex: parcelas)
+    if (transaction.type === 'income' && transaction.linked_transaction_id) return true;
+    return false;
+  };
 
   // Lista base para gráficos/relatórios: sempre sem transferências
   const nonTransferFilteredTransactions = useMemo(
