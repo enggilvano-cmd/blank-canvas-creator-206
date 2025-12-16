@@ -378,7 +378,8 @@ export function useAddTransactionForm({
     await onAddInstallmentTransactions(transactionsToCreate);
     
     // ✅ P2-1 FIX: Usar hook centralizado para invalidação
-    await invalidateTransactions();
+    // Fire and forget para não bloquear UI
+    invalidateTransactions().catch(console.error);
     onSuccess?.();
     
     toast({
@@ -429,7 +430,8 @@ export function useAddTransactionForm({
       });
 
       // ✅ P2-1 FIX: Usar hook centralizado para invalidação
-      await invalidateTransactions();
+      // Fire and forget para não bloquear UI
+      invalidateTransactions().catch(console.error);
       onSuccess?.();
       onClose();
     } catch (error: unknown) {
@@ -459,7 +461,8 @@ export function useAddTransactionForm({
     await onAddTransaction(transactionPayload);
 
     // ✅ P2-1 FIX: Usar hook centralizado para invalidação
-    await invalidateTransactions();
+    // Fire and forget para não bloquear UI
+    invalidateTransactions().catch(console.error);
     onSuccess?.();
 
     toast({

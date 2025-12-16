@@ -2,6 +2,7 @@
 import { useInstallmentMutations } from './useInstallmentMutations';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineQueue } from '@/lib/offlineQueue';
+import { offlineSync } from '@/lib/offlineSync';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { InstallmentTransactionInput } from '@/types';
@@ -51,24 +52,16 @@ export function useOfflineInstallmentMutations() {
   }, [toast]);
 
   const handleAddInstallmentTransactions = useCallback(async (transactionsData: InstallmentTransactionInput[]) => {
-    if (isOnline) {
-      try {
-        return await onlineMutations.handleAddInstallmentTransactions(transactionsData);
-      } catch (error: unknown) {
-        const message = getErrorMessage(error);
-        if (message.toLowerCase().includes('failed to fetch') || 
-            message.toLowerCase().includes('network request failed') ||
-            message.toLowerCase().includes('connection error')) {
-          logger.warn('Network error during installment creation, falling back to offline mode');
-          await processOfflineInstallments(transactionsData);
-          return;
-        }
-        throw error;
-      }
-    }
-
+    // Sempre usar modo offline para resposta imediata (< 30ms)
     await processOfflineInstallments(transactionsData);
-  }, [isOnline, onlineMutations, toast, processOfflineInstallments]);
+    
+    if (isOnline) {
+      // Dispara sincronização em background sem aguardar
+      offlineSync.syncAll().catch(err => 
+        logger.error('Background sync failed:', err)
+      );
+    }
+  }, [isOnline, processOfflineInstallments]);
 
   return {
     handleAddInstallmentTransactions,

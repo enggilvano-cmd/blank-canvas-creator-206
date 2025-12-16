@@ -67,7 +67,7 @@ import { useFixedTransactions } from "@/hooks/useFixedTransactions";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
 import { useAccountHandlers } from "@/hooks/useAccountHandlers";
-import { useTransactionHandlers, useOfflineTransactionMutations, useOfflineTransferMutations, useOfflineCreditPaymentMutations, useOfflineCategoryMutations } from "@/hooks/useTransactionHandlers";
+import { useTransactionHandlers, useOfflineTransactionMutations, useOfflineTransferMutations, useOfflineCreditPaymentMutations, useOfflineCategoryMutations, useOfflineInstallmentMutations } from "@/hooks/useTransactionHandlers";
 import { TransactionScopeDialog, EditScope } from "@/components/TransactionScopeDialog";
 import { MarkAsPaidModal } from "@/components/MarkAsPaidModal";
 import { FormErrorBoundary } from "@/components/ui/form-error-boundary";
@@ -310,9 +310,9 @@ const PlaniFlowApp = () => {
   // Use hooks customizados para handlers
   const { handleEditAccount, handleDeleteAccount, handleImportAccounts } = useAccountHandlers();
   const {
-    handleAddInstallmentTransactions,
     handleImportTransactions,
   } = useTransactionHandlers();
+  const { handleAddInstallmentTransactions } = useOfflineInstallmentMutations();
   const {
     handleAddTransaction,
     handleEditTransaction,

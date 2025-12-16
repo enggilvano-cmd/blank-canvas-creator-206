@@ -20,10 +20,18 @@ export function RecentTransactions({
 }: RecentTransactionsProps) {
   const { formatCurrency } = useSettings();
 
-  // Ordenar transações por data (mais recentes primeiro)
+  // Ordenar transações por data de criação (lançamento)
   // Nota: O filtro de transações PAI já é aplicado na query do useTransactions
   // Removido useMemo para garantir recálculo sempre que transactions mudar
   const sortedTransactions = [...transactions].sort((a, b) => {
+    // Priorizar created_at para mostrar a ordem de lançamento
+    if (a.created_at && b.created_at) {
+      const createdA = new Date(a.created_at).getTime();
+      const createdB = new Date(b.created_at).getTime();
+      return createdB - createdA;
+    }
+    
+    // Fallback para data da transação se created_at não existir
     const dateA = typeof a.date === 'string' ? createDateFromString(a.date) : a.date;
     const dateB = typeof b.date === 'string' ? createDateFromString(b.date) : b.date;
     return dateB.getTime() - dateA.getTime();
@@ -75,6 +83,7 @@ export function RecentTransactions({
                       ).toLocaleDateString('pt-BR', {
                         day: '2-digit',
                         month: '2-digit',
+                        year: 'numeric'
                       })}
                     </p>
                   </div>

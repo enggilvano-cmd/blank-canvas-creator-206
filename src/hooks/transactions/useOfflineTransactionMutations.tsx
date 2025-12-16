@@ -14,6 +14,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/types/errors';
 import { notifyFixedTransactionsChange } from '@/hooks/useFixedTransactions';
 
+import { offlineSync } from '@/lib/offlineSync';
+
 export function useOfflineTransactionMutations() {
   const isOnline = useOnlineStatus();
   const onlineMutations = useTransactionMutations();
@@ -29,14 +31,18 @@ export function useOfflineTransactionMutations() {
     transactionDate: Date | string
   ) => {
     try {
+      if (!user) return;
+
       const dateObj = typeof transactionDate === 'string' ? new Date(transactionDate) : transactionDate;
       const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
       const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
 
-      // Buscar provisões do offlineDatabase
-      const allTransactions = await offlineDatabase.getTransactions();
+      // Buscar provisões do offlineDatabase de forma otimizada
+      // Usar getTransactions com userId e filtrar por data se possível via options (mas getTransactions filtra por monthsBack)
+      // Vamos pegar apenas os últimos 3 meses (padrão) que deve cobrir a provisão do mês atual
+      const allTransactions = await offlineDatabase.getTransactions(user.id, 3);
+      
       const provisions = allTransactions.filter(t =>
-        t.user_id === user?.id &&
         t.category_id === categoryId &&
         t.is_provision === true &&
         new Date(t.date) >= startOfMonth &&
@@ -193,15 +199,17 @@ export function useOfflineTransactionMutations() {
 
         // ✅ Desconto automático de provisão em modo offline
         if (transactionData.category_id && transactionData.type !== 'transfer') {
-          await deductProvisionOffline(
+          // Fire and forget para não bloquear UI (< 30ms requirement)
+          deductProvisionOffline(
             transactionData.category_id,
             Math.abs(transactionData.amount),
             transactionData.date
-          );
+          ).catch(err => logger.error('Erro background ao descontar provisão:', err));
         }
 
         // ✅ Invalidar queries para garantir consistência eventual
-        await invalidateTransactions();
+        // Fire and forget para não bloquear UI (< 30ms requirement)
+        invalidateTransactions().catch(err => logger.error('Error invalidating transactions:', err));
       } catch (error) {
         logger.error('Failed to queue transaction:', error);
         toast({
@@ -212,40 +220,16 @@ export function useOfflineTransactionMutations() {
       }
     };
 
-    if (isOnline) {
-      try {
-        return await onlineMutations.handleAddTransaction(transactionData);
-      } catch (error) {
-        const message = getErrorMessage(error);
-        // Se o erro for de rede ou Edge Function indisponível, faz fallback para modo offline
-        if (
-          message.toLowerCase().includes('failed to fetch') || 
-          message.toLowerCase().includes('network') ||
-          message.toLowerCase().includes('failed to send a request to the edge function') ||
-          message.toLowerCase().includes('edge function') ||
-          message.toLowerCase().includes('timeout') ||
-          message.toLowerCase().includes('connection refused')
-        ) {
-          logger.warn('Network/Edge Function error ao adicionar transação, usando modo offline.', error);
-          await processOfflineAdd();
-          toast({
-            title: 'Modo Offline',
-            description: 'Transação será sincronizada quando voltar online.',
-            duration: 3000,
-          });
-          return;
-        }
-        throw error;
-      }
-    }
-
-    // Se não está online, usar modo offline
+    // Sempre usar modo offline para resposta imediata (< 30ms)
+    // O sync será feito em background se estiver online
     await processOfflineAdd();
-    toast({
-      title: 'Modo Offline',
-      description: 'Transação será sincronizada quando voltar online.',
-      duration: 3000,
-    });
+    
+    if (isOnline) {
+      // Dispara sincronização em background sem aguardar
+      offlineSync.syncAll().catch(err => 
+        logger.error('Background sync failed:', err)
+      );
+    }
   }, [isOnline, onlineMutations, toast, user, queryClient, invalidateTransactions]);
 
   const handleEditTransaction = useCallback(
