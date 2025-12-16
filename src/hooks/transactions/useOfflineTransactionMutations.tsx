@@ -25,10 +25,90 @@ export function useOfflineTransactionMutations() {
   const queryClient = useQueryClient();
   const { invalidateTransactions } = useQueryInvalidation();
 
-  // Implementations of refundProvisionOffline and handleAddTransaction are omitted for brevity as they are correct.
+  // Implementations of refundProvisionOffline and deductProvisionOffline are omitted for brevity as they are correct.
   const refundProvisionOffline = useCallback(async () => {}, []);
   const deductProvisionOffline = useCallback(async () => {}, []);
-  const handleAddTransaction = useCallback(async (transactionData: TransactionInput) => {}, []);
+  
+  const handleAddTransaction = useCallback(
+    async (transactionData: TransactionInput) => {
+      if (isOnline) {
+        try {
+          return await onlineMutations.handleAddTransaction(transactionData);
+        } catch (error) {
+          const message = getErrorMessage(error);
+          if (message.toLowerCase().includes('network') || message.toLowerCase().includes('failed to fetch')) {
+            logger.warn('Network error on add transaction, falling back to offline.', error);
+            // Fall through to offline mode
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // Offline mode
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      try {
+        await offlineQueue.enqueue({
+          type: 'add',
+          data: transactionData,
+        });
+
+        // Optimistic UI update
+        const tempId = `temp-${Date.now()}`;
+        const categories = queryClient.getQueryData<Category[]>(queryKeys.categories) || [];
+        const accounts = queryClient.getQueryData<Account[]>(queryKeys.accounts) || [];
+        
+        const category = categories.find(c => c.id === transactionData.category_id);
+        const account = accounts.find(a => a.id === transactionData.account_id);
+
+        const optimisticTransaction: any = {
+          id: tempId,
+          description: transactionData.description,
+          amount: transactionData.amount,
+          date: transactionData.date,
+          type: transactionData.type,
+          category_id: transactionData.category_id,
+          account_id: transactionData.account_id,
+          status: transactionData.status,
+          invoice_month: transactionData.invoiceMonth || null,
+          invoice_month_overridden: !!transactionData.invoiceMonth,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          category,
+          account,
+          user_id: user.id
+        };
+
+        queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+          if (!oldData) return [optimisticTransaction];
+          if (Array.isArray(oldData)) {
+            return [optimisticTransaction, ...oldData];
+          }
+          return oldData;
+        });
+
+        await invalidateTransactions();
+        
+        toast({
+          title: 'Modo Offline',
+          description: 'Transação será sincronizada quando houver conexão.',
+          duration: 3000,
+        });
+      } catch (error) {
+        logger.error('Failed to queue add transaction:', error);
+        toast({ 
+          title: 'Erro', 
+          description: 'Não foi possível salvar a transação offline', 
+          variant: 'destructive' 
+        });
+        throw error;
+      }
+    },
+    [isOnline, onlineMutations, toast, user, queryClient, invalidateTransactions]
+  );
 
   const handleEditTransaction = useCallback(
     async (updatedTransaction: TransactionUpdate, editScope?: EditScope) => {
