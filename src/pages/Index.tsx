@@ -865,16 +865,21 @@ const PlaniFlowApp = () => {
           onAddTransaction={handleAddTransaction}
           onAddInstallmentTransactions={handleAddInstallmentTransactions}
           onSuccess={() => {
-            // ✅ Invalidar e forçar refetch COMPLETO (inclusive queries inativas)
-            // Isso garante que allTransactions (Dashboard) atualize mesmo quando não está visível
+            // ⚠️ Otimização de Performance (<30ms):
+            // Não invalidamos queries aqui para evitar refetch imediato do servidor (que ainda não tem os dados).
+            // O update otimista cuida da UI imediata.
+            // A invalidação global ocorre automaticamente após o sync em background terminar.
+            
+            /* 
             queryClient.invalidateQueries({ 
               queryKey: queryKeys.transactionsBase,
-              refetchType: 'all'  // ← CRÍTICO: 'all' refetcha inclusive queries inativas
+              refetchType: 'all'
             });
             queryClient.invalidateQueries({ 
               queryKey: queryKeys.accounts,
               refetchType: 'all'
             });
+            */
           }}
           accounts={accounts}
           initialType={transactionInitialType}

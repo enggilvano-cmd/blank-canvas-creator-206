@@ -187,35 +187,58 @@ class OfflineDatabase {
       }
     }
 
+    // 1. Read local transactions (readonly) to minimize write lock time
+    const localTxs = await new Promise<Transaction[]>((resolve, reject) => {
+      const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
+      const store = tx.objectStore(STORES.TRANSACTIONS);
+      const index = store.index('user_id');
+      const request = index.getAll(userId);
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+
+    // 2. Calculate diffs in memory
+    const serverIds = new Set(transactions.map(t => t.id));
+    // ✅ BUG FIX #12: dateFrom já está em UTC
+    const cutoffTime = new Date(dateFrom).getTime();
+
+    const toDelete = localTxs.filter(tx => {
+        const txDate = new Date(tx.date).getTime();
+        const isInSyncWindow = txDate >= cutoffTime;
+        const isOfficialId = !tx.id.startsWith('temp-'); 
+        // PROTEÇÃO: Não deletar transações fixas durante o sync de transações normais
+        const isFixed = tx.is_fixed === true;
+        return isInSyncWindow && isOfficialId && !serverIds.has(tx.id) && !isFixed;
+    });
+
+    // Optimization: Only put if changed or new
+    const localMap = new Map(localTxs.map(t => [t.id, t]));
+    const toPut = transactions.filter(serverTx => {
+        const localTx = localMap.get(serverTx.id);
+        if (!localTx) return true; // New
+        if (serverTx.updated_at && localTx.updated_at) {
+            return new Date(serverTx.updated_at).getTime() > new Date(localTx.updated_at).getTime();
+        }
+        // If no updated_at, assume change (safer) or check deep equality (expensive)
+        // Let's assume change to be safe but it's still better than putting everything
+        return JSON.stringify(serverTx) !== JSON.stringify(localTx);
+    });
+
+    if (toDelete.length === 0 && toPut.length === 0) {
+        logger.info('Sync transactions: No changes needed.');
+        return;
+    }
+
+    // 3. Apply changes (readwrite) - fast!
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORES.TRANSACTIONS], 'readwrite');
       const store = transaction.objectStore(STORES.TRANSACTIONS);
-      const index = store.index('user_id');
 
-      const request = index.getAll(userId);
-
-      request.onsuccess = () => {
-        const localTxs = request.result as Transaction[];
-        const serverIds = new Set(transactions.map(t => t.id));
-        // ✅ BUG FIX #12: dateFrom já está em UTC
-        const cutoffTime = new Date(dateFrom).getTime();
-
-        const toDelete = localTxs.filter(tx => {
-           const txDate = new Date(tx.date).getTime();
-           const isInSyncWindow = txDate >= cutoffTime;
-           const isOfficialId = !tx.id.startsWith('temp-'); 
-           // PROTEÇÃO: Não deletar transações fixas durante o sync de transações normais
-           // Transações fixas são sincronizadas separadamente ou devem ser preservadas
-           const isFixed = tx.is_fixed === true;
-           return isInSyncWindow && isOfficialId && !serverIds.has(tx.id) && !isFixed;
-        });
-
-        toDelete.forEach(tx => store.delete(tx.id));
-        transactions.forEach(tx => store.put(tx));
-      };
+      toDelete.forEach(tx => store.delete(tx.id));
+      toPut.forEach(tx => store.put(tx));
 
       transaction.oncomplete = () => {
-        logger.info(`Sync transactions: Updated ${transactions.length}, cleaned obsoletes.`);
+        logger.info(`Sync transactions: Updated ${toPut.length}, deleted ${toDelete.length}.`);
         resolve();
       };
       transaction.onerror = () => reject(transaction.error);
@@ -225,33 +248,49 @@ class OfflineDatabase {
   async syncFixedTransactions(transactions: Transaction[], userId: string): Promise<void> {
     if (!this.db) await this.init();
 
+    // 1. Read local transactions (readonly)
+    const localTxs = await new Promise<Transaction[]>((resolve, reject) => {
+      const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
+      const store = tx.objectStore(STORES.TRANSACTIONS);
+      const index = store.index('user_id');
+      const request = index.getAll(userId);
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+
+    // 2. Calculate diffs
+    const serverIds = new Set(transactions.map(t => t.id));
+    const toDelete = localTxs.filter(tx => {
+        const isFixed = tx.is_fixed === true;
+        const isParent = tx.parent_transaction_id === null || tx.parent_transaction_id === undefined;
+        const isOfficialId = !tx.id.startsWith('temp-');
+        return isFixed && isParent && isOfficialId && !serverIds.has(tx.id);
+    });
+
+    const localMap = new Map(localTxs.map(t => [t.id, t]));
+    const toPut = transactions.filter(serverTx => {
+        const localTx = localMap.get(serverTx.id);
+        if (!localTx) return true;
+        if (serverTx.updated_at && localTx.updated_at) {
+            return new Date(serverTx.updated_at).getTime() > new Date(localTx.updated_at).getTime();
+        }
+        return JSON.stringify(serverTx) !== JSON.stringify(localTx);
+    });
+
+    if (toDelete.length === 0 && toPut.length === 0) {
+        return;
+    }
+
+    // 3. Apply changes (readwrite)
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORES.TRANSACTIONS], 'readwrite');
       const store = transaction.objectStore(STORES.TRANSACTIONS);
-      const index = store.index('user_id');
 
-      const request = index.getAll(userId);
-
-      request.onsuccess = () => {
-        const localTxs = request.result as Transaction[];
-        const serverIds = new Set(transactions.map(t => t.id));
-
-        // Identificar transações fixas locais que não estão mais no servidor
-        const toDelete = localTxs.filter(tx => {
-           const isFixed = tx.is_fixed === true;
-           const isParent = tx.parent_transaction_id === null || tx.parent_transaction_id === undefined;
-           const isOfficialId = !tx.id.startsWith('temp-');
-           
-           // Deletar se for fixa, pai, oficial e não estiver na lista do servidor
-           return isFixed && isParent && isOfficialId && !serverIds.has(tx.id);
-        });
-
-        toDelete.forEach(tx => store.delete(tx.id));
-        transactions.forEach(tx => store.put(tx));
-      };
+      toDelete.forEach(tx => store.delete(tx.id));
+      toPut.forEach(tx => store.put(tx));
 
       transaction.oncomplete = () => {
-        logger.info(`Sync fixed transactions: Updated ${transactions.length}, cleaned obsoletes.`);
+        logger.info(`Sync fixed transactions: Updated ${toPut.length}, deleted ${toDelete.length}.`);
         resolve();
       };
       transaction.onerror = () => reject(transaction.error);
@@ -260,21 +299,45 @@ class OfflineDatabase {
 
   async syncAccounts(accounts: Account[], userId: string): Promise<void> {
     if (!this.db) await this.init();
+    // 1. Read local accounts (readonly)
+    const localAccounts = await new Promise<Account[]>((resolve, reject) => {
+      const tx = this.db!.transaction([STORES.ACCOUNTS], 'readonly');
+      const store = tx.objectStore(STORES.ACCOUNTS);
+      const index = store.index('user_id');
+      const request = index.getAll(userId);
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+
+    // 2. Calculate diffs
+    const serverIds = new Set(accounts.map(a => a.id));
+    const toDelete = localAccounts.filter(acc => 
+      !acc.id.startsWith('temp-') && !serverIds.has(acc.id)
+    );
+
+    const localMap = new Map(localAccounts.map(a => [a.id, a]));
+    const toPut = accounts.filter(serverAcc => {
+        const localAcc = localMap.get(serverAcc.id);
+        if (!localAcc) return true;
+        // Accounts might not have updated_at in all cases, but let's check
+        if (serverAcc.updated_at && localAcc.updated_at) {
+            return new Date(serverAcc.updated_at).getTime() > new Date(localAcc.updated_at).getTime();
+        }
+        return JSON.stringify(serverAcc) !== JSON.stringify(localAcc);
+    });
+
+    if (toDelete.length === 0 && toPut.length === 0) {
+        return;
+    }
+
+    // 3. Apply changes (readwrite)
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.ACCOUNTS], 'readwrite');
       const store = tx.objectStore(STORES.ACCOUNTS);
-      const index = store.index('user_id');
-      const req = index.openCursor(IDBKeyRange.only(userId));
       
-      req.onsuccess = (e) => {
-        const cursor = (e.target as IDBRequest).result;
-        if (cursor) {
-          if (!cursor.value.id.startsWith('temp-')) cursor.delete();
-          cursor.continue();
-        } else {
-          accounts.forEach(acc => store.put(acc));
-        }
-      };
+      toDelete.forEach(acc => store.delete(acc.id));
+      toPut.forEach(acc => store.put(acc));
+      
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -282,21 +345,44 @@ class OfflineDatabase {
 
   async syncCategories(categories: Category[], userId: string): Promise<void> {
     if (!this.db) await this.init();
+    // 1. Read local categories (readonly)
+    const localCategories = await new Promise<Category[]>((resolve, reject) => {
+      const tx = this.db!.transaction([STORES.CATEGORIES], 'readonly');
+      const store = tx.objectStore(STORES.CATEGORIES);
+      const index = store.index('user_id');
+      const request = index.getAll(userId);
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+
+    // 2. Calculate diffs
+    const serverIds = new Set(categories.map(c => c.id));
+    const toDelete = localCategories.filter(cat => 
+      !cat.id.startsWith('temp-') && !serverIds.has(cat.id)
+    );
+
+    const localMap = new Map(localCategories.map(c => [c.id, c]));
+    const toPut = categories.filter(serverCat => {
+        const localCat = localMap.get(serverCat.id);
+        if (!localCat) return true;
+        if (serverCat.updated_at && localCat.updated_at) {
+            return new Date(serverCat.updated_at).getTime() > new Date(localCat.updated_at).getTime();
+        }
+        return JSON.stringify(serverCat) !== JSON.stringify(localCat);
+    });
+
+    if (toDelete.length === 0 && toPut.length === 0) {
+        return;
+    }
+
+    // 3. Apply changes (readwrite)
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.CATEGORIES], 'readwrite');
       const store = tx.objectStore(STORES.CATEGORIES);
-      const index = store.index('user_id');
-      const req = index.openCursor(IDBKeyRange.only(userId));
       
-      req.onsuccess = (e) => {
-        const cursor = (e.target as IDBRequest).result;
-        if (cursor) {
-          if (!cursor.value.id.startsWith('temp-')) cursor.delete();
-          cursor.continue();
-        } else {
-          categories.forEach(cat => store.put(cat));
-        }
-      };
+      toDelete.forEach(cat => store.delete(cat.id));
+      toPut.forEach(cat => store.put(cat));
+      
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });

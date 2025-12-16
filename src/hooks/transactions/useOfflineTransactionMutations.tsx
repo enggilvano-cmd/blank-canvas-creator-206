@@ -137,26 +137,8 @@ export function useOfflineTransactionMutations() {
           updated_at: new Date().toISOString(),
         };
 
-        await offlineDatabase.saveTransactions([optimisticTx as Transaction]);
-
-        await offlineQueue.enqueue({
-          type: 'transaction',
-          data: {
-            id: optimisticTx.id, // Include temp ID for mapping during sync
-            description: transactionData.description,
-            amount: transactionData.amount,
-            date: transactionData.date.toISOString().split('T')[0],
-            type: transactionData.type,
-            category_id: transactionData.category_id,
-            account_id: transactionData.account_id,
-            status: transactionData.status,
-            invoice_month: transactionData.invoiceMonth || null,
-            invoice_month_overridden: !!transactionData.invoiceMonth,
-          },
-        });
-
-        // ✅ Optimistic Update: Injeta a transação diretamente no cache do React Query
-        // Isso garante que a UI atualize imediatamente mesmo sem internet
+        // ✅ 1. Optimistic Update: Injeta a transação diretamente no cache do React Query
+        // Isso garante que a UI atualize imediatamente (< 30ms) ANTES de persistir
         const categories = queryClient.getQueryData<Category[]>(queryKeys.categories) || [];
         const accounts = queryClient.getQueryData<Account[]>(queryKeys.accounts) || [];
         const category = categories.find(c => c.id === transactionData.category_id);
@@ -197,6 +179,53 @@ export function useOfflineTransactionMutations() {
           });
         }
 
+        // ✅ 2. Persistência em Background (Paralelizada)
+        // Usamos Promise.all para salvar no DB e na Fila simultaneamente
+        try {
+          await Promise.all([
+            offlineDatabase.saveTransactions([optimisticTx as Transaction]),
+            offlineQueue.enqueue({
+              type: 'transaction',
+              data: {
+                id: optimisticTx.id, // Include temp ID for mapping during sync
+                description: transactionData.description,
+                amount: transactionData.amount,
+                date: transactionData.date.toISOString().split('T')[0],
+                type: transactionData.type,
+                category_id: transactionData.category_id,
+                account_id: transactionData.account_id,
+                status: transactionData.status,
+                invoice_month: transactionData.invoiceMonth || null,
+                invoice_month_overridden: !!transactionData.invoiceMonth,
+              },
+            })
+          ]);
+        } catch (persistError) {
+          // ❌ Rollback em caso de erro na persistência
+          logger.error('Erro na persistência, revertendo optimistic update:', persistError);
+          
+          // Reverter transações
+          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
+            if (!oldData || !Array.isArray(oldData)) return oldData;
+            return oldData.filter((t: any) => t.id !== optimisticTx.id);
+          });
+
+          // Reverter saldo
+          if (account) {
+            queryClient.setQueryData<Account[]>(queryKeys.accounts, (oldAccounts) => {
+              if (!oldAccounts) return oldAccounts;
+              return oldAccounts.map(acc => {
+                if (acc.id === account.id) {
+                  const originalBalance = acc.balance - (optimisticTx.amount || 0);
+                  return { ...acc, balance: originalBalance };
+                }
+                return acc;
+              });
+            });
+          }
+          throw persistError; // Re-throw para ser capturado pelo catch externo
+        }
+
         // ✅ Desconto automático de provisão em modo offline
         if (transactionData.category_id && transactionData.type !== 'transfer') {
           // Fire and forget para não bloquear UI (< 30ms requirement)
@@ -207,9 +236,12 @@ export function useOfflineTransactionMutations() {
           ).catch(err => logger.error('Erro background ao descontar provisão:', err));
         }
 
-        // ✅ Invalidar queries para garantir consistência eventual
-        // Fire and forget para não bloquear UI (< 30ms requirement)
-        invalidateTransactions().catch(err => logger.error('Error invalidating transactions:', err));
+        // ⚠️ NÃO invalidar queries aqui!
+        // O update otimista já atualizou a UI.
+        // Se invalidarmos agora, o refetch vai buscar do servidor (que ainda não tem o dado)
+        // e a transação vai "sumir" da tela até o próximo sync.
+        // A invalidação será feita pelo offlineSync após confirmar o envio.
+        // invalidateTransactions().catch(err => logger.error('Error invalidating transactions:', err));
       } catch (error) {
         logger.error('Failed to queue transaction:', error);
         toast({

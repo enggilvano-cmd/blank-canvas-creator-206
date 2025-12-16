@@ -378,9 +378,8 @@ export function useAddTransactionForm({
 
     await onAddInstallmentTransactions(transactionsToCreate);
     
-    // ✅ P2-1 FIX: Usar hook centralizado para invalidação
-    // Fire and forget para não bloquear UI
-    invalidateTransactions().catch(console.error);
+    // ⚠️ NÃO invalidar queries aqui! O update otimista já cuidou da UI.
+    // invalidateTransactions().catch(console.error);
     onSuccess?.();
     
     toast({
@@ -461,9 +460,8 @@ export function useAddTransactionForm({
 
     await onAddTransaction(transactionPayload);
 
-    // ✅ P2-1 FIX: Usar hook centralizado para invalidação
-    // Fire and forget para não bloquear UI
-    invalidateTransactions().catch(console.error);
+    // ⚠️ NÃO invalidar queries aqui! O update otimista já cuidou da UI.
+    // invalidateTransactions().catch(console.error);
     onSuccess?.();
 
     toast({
