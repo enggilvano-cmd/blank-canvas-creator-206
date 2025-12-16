@@ -537,12 +537,19 @@ export function ImportFixedTransactionsModal({
           const today = new Date();
           const currentYear = today.getFullYear();
           const currentMonth = today.getMonth();
+          
+          // A lógica deve ser importar no mês atual independente do dia
           let initialDate = new Date(currentYear, currentMonth, t.diaDoMes);
           
-          // Se a data já passou, iniciar no próximo mês
-          if (initialDate < today) {
-            initialDate = new Date(currentYear, currentMonth + 1, t.diaDoMes);
+          // Ajustar se o dia não existe no mês atual (ex: 31 de Fev)
+          if (initialDate.getMonth() !== currentMonth) {
+            initialDate = new Date(currentYear, currentMonth + 1, 0);
           }
+
+          // Calcular meses a gerar: completar o ano atual + 12 meses do ano seguinte
+          // Total de meses = (12 - mês atual) + 12
+          // Como a primeira transação (pai) já conta, subtraímos 1 para as filhas
+          const monthsToGenerate = (12 - currentMonth) + 12 - 1;
 
           const amount = Math.round(Math.abs(t.valor) * 100);
           const categoryId = categoryMap.get(normalizeString(t.categoria)) || null;
@@ -570,7 +577,7 @@ export function ImportFixedTransactionsModal({
             errorCount++;
           } else if (data?.success) {
             // Se a transação tem meses extras gerados, criar as transações filhas adicionais
-            if (data?.parent_id && t.mesesGerados && t.mesesGerados > 0 && t.accountId) {
+            if (data?.parent_id && t.accountId) {
               try {
                 // Contar quantas transações filhas o atomic-create-fixed já criou
                 const { count: existingCount, error: countError } = await supabase
@@ -580,7 +587,7 @@ export function ImportFixedTransactionsModal({
 
                 if (!countError && existingCount !== null) {
                   // Calcular quantas transações adicionais precisamos criar
-                  const additionalTransactions = t.mesesGerados - existingCount;
+                  const additionalTransactions = monthsToGenerate - existingCount;
 
                   if (additionalTransactions > 0) {
                     // Buscar a última transação filha gerada
@@ -591,17 +598,22 @@ export function ImportFixedTransactionsModal({
                       .order("date", { ascending: false })
                       .limit(1);
 
+                    let lastDate: Date;
                     if (!childError && childTransactions && childTransactions.length > 0) {
-                      const lastDate = new Date(childTransactions[0].date);
-                      const transactionsToGenerate = [];
+                      lastDate = new Date(childTransactions[0].date);
+                    } else {
+                      lastDate = initialDate;
+                    }
 
-                      // Gerar apenas as transações extras necessárias
-                      for (let i = 0; i < additionalTransactions; i++) {
-                        const nextDate = new Date(
-                          lastDate.getFullYear(),
-                          lastDate.getMonth() + i + 1,
-                          t.diaDoMes
-                        );
+                    const transactionsToGenerate = [];
+
+                    // Gerar apenas as transações extras necessárias
+                    for (let i = 0; i < additionalTransactions; i++) {
+                      const nextDate = new Date(
+                        lastDate.getFullYear(),
+                        lastDate.getMonth() + i + 1,
+                        t.diaDoMes
+                      );
 
                         // Ajustar para o dia correto do mês
                         const targetMonth = nextDate.getMonth();
@@ -637,7 +649,6 @@ export function ImportFixedTransactionsModal({
                           logger.error("Error generating extra months:", insertError);
                         }
                       }
-                    }
                   }
                 }
               } catch (extraError) {
