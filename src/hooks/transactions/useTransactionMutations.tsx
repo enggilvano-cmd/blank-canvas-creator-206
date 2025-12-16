@@ -18,242 +18,9 @@ export function useTransactionMutations() {
   const { invalidateTransactions, helper } = useQueryInvalidation();
   const queryClient = helper.queryClient;
 
-  /**
-   * Desconta o valor de uma provisão quando uma transação real é lançada.
-   * A provisão funciona como um "orçamento" que vai sendo consumido.
-   * ⚠️ IMPORTANTE: Altera apenas a instância do mês (filha), não a provisão pai
-   * ⚠️ CUIDADO: Provisões são armazenadas como NEGATIVAS no banco (-5000)
-   */
-  const deductProvisionIfExists = useCallback(async (
-    categoryId: string,
-    transactionAmount: number,
-    transactionDate: Date,
-    transactionType: 'income' | 'expense' | 'transfer' = 'expense'
-  ) => {
-    if (!user) return;
 
-    try {
-      // Buscar provisões da categoria no mesmo mês
-      const transactionMonth = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), 1);
-      const startOfMonth = new Date(transactionMonth.getFullYear(), transactionMonth.getMonth(), 1);
-      const endOfMonth = new Date(transactionMonth.getFullYear(), transactionMonth.getMonth() + 1, 0);
 
-      // 🔴 CRÍTICO: Buscar apenas as INSTÂNCIAS (filhas) da provisão, não a pai!
-      // parent_transaction_id NOT NULL = são as filhas geradas para cada mês
-      const { data: provisions, error } = await supabase
-        .from('transactions')
-        .select('id, amount, date, type, parent_transaction_id')
-        .eq('user_id', user.id)
-        .eq('category_id', categoryId)
-        .eq('is_provision', true)
-        .not('parent_transaction_id', 'is', null)  // ⚠️ APENAS as filhas!
-        .gte('date', startOfMonth.toISOString())
-        .lte('date', endOfMonth.toISOString());
 
-      if (error) {
-        logger.error('Erro ao buscar provisões:', error);
-        return;
-      }
-
-      if (!provisions || provisions.length === 0) return;
-
-      const provision = provisions[0];
-      
-      // ⚠️ IMPORTANTE: Transações no banco são armazenadas NEGATIVAS para despesas!
-      // Quando lança despesa de 500, é armazenada como -500
-      // Provisões também são negativas: -5000
-      // Logo: -5000 + (-500) = -5500 (mais negativa = consumida)
-      
-      const absAmount = Math.abs(transactionAmount);
-      let adjustment = 0;
-
-      // Lógica: descontar o valor gasto da provisão
-      // 🎯 PADRÃO: Despesas somam (invertem sinal), Receitas subtraem
-      // ⚠️ Provisões NEGATIVAS no banco: -2000 (R$ 2000 de despesa)
-      // Despesa de 500: -2000 + 500 = -1500 (R$ 1500 restante)
-      // Receita de 500: 1000 - 500 = 500 (R$ 500 restante)
-      
-      if (provision.type === 'expense' && transactionType === 'expense') {
-        // Provisão expense - Despesa lançada = REVERTER sinal (somar)
-        // -2000 + 500 = -1500 ✓
-        adjustment = +absAmount;
-      } else if (provision.type === 'expense' && transactionType === 'income') {
-        // Provisão expense + Receita lançada = DESCONTAR
-        // -2000 + (-500) = -2500
-        adjustment = -absAmount;
-      } else if (provision.type === 'income' && transactionType === 'income') {
-        // Provisão income - Receita lançada = DESCONTAR
-        // 1000 + (-500) = 500 ✓
-        adjustment = -absAmount;
-      } else if (provision.type === 'income' && transactionType === 'expense') {
-        // Provisão income + Despesa lançada = SOMAR (descontar)
-        // 1000 + 500 = 1500 ✓
-        adjustment = +absAmount;
-      }
-
-      const newProvisionAmount = provision.amount + adjustment;
-
-      logger.info(`✅ Reduzindo INSTÂNCIA da provisão (filha):
-        - categoryId: ${categoryId}
-        - provisionId: ${provision.id}
-        - provision.amount: ${provision.amount} (negativa no banco)
-        - transactionAmount: ${transactionAmount}
-        - adjustment: ${adjustment}
-        - ${provision.amount} → ${newProvisionAmount}`);
-
-      // Atualizar apenas a instância (filha)
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update({ amount: newProvisionAmount })
-        .eq('id', provision.id)
-        .eq('user_id', user.id);
-
-      if (updateError) {
-        logger.error('Erro ao atualizar provisão:', updateError);
-        return;
-      }
-
-      // Atualizar cache offline
-      const { data: updatedProvision } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('id', provision.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (updatedProvision) {
-        await offlineDatabase.saveTransactions([updatedProvision as any]);
-      }
-
-      // Notificar Dashboard para recalcular
-      notifyFixedTransactionsChange();
-    } catch (error) {
-      logger.error('Erro ao descontar provisão:', error);
-    }
-  }, [user, queryClient]);
-
-  /**
-   * Ajusta a provisão filha quando uma transação é editada ou deletada.
-   * ⚠️ IMPORTANTE: Altera apenas a instância do mês (filha), não a provisão pai
-   * ⚠️ CUIDADO: Provisões são armazenadas como NEGATIVAS no banco (-5000), trate com cuidado!
-   */
-  const adjustProvisionIfExists = useCallback(async (
-    categoryId: string,
-    transactionDate: Date | string,
-    oldAmount: number,
-    newAmount: number | null, // null = deletada
-    transactionType: 'income' | 'expense' | 'transfer' = 'expense'
-  ) => {
-    if (!user) return;
-
-    try {
-      // Buscar provisão filha do mês
-      const dateObj = typeof transactionDate === 'string' ? new Date(transactionDate) : transactionDate;
-      const transactionMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
-      const startOfMonth = new Date(transactionMonth.getFullYear(), transactionMonth.getMonth(), 1);
-      const endOfMonth = new Date(transactionMonth.getFullYear(), transactionMonth.getMonth() + 1, 0);
-
-      const { data: provisions, error } = await supabase
-        .from('transactions')
-        .select('id, amount, date, type, parent_transaction_id')
-        .eq('user_id', user.id)
-        .eq('category_id', categoryId)
-        .eq('is_provision', true)
-        .not('parent_transaction_id', 'is', null)  // ⚠️ Apenas as filhas!
-        .gte('date', startOfMonth.toISOString())
-        .lte('date', endOfMonth.toISOString());
-
-      if (error) {
-        logger.error('Erro ao buscar provisões:', error);
-        return;
-      }
-
-      if (!provisions || provisions.length === 0) return;
-
-      const provision = provisions[0];
-      
-      // Calcular ajuste (PADRÃO: Despesas somam, Receitas subtraem)
-      let adjustment = 0;
-
-      if (newAmount === null) {
-        // DELETADA: reembolsar o valor (INVERTER o que foi debitado)
-        const absOldAmount = Math.abs(oldAmount);
-        if (provision.type === 'expense' && transactionType === 'expense') {
-          // Deletada despesa = reembolsar (inverter +absAmount para -absAmount)
-          // -1500 + (-500) = -2000 ✓ (volta ao original)
-          adjustment = -absOldAmount;  
-        } else if (provision.type === 'expense' && transactionType === 'income') {
-          adjustment = +absOldAmount;
-        } else if (provision.type === 'income' && transactionType === 'income') {
-          // Deletada receita = reembolsar (inverter -absAmount para +absAmount)
-          // 500 + 500 = 1000 ✓ (volta ao original)
-          adjustment = +absOldAmount;
-        } else if (provision.type === 'income' && transactionType === 'expense') {
-          adjustment = -absOldAmount;
-        }
-      } else {
-        // EDITADA: recalcular a diferença (INVERTER o padrão de lançamento)
-        const oldAbs = Math.abs(oldAmount);
-        const newAbs = Math.abs(newAmount);
-        const difference = oldAbs - newAbs;
-
-        if (provision.type === 'expense' && transactionType === 'expense') {
-          // Edição despesa = inverter sinal (de +difference para -difference)
-          // Lançou 500: -2000 + 500 = -1500
-          // Edita para 300: -1500 + (-200) = -1700 ✓ (equivalente a ter lançado 300)
-          adjustment = -difference;
-        } else if (provision.type === 'expense' && transactionType === 'income') {
-          adjustment = +difference;
-        } else if (provision.type === 'income' && transactionType === 'income') {
-          // Edição receita = inverter sinal (de -difference para +difference)
-          // Lançou 500: 1000 + (-500) = 500
-          // Edita para 300: 500 + 200 = 700 ✓ (equivalente a ter lançado 300)
-          adjustment = +difference;
-        } else if (provision.type === 'income' && transactionType === 'expense') {
-          adjustment = -difference;
-        }
-      }
-
-      const newProvisionAmount = provision.amount + adjustment;
-
-      logger.info(`📊 Ajustando provisão filha:
-        - categoryId: ${categoryId}
-        - provisionId: ${provision.id}
-        - provision.amount: ${provision.amount} (negativa no banco)
-        - oldAmount: ${oldAmount}, newAmount: ${newAmount}
-        - adjustment: ${adjustment}
-        - ${provision.amount} → ${newProvisionAmount}`);
-
-      // Atualizar apenas a instância (filha)
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update({ amount: newProvisionAmount })
-        .eq('id', provision.id)
-        .eq('user_id', user.id);
-
-      if (updateError) {
-        logger.error('Erro ao ajustar provisão:', updateError);
-        return;
-      }
-
-      // Atualizar cache offline
-      const { data: updatedProvision } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('id', provision.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (updatedProvision) {
-        await offlineDatabase.saveTransactions([updatedProvision as any]);
-      }
-
-      // Notificar Dashboard
-      notifyFixedTransactionsChange();
-    } catch (error) {
-      logger.error('Erro ao ajustar provisão:', error);
-    }
-  }, [user, queryClient]);
 
   const handleAddTransaction = useCallback(async (transactionData: TransactionInput) => {
     if (!user) return;
@@ -382,17 +149,7 @@ export function useTransactionMutations() {
         throw error;
       }
 
-      // ✅ Descontar provisão: quando lança uma transação real, a provisão é consumida
-      // 🚀 Executar em BACKGROUND sem bloquear o fluxo principal
-      if (transactionData.category_id && transactionData.type !== 'transfer') {
-        // Fire and forget - não bloqueia com await
-        deductProvisionIfExists(
-          transactionData.category_id,
-          transactionData.amount,
-          transactionData.date,
-          transactionData.type
-        ).catch(err => logger.error('Erro background ao descontar provisão:', err));
-      }
+
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
       await invalidateTransactions();
@@ -563,42 +320,7 @@ export function useTransactionMutations() {
 
       if (error) throw error;
 
-      // ✅ Ajustar provisão ao editar transação (executar em background)
-      if (originalTransaction && originalTransaction.category_id && originalTransaction.type !== 'transfer') {
-        const newCategoryId = updatedTransaction.category_id ?? originalTransaction.category_id;
-        const newAmount = updatedTransaction.amount ?? originalTransaction.amount;
-        const newDate = updatedTransaction.date ?? originalTransaction.date;
-        
-        // Se mudou de categoria, ajustar ambas
-        if (newCategoryId !== originalTransaction.category_id) {
-          // Devolver na categoria antiga
-          adjustProvisionIfExists(
-            originalTransaction.category_id,
-            originalTransaction.date,
-            originalTransaction.amount,
-            null, // deletada
-            originalTransaction.type
-          ).catch(err => logger.error('Erro ao ajustar provisão antiga:', err));
-          
-          // Descontar na categoria nova
-          adjustProvisionIfExists(
-            newCategoryId,
-            newDate,
-            newAmount,
-            newAmount,
-            updatedTransaction.type ?? originalTransaction.type
-          ).catch(err => logger.error('Erro ao ajustar provisão nova:', err));
-        } else {
-          // Mesma categoria, apenas recalcular
-          adjustProvisionIfExists(
-            newCategoryId,
-            newDate,
-            originalTransaction.amount,
-            newAmount,
-            updatedTransaction.type ?? originalTransaction.type
-          ).catch(err => logger.error('Erro ao ajustar provisão:', err));
-        }
-      }
+
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
       await invalidateTransactions();
@@ -749,16 +471,7 @@ export function useTransactionMutations() {
         }
       }
 
-      if (originalTransaction && originalTransaction.category_id && originalTransaction.type !== 'transfer') {
-        // ✅ Devolver o valor da provisão filha quando deleta transação
-        adjustProvisionIfExists(
-          originalTransaction.category_id,
-          originalTransaction.date,
-          originalTransaction.amount,
-          null, // deletada
-          originalTransaction.type
-        ).catch(err => logger.error('Erro ao devolver provisão:', err));
-      }
+
 
       // ✅ Invalidação imediata dispara refetch automático sem delay
       queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });

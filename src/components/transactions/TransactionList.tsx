@@ -151,13 +151,15 @@ export const TransactionList = memo(function TransactionList({
                /* Transferência de entrada */
                (transaction.type === "income" && transaction.linked_transaction_id) ? "+" :
                /* Receita normal */
-               transaction.type === "income" ? "+" : 
+               transaction.type === "income" ? 
+                 (transaction.is_provision && transaction.amount <= 0 ? "" : "+") : 
                /* Despesa */
                transaction.type === "expense" ? 
-                 (transaction.is_provision && transaction.amount > 0 ? "" : "-") 
+                 (transaction.is_provision && transaction.amount >= 0 ? "" : "-") 
                  : ""}
-              {/* Quando provisão estoura (amount > 0), mostrar R$ 0,00 */}
-              {transaction.is_provision && transaction.type === "expense" && transaction.amount > 0
+              {/* Quando provisão estoura (amount >= 0 para despesa, amount <= 0 para receita), mostrar R$ 0,00 */}
+              {(transaction.is_provision && transaction.type === "expense" && transaction.amount >= 0) ||
+               (transaction.is_provision && transaction.type === "income" && transaction.amount <= 0)
                 ? formatCurrency(0, currency)
                 : formatCurrency(Math.abs(transaction.amount), currency)}
             </span>
