@@ -10,14 +10,12 @@ import {
   Edit,
   Trash2,
   CreditCard,
-  PiggyBank,
-  Wallet,
   MoreVertical,
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Utensils,
   EyeOff,
+  Wallet,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +34,7 @@ import { AccountFilterChips } from "@/components/accounts/AccountFilterChips";
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAccountHandlers } from "@/hooks/useAccountHandlers";
+import { getAccountIcon, getAccountTypeLabel, getAccountTypeBadge, getAccountTypeBadgeColor } from "@/lib/accountUtils";
 
 import { Account, ImportAccountData } from '@/types';
 
@@ -103,52 +102,6 @@ export function AccountsPage({
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const { toast } = useToast();
-
-  // Helper functions (must be declared before filterChips useMemo)
-  const getAccountIcon = (type: string) => {
-    switch (type) {
-      case "checking":
-        return <Wallet className="h-5 w-5" />;
-      case "savings":
-        return <PiggyBank className="h-5 w-5" />;
-      case "credit":
-        return <CreditCard className="h-5 w-5" />;
-      case "investment":
-        return <TrendingUp className="h-5 w-5" />;
-      case "meal_voucher":
-        return <Utensils className="h-5 w-SA5 w-5" />;
-      default:
-        return <Wallet className="h-5 w-5" />;
-    }
-  };
-
-  const getAccountTypeLabel = (type: string) => {
-    switch (type) {
-      case "checking":
-        return "Corrente";
-      case "savings":
-        return "Poupança";
-      case "credit":
-        return "Cartão de Crédito";
-      case "investment":
-        return "Investimento";
-      case "meal_voucher":
-        return "Vale Refeição/Alimentação";
-      default:
-        return type;
-    }
-  };
-
-  const getAccountTypeBadge = (type: string) => {
-    const variants = {
-      checking: "default",
-      savings: "secondary",
-      credit: "destructive",
-      investment: "secondary",
-      meal_voucher: "default",
-    } as const;
-    return variants[type as keyof typeof variants] || "default";
-  };
 
   // Generate filter chips (after helper functions)
   const filterChips = useMemo(() => {
@@ -437,10 +390,14 @@ export function AccountsPage({
                         {account.name}
                       </h3>
                       <Badge
-                        variant={getAccountTypeBadge(account.type)}
-                        className="gap-1 text-caption h-5 px-2 inline-flex text-white"
+                        className={`gap-1.5 text-[11px] h-6 px-2.5 inline-flex items-center font-medium border-0 max-w-full ${getAccountTypeBadgeColor(account.type)}`}
                       >
-                        {getAccountTypeLabel(account.type)}
+                        <span className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center">
+                          {getAccountIcon(account.type)}
+                        </span>
+                        <span className="truncate">
+                          {getAccountTypeLabel(account.type)}
+                        </span>
                       </Badge>
                     </div>
 

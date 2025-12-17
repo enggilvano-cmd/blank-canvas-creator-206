@@ -1,9 +1,11 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CreditCard, EyeOff, Eye } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { Account } from '@/types';
 import { memo, useMemo, useState, useEffect } from 'react';
+import { getAccountIcon, getAccountTypeLabel, getAccountTypeBadgeColor } from '@/lib/accountUtils';
 
 interface AccountsSummaryProps {
   accounts: Account[];
@@ -112,22 +114,28 @@ export const AccountsSummary = memo(function AccountsSummary({
             {filteredAccounts.map((account) => (
               <div
                 key={account.id}
-                className="flex items-center justify-between p-1.5 rounded-md bg-muted/20 hover:bg-muted/40 transition-colors"
+                className="flex items-center justify-between p-2 rounded-md bg-muted/20 hover:bg-muted/40 transition-colors gap-2"
               >
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white flex-shrink-0"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0"
                     style={{ backgroundColor: account.color || '#6b7280' }}
                   >
-                    <div className="text-caption font-semibold">
-                      {account.type === 'checking' && 'C'}
-                      {account.type === 'savings' && 'P'}
-                      {account.type === 'credit' && 'R'}
-                      {account.type === 'investment' && 'I'}
-                      {account.type === 'meal_voucher' && 'V'}
-                    </div>
+                    {getAccountIcon(account.type, "h-4 w-4")}
                   </div>
-                  <p className="font-medium text-xs truncate">{account.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-xs truncate">{account.name}</p>
+                    <Badge
+                      className={`gap-1 text-[10px] h-4 px-1.5 inline-flex items-center font-medium mt-0.5 border-0 max-w-full ${getAccountTypeBadgeColor(account.type)}`}
+                    >
+                      <span className="w-2.5 h-2.5 flex-shrink-0 flex items-center justify-center">
+                        {getAccountIcon(account.type, "h-2.5 w-2.5")}
+                      </span>
+                      <span className="truncate">
+                        {getAccountTypeLabel(account.type)}
+                      </span>
+                    </Badge>
+                  </div>
                 </div>
                 <div
                   className={`text-xs font-medium flex-shrink-0 ${
