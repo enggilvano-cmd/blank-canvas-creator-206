@@ -1579,7 +1579,7 @@ export default function AnalyticsPage({
                           </span>
                         </div>
                         <span className={`font-medium flex-shrink-0 ${textColor}`}>
-                          {formatCurrency(value)}
+                          {formatCurrency(value * 100)}
                         </span>
                       </div>
                     );
@@ -1618,7 +1618,7 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className={`font-medium flex-shrink-0 ${textColor}`}>
-                        {formatCurrency(value)}
+                        {formatCurrency(value * 100)}
                       </span>
                     </div>
                   );
@@ -1920,7 +1920,7 @@ export default function AnalyticsPage({
                   />
                   <YAxis
                     tickFormatter={(value) =>
-                      formatCurrencyForAxis(value / 100, isMobile)
+                      formatCurrencyForAxis(value, isMobile)
                     }
                     tick={{ fontSize: isMobile ? 9 : 11 }}
                     width={isMobile ? 35 : 60}
@@ -2003,7 +2003,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       account.balance >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(account.balance)}
+                      {formatCurrency(account.balance * 100)}
                     </span>
                   </div>
                 ))}
@@ -2012,7 +2012,7 @@ export default function AnalyticsPage({
                   <span className={`font-medium flex-shrink-0 ${
                     accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                   }`}>
-                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                   </span>
                 </div>
               </div>
@@ -2044,7 +2044,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       account.balance >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(account.balance)}
+                      {formatCurrency(account.balance * 100)}
                     </span>
                   </div>
                 ))}
@@ -2053,7 +2053,7 @@ export default function AnalyticsPage({
                   <span className={`font-medium flex-shrink-0 ${
                     accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                   }`}>
-                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                    {formatCurrency(accountBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                   </span>
                 </div>
               </div>
@@ -2095,7 +2095,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -2178,7 +2178,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2187,7 +2187,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       investmentBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(investmentBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(investmentBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -2219,7 +2219,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2228,7 +2228,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       investmentBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(investmentBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(investmentBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -2270,7 +2270,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -2447,7 +2447,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -2530,7 +2530,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2539,7 +2539,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       checkingBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(checkingBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(checkingBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -2571,7 +2571,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2580,7 +2580,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       checkingBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(checkingBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(checkingBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -2622,7 +2622,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -2705,7 +2705,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2714,7 +2714,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       mealVoucherBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(mealVoucherBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(mealVoucherBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -2746,7 +2746,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2755,7 +2755,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       mealVoucherBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(mealVoucherBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(mealVoucherBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -2797,7 +2797,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -2977,7 +2977,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -3129,7 +3129,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -3309,7 +3309,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value / 100, isMobile)
+                        formatCurrencyForAxis(value, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
