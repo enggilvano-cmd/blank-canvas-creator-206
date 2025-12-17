@@ -17,6 +17,7 @@ import {
   TrendingUp,
   TrendingDown,
   Utensils,
+  EyeOff,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,6 +25,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { ImportAccountsModal } from "@/components/ImportAccountsModal";
@@ -32,6 +35,7 @@ import { AccountFilterDialog } from "@/components/accounts/AccountFilterDialog";
 import { AccountFilterChips } from "@/components/accounts/AccountFilterChips";
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useAccountHandlers } from "@/hooks/useAccountHandlers";
 
 import { Account, ImportAccountData } from '@/types';
 
@@ -66,6 +70,7 @@ export function AccountsPage({
 }: AccountsPageProps) {
   const { accounts } = useAccounts();
   const { formatCurrency } = useSettings();
+  const { handleEditAccount } = useAccountHandlers();
 
   // Filters with persistence
   const [filters, setFilters] = usePersistedFilters<AccountsFilters>(
@@ -111,7 +116,7 @@ export function AccountsPage({
       case "investment":
         return <TrendingUp className="h-5 w-5" />;
       case "meal_voucher":
-        return <Utensils className="h-5 w-5" />;
+        return <Utensils className="h-5 w-SA5 w-5" />;
       default:
         return <Wallet className="h-5 w-5" />;
     }
@@ -206,7 +211,23 @@ export function AccountsPage({
     }
   };
 
+  const handleToggleIgnoreAccount = async (account: Account) => {
+    try {
+      await handleEditAccount({
+        id: account.id,
+        ignored: !account.ignored,
+      });
+      toast({
+        title: "Sucesso",
+        description: `Conta ${!account.ignored ? "ignorada" : "incluída"} nos cálculos.`,
+      });
+    } catch (error) {
+      // Error toast is handled inside useAccountHandlers
+    }
+  };
+
   const totalBalance = filteredAccounts
+    .filter(acc => !acc.ignored)
     .reduce((sum, acc) => {
       if (acc.type === "credit") {
         return sum + (acc.balance > 0 ? acc.balance : 0);
@@ -215,6 +236,7 @@ export function AccountsPage({
     }, 0);
 
   const creditUsed = filteredAccounts
+    .filter(acc => !acc.ignored)
     .reduce((sum, acc) => {
       if (acc.type === "credit") {
         // Cartões de crédito: saldo negativo é dívida
@@ -227,7 +249,7 @@ export function AccountsPage({
     }, 0);
 
   const creditAvailable = filteredAccounts
-    .filter((acc) => acc.limit_amount && acc.limit_amount > 0)
+    .filter((acc) => !acc.ignored && acc.limit_amount && acc.limit_amount > 0)
     .reduce((sum, acc) => {
       if (acc.type === "credit") {
         // Para cartões de crédito: limite - usado
@@ -396,7 +418,7 @@ export function AccountsPage({
           </div>
         ) : (
           filteredAccounts.map((account) => (
-            <Card key={account.id} className="financial-card apple-interaction group">
+            <Card key={account.id} className={`financial-card apple-interaction group ${account.ignored ? 'opacity-60' : ''}`}>
               <CardContent className="p-3 sm:p-4">
                 <div className="space-y-3">
                   {/* Header com Ícone, Nome e Menu */}
@@ -445,6 +467,17 @@ export function AccountsPage({
                               Pagar Fatura
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                            <Label htmlFor={`ignore-switch-${account.id}`} className="flex items-center gap-2 cursor-pointer">
+                              <EyeOff className="h-4 w-4 mr-2" />
+                              Ignorar no Saldo
+                            </Label>
+                            <Switch
+                              id={`ignore-switch-${account.id}`}
+                              checked={account.ignored}
+                              onCheckedChange={() => handleToggleIgnoreAccount(account)}
+                            />
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteClick(account)}
                             className="text-destructive"

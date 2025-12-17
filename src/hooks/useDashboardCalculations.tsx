@@ -134,10 +134,11 @@ export function useDashboardCalculations(
   const totalBalance = useMemo(() => 
     accounts
       .filter((acc) => 
-        acc.type === 'checking' || 
+        !acc.ignored &&
+        (acc.type === 'checking' || 
         acc.type === 'savings' || 
         acc.type === 'investment' ||
-        acc.type === 'meal_voucher'
+        acc.type === 'meal_voucher')
       )
       .reduce((sum, acc) => sum + (acc.balance * 100), 0),
     [accounts]
@@ -146,7 +147,7 @@ export function useDashboardCalculations(
   // acc.balance e acc.limit_amount vêm em REAIS do banco, converter para CENTAVOS
   const creditAvailable = useMemo(() => 
     accounts
-      .filter((acc) => acc.type === 'credit')
+      .filter((acc) => !acc.ignored && acc.type === 'credit')
       .reduce((sum, acc) => {
         const limit = acc.limit_amount || 0;
         const balance = acc.balance;
@@ -167,7 +168,7 @@ export function useDashboardCalculations(
   // acc.balance vem em REAIS, converter para CENTAVOS
   const creditLimitUsed = useMemo(() => 
     accounts
-      .filter((acc) => acc.type === 'credit')
+      .filter((acc) => !acc.ignored && acc.type === 'credit')
       .reduce((sum, acc) => {
         // Balance negativo = dívida (limite utilizado)
         if (acc.balance < 0) {

@@ -135,14 +135,14 @@ const FALLBACK_COLOR = "#8884d8";
 export default function AnalyticsPage({
   transactions,
   accounts,
-  initialDateFilter = "all",
+  initialDateFilter = "current_month",
   initialSelectedMonth = new Date(),
   initialCustomStartDate = undefined,
   initialCustomEndDate = undefined,
 }: AnalyticsPageProps) {
   // Filters with persistence
   const [filters, setFilters] = usePersistedFilters<AnalyticsFilters>(
-    'analytics-filters',
+          'analytics-filters',
     {
       searchTerm: "",
       filterType: "all",
@@ -567,8 +567,12 @@ export default function AnalyticsPage({
   }, [nonTransferFilteredTransactions]);
 
 
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter(account => !account.ignored);
+  }, [accounts]);
+
   const accountBalanceData = useMemo(() => {
-    return accounts
+    return filteredAccounts
       .filter((acc) => acc.type !== "credit" || acc.balance > 0)
       .map((account) => ({
         name: account.name.split(" - ")[0] || account.name,
@@ -578,7 +582,7 @@ export default function AnalyticsPage({
         type: account.type,
         color: account.color || "hsl(var(--primary))",
       }));
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Chart config específico para o gráfico de saldos de contas
   const accountChartConfig = useMemo(() => {
@@ -594,7 +598,7 @@ export default function AnalyticsPage({
 
   // Dados para o gráfico de saldos de cartões de crédito
   const creditCardBalanceData = useMemo(() => {
-    return accounts
+    return filteredAccounts
       .filter((acc) => acc.type === "credit")
       .map((account) => {
         const usedCredit = account.balance < 0 ? Math.abs(account.balance) : 0;
@@ -612,7 +616,7 @@ export default function AnalyticsPage({
           limitAmount: account.limit_amount || 0,
         };
       });
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Chart config específico para o gráfico de cartões de crédito
   const creditCardChartConfig = useMemo(() => {
@@ -659,7 +663,7 @@ export default function AnalyticsPage({
 
   // Dados para o gráfico de cheque especial (Overdraft)
   const overdraftBalanceData = useMemo(() => {
-    return accounts
+    return filteredAccounts
       .filter((acc) => acc.type === "checking")
       .map((account) => {
         // Se o saldo é negativo, estamos usando o cheque especial
@@ -678,7 +682,7 @@ export default function AnalyticsPage({
           limitAmount: account.limit_amount || 0,
         };
       });
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Chart config para o gráfico de cheque especial
   const overdraftChartConfig = useMemo(() => {
@@ -725,7 +729,7 @@ export default function AnalyticsPage({
 
   // Dados para o gráfico de saldos de contas de investimento
   const investmentBalanceData = useMemo(() => {
-    return accounts
+    return filteredAccounts
       .filter((acc) => acc.type === "investment")
       .map((account) => ({
         name: account.name.split(" - ")[0] || account.name,
@@ -735,7 +739,7 @@ export default function AnalyticsPage({
         type: account.type,
         color: account.color || "hsl(var(--primary))",
       }));
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Chart config específico para o gráfico de contas de investimento
   const investmentChartConfig = useMemo(() => {
@@ -751,7 +755,7 @@ export default function AnalyticsPage({
 
   // Dados para o gráfico de saldos de contas poupança
   const savingsBalanceData = useMemo(() => {
-    return accounts
+    return filteredAccounts
       .filter((acc) => acc.type === "savings")
       .map((account) => ({
         name: account.name.split(" - ")[0] || account.name,
@@ -761,7 +765,7 @@ export default function AnalyticsPage({
         type: account.type,
         color: account.color || "hsl(var(--primary))",
       }));
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Chart config específico para o gráfico de contas poupança
   const savingsChartConfig = useMemo(() => {
@@ -777,7 +781,7 @@ export default function AnalyticsPage({
 
   // Dados para o gráfico de saldos de contas corrente
   const checkingBalanceData = useMemo(() => {
-    return accounts
+    return filteredAccounts
       .filter((acc) => acc.type === "checking")
       .map((account) => ({
         name: account.name.split(" - ")[0] || account.name,
@@ -787,7 +791,7 @@ export default function AnalyticsPage({
         type: account.type,
         color: account.color || "hsl(var(--primary))",
       }));
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Chart config específico para o gráfico de contas corrente
   const checkingChartConfig = useMemo(() => {
@@ -803,7 +807,7 @@ export default function AnalyticsPage({
 
   // Dados para o gráfico de saldos de vale refeição/alimentação
   const mealVoucherBalanceData = useMemo(() => {
-    return accounts
+    return filteredAccounts
       .filter((acc) => acc.type === "meal_voucher")
       .map((account) => ({
         name: account.name.split(" - ")[0] || account.name,
@@ -813,7 +817,7 @@ export default function AnalyticsPage({
         type: account.type,
         color: account.color || "hsl(var(--primary))",
       }));
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   // Chart config específico para o gráfico de vale refeição/alimentação
   const mealVoucherChartConfig = useMemo(() => {

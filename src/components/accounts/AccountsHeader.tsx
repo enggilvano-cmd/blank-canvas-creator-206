@@ -22,11 +22,11 @@ export function AccountsHeader({
   const exportToExcel = async () => {
     try {
       const { exportAccountsToExcel } = await import('@/lib/exportUtils');
-      await exportAccountsToExcel(accounts);
-      
+      const filteredAccounts = accounts.filter(acc => !acc.ignored);
+      await exportAccountsToExcel(filteredAccounts);
       toast({
         title: "Sucesso",
-        description: `${accounts.length} conta${accounts.length !== 1 ? 's' : ''} exportada${accounts.length !== 1 ? 's' : ''} com sucesso`,
+        description: `${filteredAccounts.length} conta${filteredAccounts.length !== 1 ? 's' : ''} exportada${filteredAccounts.length !== 1 ? 's' : ''} com sucesso`,
       });
     } catch (error) {
       toast({

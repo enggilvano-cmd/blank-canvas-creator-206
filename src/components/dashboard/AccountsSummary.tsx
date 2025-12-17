@@ -38,15 +38,15 @@ export const AccountsSummary = memo(function AccountsSummary({
   // ✅ Memoização para evitar recalcular em cada render
   const filteredAccounts = useMemo(
     () => {
-      let filtered = accountTypes
-        ? accounts.filter((account) => accountTypes.includes(account.type))
-        : accounts;
-      
+      // Sempre ignora contas marcadas como ignoradas
+      let filtered = accounts.filter((account) => !account.ignored);
+      if (accountTypes) {
+        filtered = filtered.filter((account) => accountTypes.includes(account.type));
+      }
       // Filtra contas com saldo zero se a opção estiver ativada
       if (hideZeroBalances) {
         filtered = filtered.filter((account) => account.balance !== 0);
       }
-      
       return filtered;
     },
     [accounts, accountTypes, hideZeroBalances]
