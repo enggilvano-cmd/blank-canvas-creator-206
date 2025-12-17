@@ -81,7 +81,7 @@ export function BalanceCards({
             {formatCurrency(totalBalance)}
           </div>
           <p className="text-caption text-muted-foreground mt-1 opacity-70">
-            Corrente • Poupança
+            Soma de todas as contas
           </p>
         </CardContent>
       </Card>

@@ -136,6 +136,7 @@ export function useDashboardCalculations(
       .filter((acc) => 
         acc.type === 'checking' || 
         acc.type === 'savings' || 
+        acc.type === 'investment' ||
         acc.type === 'meal_voucher'
       )
       .reduce((sum, acc) => sum + (acc.balance * 100), 0),
