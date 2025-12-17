@@ -41,14 +41,16 @@ export function EditAccountModal({
     // Resetar e carregar o saldo inicial sempre que a conta ou o modal abre
     if (!account || !open) return;
 
-    // Usar o balance da conta (initial_balance não existe mais no DB)
-    const balanceValue = account.balance || 0;
+    // Converter balance de reais (DECIMAL no banco) para centavos (CurrencyInput espera centavos)
+    const balanceInCents = Math.round((account.balance || 0) * 100);
+    // Limite já está no formato correto - não precisa conversão
+    const limitInCents = account.limit_amount || 0;
 
     setFormData({
       name: account.name,
       type: account.type,
-      balanceInCents: balanceValue,
-      limitInCents: account.limit_amount || 0,
+      balanceInCents: balanceInCents,
+      limitInCents: limitInCents,
       dueDate: account.due_date?.toString() || "",
       closingDate: account.closing_date?.toString() || "",
       color: account.color || PREDEFINED_COLORS[0],
@@ -68,10 +70,6 @@ export function EditAccountModal({
       });
       return;
     }
-
-    // Permite salvar 0 como limite (para remover cheque especial/limite)
-    // Antes convertia 0 para null/undefined, o que impedia a atualização
-    const dbLimitAmount = formData.limitInCents;
 
     let dueDate: number | undefined;
     if (formData.type === "credit" && formData.dueDate) {
@@ -111,15 +109,19 @@ export function EditAccountModal({
       hasChanges = true;
     }
 
+    // Converter balance de centavos para reais (banco usa DECIMAL para balance)
+    const balanceInReais = formData.balanceInCents / 100;
+    
     // Verifica se houve mudança no saldo
-    if (formData.balanceInCents !== account.balance) {
+    if (Math.abs(balanceInReais - (account.balance || 0)) > 0.001) {
       // Use a custom property that handleEditAccount understands
-      (updates as Partial<Account> & { id: string; initial_balance?: number }).initial_balance = formData.balanceInCents;
+      (updates as Partial<Account> & { id: string; initial_balance?: number }).initial_balance = balanceInReais;
       hasChanges = true;
     }
     
-    if (dbLimitAmount !== (account.limit_amount || 0)) {
-        updates.limit_amount = dbLimitAmount || 0;
+    // Verifica se houve mudança no limite (não precisa conversão)
+    if (formData.limitInCents !== (account.limit_amount || 0)) {
+        updates.limit_amount = formData.limitInCents || 0;
         hasChanges = true;
     }
 

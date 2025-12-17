@@ -76,8 +76,9 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
     }
     // --- Fim da Correção ---
 
-    const balanceInCents = formData.balanceInCents;
-
+    // Converter de centavos para reais (o banco armazena balance em formato DECIMAL)
+    const balanceInReais = formData.balanceInCents / 100;
+    // Limite não precisa conversão - já funciona corretamente em centavos
     const limitInCents =
       formData.limitInCents > 0 ? formData.limitInCents : undefined;
 
@@ -114,7 +115,7 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
       await handleAddAccount({
         name: formData.name,
         type: formData.type as any,
-        balance: balanceInCents,
+        balance: balanceInReais,
         limit_amount: limitInCents,
         due_date: dueDate,
         closing_date: closingDate,
