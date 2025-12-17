@@ -497,16 +497,18 @@ export function AccountsPage({
                                     className="h-2 rounded-full transition-all duration-300 bg-destructive"
                                     style={{
                                       width: `${Math.min(
-                                        (Math.abs(Math.min(account.balance, 0)) / (account.limit_amount || 1)) * 100,
+                                        account.balance < 0 
+                                          ? (Math.abs(account.balance) * 100 / (account.limit_amount || 1)) * 100
+                                          : 0,
                                         100
                                       )}%`,
                                     }}
                                   />
                                 </div>
                                 <span className="text-xs font-medium w-10 text-right">
-                                  {Math.round(
-                                    (Math.abs(Math.min(account.balance, 0)) / (account.limit_amount || 1)) * 100
-                                  )}%
+                                  {account.balance < 0 
+                                    ? Math.round((Math.abs(account.balance) * 100 / (account.limit_amount || 1)) * 100)
+                                    : 0}%
                                 </span>
                               </div>
                             </div>
@@ -540,7 +542,7 @@ export function AccountsPage({
                                   style={{
                                     width: `${Math.min(
                                       account.balance < 0 
-                                        ? (Math.abs(account.balance) / (account.limit_amount || 1)) * 100
+                                        ? (Math.abs(account.balance) * 100 / (account.limit_amount || 1)) * 100
                                         : 0,
                                       100
                                     )}%`,
@@ -549,7 +551,7 @@ export function AccountsPage({
                               </div>
                               <span className="text-xs font-medium w-10 text-right">
                                 {account.balance < 0 
-                                  ? Math.round((Math.abs(account.balance) / (account.limit_amount || 1)) * 100)
+                                  ? Math.round((Math.abs(account.balance) * 100 / (account.limit_amount || 1)) * 100)
                                   : 0}%
                               </span>
                             </div>

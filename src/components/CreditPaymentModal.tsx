@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { getTodayString, createDateFromString } from "@/lib/dateUtils";
 import { getAvailableBalance } from "@/lib/formatters";
-import { AccountBalanceDetails } from "./AccountBalanceDetails";
 import { CurrencyInput } from "./forms/CurrencyInput";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { creditPaymentSchema } from "@/lib/validationSchemas";
@@ -253,8 +252,33 @@ export function CreditPaymentModal({
                 setFormData((prev) => ({ ...prev, bankAccountId: value }));
               }}
             >
-              <SelectTrigger id="bankAccount">
-                <SelectValue placeholder="Selecione a conta" />
+              <SelectTrigger id="bankAccount" className="h-auto">
+                <SelectValue placeholder="Selecione a conta">
+                  {formData.bankAccountId && (() => {
+                    const selectedAccount = bankAccounts.find((acc) => acc.id === formData.bankAccountId);
+                    if (!selectedAccount) return null;
+                    const hasLimit = selectedAccount.limit_amount && selectedAccount.limit_amount > 0;
+                    return (
+                      <div className="flex flex-col gap-1 w-full py-1">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor: selectedAccount.color || "#6b7280",
+                            }}
+                          />
+                          <span className="text-body font-medium">{selectedAccount.name}</span>
+                        </div>
+                        <div className="text-caption text-muted-foreground pl-5">
+                          {formatBRL(selectedAccount.balance)}
+                          {hasLimit && (
+                            <span className="text-primary font-semibold"> + {formatBRL(selectedAccount.limit_amount || 0)} limite</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="z-[9999]">
                 {bankAccounts.length === 0 ? (
@@ -262,34 +286,33 @@ export function CreditPaymentModal({
                     Nenhuma conta disponível
                   </div>
                 ) : (
-                  bankAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      <div className="flex justify-between items-center w-full gap-4">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{
-                              backgroundColor: account.color || "#6b7280",
-                            }}
+                  bankAccounts.map((account) => {
+                    const hasLimit = account.limit_amount && account.limit_amount > 0;
+                    return (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex items-center gap-2 w-full">
+                          <div 
+                            className="w-3 h-3 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: account.color || "#6b7280" }}
                           />
-                          <span className="truncate">{account.name}</span>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="font-medium truncate text-body">{account.name}</span>
+                            <span className="text-caption text-muted-foreground">
+                              {formatBRL(account.balance)}
+                              {hasLimit && (
+                                <span className="text-primary ml-1">
+                                  + {formatBRL(account.limit_amount || 0)} limite
+                                </span>
+                              )}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {formatBRL(getAvailableBalance(account))}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))
+                      </SelectItem>
+                    );
+                  })
                 )}
               </SelectContent>
             </Select>
-            {formData.bankAccountId && (
-              <AccountBalanceDetails
-                account={allAccounts.find(
-                  (acc) => acc.id === formData.bankAccountId
-                )}
-              />
-            )}
           </div>
 
           <div className="space-y-3">

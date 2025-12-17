@@ -138,9 +138,6 @@ export function EditTransactionFormFields({
                           }}
                         />
                         <span className="text-body font-medium">{selectedAccount.name}</span>
-                        <span className="text-caption text-muted-foreground">
-                          - {ACCOUNT_TYPE_LABELS[selectedAccount.type]}
-                        </span>
                       </div>
                       <div className="text-caption text-muted-foreground pl-5">
                         {formatCurrency(selectedAccount.balance * 100)}
@@ -156,24 +153,21 @@ export function EditTransactionFormFields({
             <SelectContent>
               {[...accounts].sort((a, b) => a.name.localeCompare(b.name)).map((account) => (
                 <SelectItem key={account.id} value={account.id}>
-                  <div className="flex flex-col gap-1 w-full">
-                    <div className="flex justify-between items-center w-full">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: account.color || "#6b7280" }}
-                        />
-                        <span className="text-body">{account.name}</span>
-                      </div>
-                      <span className="ml-2 text-caption text-muted-foreground">
-                        {ACCOUNT_TYPE_LABELS[account.type]}
+                  <div className="flex items-center gap-2 w-full">
+                    <div
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: account.color || "#6b7280" }}
+                    />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-medium truncate text-body">{account.name}</span>
+                      <span className="text-caption text-muted-foreground">
+                        {formatCurrency(account.balance * 100)}
+                        {account.limit_amount && account.limit_amount > 0 && (
+                          <span className="text-primary ml-1">
+                            + {formatCurrency(account.limit_amount)} limite
+                          </span>
+                        )}
                       </span>
-                    </div>
-                    <div className="text-caption text-muted-foreground">
-                      {formatCurrency(account.balance * 100)}
-                      {account.limit_amount && account.limit_amount > 0 && (
-                        <span className="text-primary"> + {formatCurrency(account.limit_amount)} limite</span>
-                      )}
                     </div>
                   </div>
                 </SelectItem>
