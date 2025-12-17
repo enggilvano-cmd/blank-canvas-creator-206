@@ -2,13 +2,15 @@ import { ChartDimensions } from "@/hooks/useChartResponsive";
 import type { ChartDataItem } from "@/types/export";
 
 export function formatCurrencyForAxis(value: number, isMobile: boolean): string {
+  const realValue = value / 100;
+
   if (isMobile) {
-    if (Math.abs(value) >= 1000000) {
-      return `R$ ${(value / 1000000).toFixed(1)}M`;
-    } else if (Math.abs(value) >= 1000) {
-      return `R$ ${(value / 1000).toFixed(0)}k`;
+    if (Math.abs(realValue) >= 1000000) {
+      return `R$ ${(realValue / 1000000).toFixed(1)}M`;
+    } else if (Math.abs(realValue) >= 1000) {
+      return `R$ ${(realValue / 1000).toFixed(0)}k`;
     } else {
-      return `R$ ${value.toFixed(0)}`;
+      return `R$ ${realValue.toFixed(0)}`;
     }
   }
   
@@ -16,7 +18,7 @@ export function formatCurrencyForAxis(value: number, isMobile: boolean): string 
     style: 'currency',
     currency: 'BRL',
     maximumFractionDigits: 0
-  }).format(value);
+  }).format(realValue);
 }
 
 export function getPieChartProps(chartConfig: ChartDimensions, data: ChartDataItem[]) {
