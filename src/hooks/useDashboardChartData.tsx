@@ -39,7 +39,10 @@ export function useDashboardChartData(
     const calculateBalanceAtStartOfDate = (targetDate: Date) => {
       // 1. Start with the current actual balance (sum of all accounts)
       // This includes the effect of all COMPLETED transactions up to now
-      const currentTotalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+      // Exclude accounts with ignored: true
+      const currentTotalBalance = accounts
+        .filter(acc => !acc.ignored)
+        .reduce((sum, acc) => sum + acc.balance, 0);
       
       const targetDateStr = format(targetDate, 'yyyy-MM-dd');
 

@@ -481,7 +481,10 @@ export default function AnalyticsPage({
     const calculateBalanceAtStartOfDate = (targetDate: Date) => {
       // 1. Start with the current actual balance (sum of all accounts)
       // This includes the effect of all COMPLETED transactions up to now
-      const currentTotalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+      // Exclude accounts with ignored: true
+      const currentTotalBalance = accounts
+        .filter(acc => !acc.ignored)
+        .reduce((sum, acc) => sum + acc.balance, 0);
       
       const targetDateStr = format(targetDate, 'yyyy-MM-dd');
 
@@ -1084,7 +1087,7 @@ export default function AnalyticsPage({
   // Chart config específico para o gráfico de categorias
   // Memoize tooltip formatters to prevent re-renders
   const categoryTooltipFormatter = useMemo(
-    () => (value: number, name: string) => [formatCurrency(value), ` - ${name}`],
+    () => (value: number, name: string) => [formatCurrency(value * 100), ` - ${name}`],
     [formatCurrency]
   );
 
@@ -1092,16 +1095,16 @@ export default function AnalyticsPage({
     () => (value: number, _name: string, props: any) => {
       // Show only the actual balance value, not the split values
       if (props?.payload?.balance !== undefined) {
-        return [formatCurrency(props.payload.balance), " - Saldo"];
+        return [formatCurrency(props.payload.balance * 100), " - Saldo"];
       }
-      return [formatCurrency(value), " - Saldo"];
+      return [formatCurrency(value * 100), " - Saldo"];
     },
     [formatCurrency]
   );
 
   const monthlyTooltipFormatter = useMemo(
     () => (value: number, name: string) => [
-      formatCurrency(value),
+      formatCurrency(value * 100),
       name === "receitas"
         ? " - Receitas"
         : name === "despesas"
@@ -2991,9 +2994,9 @@ export default function AnalyticsPage({
                       content={<ChartTooltipContent />}
                       formatter={(value: number, _name: string, props: any) => {
                         if (props?.payload?.balance !== undefined) {
-                          return [formatCurrency(props.payload.balance), " - Limite Usado"];
+                          return [formatCurrency(props.payload.balance * 100), " - Limite Usado"];
                         }
-                        return [formatCurrency(value), " - Limite Usado"];
+                        return [formatCurrency(value * 100), " - Limite Usado"];
                       }}
                      />
                      <Bar 
@@ -3323,9 +3326,9 @@ export default function AnalyticsPage({
                       content={<ChartTooltipContent />}
                       formatter={(value: number, _name: string, props: any) => {
                         if (props?.payload?.balance !== undefined) {
-                          return [formatCurrency(props.payload.balance), " - Limite Usado"];
+                          return [formatCurrency(props.payload.balance * 100), " - Limite Usado"];
                         }
-                        return [formatCurrency(value), " - Limite Usado"];
+                        return [formatCurrency(value * 100), " - Limite Usado"];
                       }}
                      />
                      <Bar 

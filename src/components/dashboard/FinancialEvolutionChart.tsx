@@ -247,7 +247,7 @@ export function FinancialEvolutionChart({
                       fill: 'hsl(var(--muted-foreground))',
                     }}
                     tickFormatter={(value) => {
-                      const formatted = formatCurrencyForAxis(value * 100, isMobile);
+                      const formatted = formatCurrencyForAxis(value, isMobile);
                       return isMobile ? formatted.replace('R$', '').trim() : formatted;
                     }}
                     width={isMobile ? 35 : 80}
