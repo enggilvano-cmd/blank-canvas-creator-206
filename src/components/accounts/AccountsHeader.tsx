@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, FileDown, ArrowRight } from "lucide-react";
+import { Plus, Upload, FileDown, ArrowRightLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 
@@ -74,8 +74,8 @@ export function AccountsHeader({
           className="gap-1.5 apple-interaction h-8 text-xs"
           title="Transferência"
         >
-          <ArrowRight className="h-3.5 w-3.5" />
-          <span className="hidden md:inline">Transfer</span>
+          <ArrowRightLeft className="h-3.5 w-3.5" />
+          <span className="hidden md:inline">Transferência</span>
         </Button>
       )}
       <Button
