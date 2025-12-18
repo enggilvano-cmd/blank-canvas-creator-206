@@ -336,8 +336,8 @@ export function useTransactionsPageLogic({
         const isTransferLike = (t: typeof transactions[number]) => {
           if (t.type === 'transfer') return true;
           if ((t as any).to_account_id) return true;
-          // Excluir receitas espelho de transferências (income + linked_transaction_id)
-          if (t.type === 'income' && (t as any).linked_transaction_id) return true;
+          // Excluir receitas espelho de transferências (transfer + linked_transaction_id)
+          if (t.type === 'transfer' && (t as any).linked_transaction_id) return true;
           return false;
         };
 

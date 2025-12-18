@@ -38,7 +38,7 @@ export function useOfflineAccountMutations() {
         name: accountData.name,
         type: accountData.type,
         balance: accountData.balance || 0,
-        initial_balance: accountData.balance || 0,
+        initial_balance: accountData.balance ? Math.round((accountData.balance) * 100) : 0,
         color: accountData.color || '#6b7280',
         limit_amount: accountData.limit_amount,
         due_date: accountData.due_date,
@@ -53,60 +53,14 @@ export function useOfflineAccountMutations() {
         data: { ...accountData, id: tempId }, // Include temp ID for mapping
       });
 
-      // 2. Queue operation (Transaction) if balance != 0
-      if (accountData.balance && accountData.balance !== 0) {
-         const isIncome = accountData.balance > 0;
-         const amount = Math.abs(accountData.balance);
-         
-         await offlineQueue.enqueue({
-            type: 'transaction',
-            data: {
-                description: 'Saldo Inicial',
-                amount: amount,
-                date: new Date().toISOString().split('T')[0],
-                type: isIncome ? 'income' : 'expense',
-                account_id: tempId,
-                status: 'completed',
-                category_id: null
-            }
-         });
-      }
+      // Note: No need to create initial balance transaction
+      // The balance is already set directly in the account record
+      // and initial_balance field stores the starting balance
 
-      // 3. Update local DB (Optimistic UI)
+      // 2. Update local DB (Optimistic UI)
       await offlineDatabase.saveAccounts([newAccount]);
 
-      if (accountData.balance && accountData.balance !== 0) {
-          const isIncome = accountData.balance > 0;
-          const amount = Math.abs(accountData.balance);
-          const txTempId = `temp-tx-${Date.now()}`;
-          
-          const optimisticTx = {
-              id: txTempId,
-              user_id: user?.id || 'offline-user',
-              description: 'Saldo Inicial',
-              amount: isIncome ? amount : -amount,
-              date: new Date().toISOString().split('T')[0],
-              type: isIncome ? 'income' : 'expense',
-              category_id: null,
-              account_id: tempId,
-              status: 'completed',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-          };
-          
-          // Type assertion with proper validation
-          await offlineDatabase.saveTransactions([optimisticTx as unknown as Transaction]);
-          
-          queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
-              if (!oldData) return [optimisticTx];
-              if (Array.isArray(oldData)) {
-                  return [optimisticTx, ...oldData];
-              }
-              return oldData;
-          });
-      }
-
-      // 4. Update React Query Cache (Accounts)
+      // 3. Update React Query Cache (Accounts)
       queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
         return [newAccount, ...(old || [])];
       });
@@ -151,7 +105,7 @@ export function useOfflineAccountMutations() {
               name: accountData.name,
               type: accountData.type,
               balance: accountData.balance || 0,
-              initial_balance: accountData.balance || 0,
+              initial_balance: accountData.balance ? Math.round((accountData.balance) * 100) : 0,
               color: accountData.color || '#6b7280',
               limit_amount: accountData.limit_amount,
               due_date: accountData.due_date,
@@ -189,28 +143,9 @@ export function useOfflineAccountMutations() {
           }
         }
 
-        // 2. Create Initial Balance Transaction if needed
-        if (accountData.balance && accountData.balance !== 0) {
-           const isIncome = accountData.balance > 0;
-           const amount = Math.abs(accountData.balance);
-           
-           const { error: txError } = await supabase.rpc('atomic_create_transaction', {
-             p_user_id: user.id,
-             p_description: 'Saldo Inicial',
-             p_amount: amount,
-             p_date: new Date().toISOString().split('T')[0],
-             p_type: isIncome ? 'income' : 'expense',
-             p_category_id: null,
-             p_account_id: newAccount.id,
-             p_status: 'completed'
-           });
-             
-           if (txError) {
-              logger.error('Failed to create initial balance transaction', txError);
-              await supabase.from('accounts').delete().eq('id', newAccount.id);
-              throw new Error('Falha ao criar transação de saldo inicial. Tente novamente.');
-           }
-        }
+        // Note: No need to create initial balance transaction
+        // The balance is already set directly in the account record
+        // and initial_balance field stores the starting balance
 
         queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
         toast({

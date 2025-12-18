@@ -334,7 +334,7 @@ export function FixedTransactionsPage({
 
       toast({
         title: "Transação fixa adicionada",
-        description: `${result.created_count || 1} transações foram geradas com sucesso`,
+        description: `${(result.created_count || 1) - 1} transações foram geradas com sucesso`,
       });
 
       // 🔄 Buscar dados atualizados do servidor para cache offline

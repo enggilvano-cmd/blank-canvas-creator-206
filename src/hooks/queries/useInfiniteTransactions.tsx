@@ -138,7 +138,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       if (type !== 'all') {
         if (type === 'transfer') {
           // Incluir AMBAS as transações da transferência
-          query = query.or('to_account_id.not.is.null,and(type.eq.income,linked_transaction_id.not.is.null)');
+          query = query.or('to_account_id.not.is.null,and(type.eq.transfer,linked_transaction_id.not.is.null)');
         } else {
           query = query.eq('type', type).is('to_account_id', null);
         }
@@ -244,7 +244,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       if (type !== 'all') {
         if (type === 'transfer') {
           // Incluir AMBAS as transações da transferência (count)
-          query = query.or('to_account_id.not.is.null,and(type.eq.income,linked_transaction_id.not.is.null)');
+          query = query.or('to_account_id.not.is.null,and(type.eq.transfer,linked_transaction_id.not.is.null)');
         } else {
           query = query.eq('type', type).is('to_account_id', null);
         }

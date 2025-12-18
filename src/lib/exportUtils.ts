@@ -95,7 +95,7 @@ export async function exportTransactionsToExcel(
     const toAccount = transaction.to_account_id ? accounts.find(a => a.id === transaction.to_account_id) : null;
     
     // Identificar se é transferência (saída com to_account_id OU entrada com linked_transaction_id)
-    const isTransfer = transaction.type === 'transfer' || (transaction.type === 'income' && transaction.linked_transaction_id);
+    const isTransfer = transaction.type === 'transfer' || transaction.to_account_id;
 
     return {
       'Data': format(new Date(transaction.date), 'dd/MM/yyyy', { locale: ptBR }),
@@ -184,7 +184,7 @@ export async function exportAllDataToExcel(
     const toAccount = transaction.to_account_id ? accounts.find(a => a.id === transaction.to_account_id) : null;
     
     // Identificar se é transferência (saída com to_account_id OU entrada com linked_transaction_id)
-    const isTransfer = transaction.type === 'transfer' || (transaction.type === 'income' && transaction.linked_transaction_id);
+    const isTransfer = transaction.type === 'transfer' || transaction.to_account_id;
 
     return {
       'Data': format(new Date(transaction.date), 'dd/MM/yyyy', { locale: ptBR }),

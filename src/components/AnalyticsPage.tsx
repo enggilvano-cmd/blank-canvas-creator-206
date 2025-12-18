@@ -308,11 +308,10 @@ export default function AnalyticsPage({
 
   // Helper para identificar transações de transferência (ambos os lados)
   const isTransferLike = (transaction: Transaction) => {
-    if (transaction.type === 'transfer') return true;
+    // Transferência de saída (tem to_account_id)
     if (transaction.to_account_id) return true;
-    // Apenas excluir receitas espelho de transferências (income + linked_transaction_id)
-    // Manter despesas com linked_transaction_id (elas são reais, ex: parcelas)
-    if (transaction.type === 'income' && transaction.linked_transaction_id) return true;
+    // Transferência de entrada (type='transfer' com linked_transaction_id)
+    if (transaction.type === 'transfer' && transaction.linked_transaction_id) return true;
     return false;
   };
 

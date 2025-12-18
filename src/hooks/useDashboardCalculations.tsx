@@ -83,7 +83,7 @@ export function useDashboardCalculations(
       if (t.to_account_id) return false;
       
       // Excluir APENAS receitas espelho de transferências
-      if (t.type === 'income' && t.linked_transaction_id) return false;
+      if (t.type === 'transfer' && t.linked_transaction_id) return false;
       
       // Filtrar por período
       if (!isInPeriod(t.date)) return false;

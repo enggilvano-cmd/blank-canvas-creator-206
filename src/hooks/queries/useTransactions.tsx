@@ -119,11 +119,11 @@ export function useTransactions(params: UseTransactionsParams = {}) {
       // Type
       if (type !== 'all') {
         if (type === 'transfer') {
-          // Incluir AMBAS as transações da transferência
-          if (!t.to_account_id && !t.linked_transaction_id) return false;
+          // Incluir todas as transações de transferência
+          if (t.type !== 'transfer') return false;
         } else {
-          // Excluir transferências: saída (com to_account_id) e entrada (income com linked_transaction_id)
-          if (t.type !== type || t.to_account_id || t.linked_transaction_id) return false;
+          // Excluir transferências
+          if (t.type !== type || t.type === 'transfer') return false;
         }
       }
 
@@ -199,11 +199,11 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       if (type !== 'all') {
         if (type === 'transfer') {
-          // Incluir AMBAS as transações da transferência (count query)
-          query = query.or('to_account_id.not.is.null,and(type.eq.income,linked_transaction_id.not.is.null)');
+          // Incluir todas as transações de transferência
+          query = query.eq('type', 'transfer');
         } else {
-          // Excluir transferências de entrada (income com linked_transaction_id) e de saída (com to_account_id)
-          query = query.eq('type', type).is('to_account_id', null).is('linked_transaction_id', null);
+          // Excluir transferências
+          query = query.eq('type', type).neq('type', 'transfer');
         }
       }
 
@@ -365,13 +365,11 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       if (type !== 'all') {
         if (type === 'transfer') {
-          // Incluir AMBAS as transações da transferência:
-          // 1. Saída: type='transfer' com to_account_id
-          // 2. Entrada: type='income' com linked_transaction_id
-          query = query.or('to_account_id.not.is.null,and(type.eq.income,linked_transaction_id.not.is.null)');
+          // Incluir todas as transações de transferência
+          query = query.eq('type', 'transfer');
         } else {
-          // Excluir transferências de entrada (income com linked_transaction_id) e de saída (com to_account_id)
-          query = query.eq('type', type).is('to_account_id', null).is('linked_transaction_id', null);
+          // Excluir transferências
+          query = query.eq('type', type).neq('type', 'transfer');
         }
       }
 

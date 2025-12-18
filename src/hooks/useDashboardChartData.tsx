@@ -20,13 +20,11 @@ export function useDashboardChartData(
     const isTransferLike = (t: Transaction) => {
       // ✅ USAR A MESMA LÓGICA DOS CARDS:
       // Excluir apenas:
-      // 1. Tipo 'transfer' explícito (legado)
-      // 2. Transferências pai (to_account_id)
-      // 3. APENAS receitas espelho de transferências (income + linked_transaction_id)
-      // ❌ NÃO excluir despesas com linked_transaction_id (elas são reais)
-      if (t.type === 'transfer') return true;
+      // 1. Transferências de saída (to_account_id)
+      // 2. Transferências de entrada (type='transfer' + linked_transaction_id)
+      // ❌ NÃO excluir transações normais
       if ((t as any).to_account_id) return true;
-      if (t.type === 'income' && (t as any).linked_transaction_id) return true;
+      if (t.type === 'transfer' && (t as any).linked_transaction_id) return true;
       return false;
     };
 

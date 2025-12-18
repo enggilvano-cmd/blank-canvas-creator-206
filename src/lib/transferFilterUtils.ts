@@ -17,10 +17,10 @@ export interface Transaction {
 
 /**
  * Verifica se uma transação é o espelho (mirror) de uma transferência.
- * Espelhos são receitas com linked_transaction_id.
+ * Espelhos são transferências de entrada com linked_transaction_id.
  */
 export const isTransferMirror = (transaction: Transaction): boolean => {
-  return transaction.type === 'income' && !!transaction.linked_transaction_id;
+  return transaction.type === 'transfer' && !!transaction.linked_transaction_id;
 };
 
 /**

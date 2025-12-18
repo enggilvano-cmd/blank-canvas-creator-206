@@ -49,11 +49,11 @@ export const TransactionList = memo(function TransactionList({
 
   const getTypeIcon = (transaction: Transaction) => {
     // Transferência de saída (tem to_account_id)
-    if (transaction.type === "transfer" || transaction.to_account_id) {
+    if (transaction.to_account_id) {
       return <ArrowUpRight className="h-5 w-5 text-red-500" />;
     }
-    // Transferência de entrada (income com linked_transaction_id)
-    if (transaction.type === "income" && transaction.linked_transaction_id) {
+    // Transferência de entrada (type='transfer' com linked_transaction_id)
+    if (transaction.type === "transfer" && transaction.linked_transaction_id) {
       return <ArrowDownLeft className="h-5 w-5 text-green-500" />;
     }
     // Receita normal
@@ -119,11 +119,11 @@ export const TransactionList = memo(function TransactionList({
                     <ArrowRight className="h-3 w-3" />
                     {getAccountName(transaction.to_account_id)}
                   </span>
-                ) : transaction.type === 'income' && transaction.linked_transaction_id && transaction.linked_transactions?.accounts?.name ? (
+                ) : transaction.type === 'transfer' && transaction.linked_transaction_id ? (
                   <span className="truncate flex items-center gap-1">
-                    {getAccountName(transaction.account_id)}
-                    <ArrowLeft className="h-3 w-3" />
                     {transaction.linked_transactions?.accounts?.name || 'Conta Desconhecida'}
+                    <ArrowRight className="h-3 w-3" />
+                    {getAccountName(transaction.account_id)}
                   </span>
                 ) : (
                   <span className="truncate">{getAccountName(transaction.account_id)}</span>
@@ -135,9 +135,9 @@ export const TransactionList = memo(function TransactionList({
           <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
             <span
               className={`font-semibold text-lg ${
-                transaction.type === "transfer" || transaction.to_account_id
+                transaction.to_account_id
                   ? "text-red-600 dark:text-red-400"
-                  : transaction.type === "income" && transaction.linked_transaction_id
+                  : transaction.type === "transfer" && transaction.linked_transaction_id
                   ? "text-green-600 dark:text-green-400"
                   : transaction.type === "income"
                   ? "text-success"
@@ -146,10 +146,10 @@ export const TransactionList = memo(function TransactionList({
                   : "text-primary"
               }`}
             >
-              {/* Transferência de saída */}
-              {(transaction.type === "transfer" || transaction.to_account_id) ? "-" : 
-               /* Transferência de entrada */
-               (transaction.type === "income" && transaction.linked_transaction_id) ? "+" :
+              {/* Transferência de saída (tem to_account_id) */}
+              {transaction.to_account_id ? "-" : 
+               /* Transferência de entrada (type='transfer' com linked_transaction_id) */
+               (transaction.type === "transfer" && transaction.linked_transaction_id) ? "+" :
                /* Receita normal */
                transaction.type === "income" ? 
                  (transaction.is_provision && transaction.amount <= 0 ? "" : "+") : 
