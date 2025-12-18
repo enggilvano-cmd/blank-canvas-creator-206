@@ -1,3 +1,4 @@
+import React from "react";
 import { Home, CreditCard, ArrowLeftRight, BarChart3, Settings, Tag, Users, LogOut, User, Receipt, Calendar } from "lucide-react";
 import {
   Sidebar,
@@ -21,6 +22,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { InstallPWA } from "@/components/InstallPWA";
 import { useExpirationNotifications } from "@/hooks/useExpirationNotifications";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { useScrollDirection } from "@/hooks/use-scroll-direction";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -296,6 +298,8 @@ function LayoutContent({ children, currentPage, onPageChange, onNavigate, dashbo
   const isMobile = useIsMobile();
   const { profile, isAdmin, signOut } = useOfflineAuth();
   const { open } = useSidebar();
+  const mainRef = React.useRef<HTMLElement>(null);
+  const { isVisible } = useScrollDirection(mainRef.current);
   
   // Use onNavigate if provided, otherwise use onPageChange
   const handlePageChange = onNavigate || onPageChange || (() => {});
@@ -304,7 +308,10 @@ function LayoutContent({ children, currentPage, onPageChange, onNavigate, dashbo
     <>
       {/* Mobile Header - Fixed with safe area */}
       {isMobile && (
-        <header className="safe-top fixed top-0 left-0 right-0 z-[60] h-14 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm">
+        <header className={cn(
+          "safe-top fixed top-0 left-0 right-0 z-[60] h-14 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm transition-transform duration-300",
+          !isVisible ? "-translate-y-full" : "translate-y-0"
+        )}>
           <div className="flex items-center justify-between h-full px-4">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-10 w-10 hover:bg-accent hover:text-accent-foreground rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-md flex items-center justify-center touch-target">
@@ -381,7 +388,7 @@ function LayoutContent({ children, currentPage, onPageChange, onNavigate, dashbo
         <AppSidebar currentPage={currentPage} onPageChange={handlePageChange} />
         
         {/* Main content with responsive padding and safe areas */}
-          <main className={cn(
+          <main ref={mainRef} className={cn(
             "flex-1 w-full overflow-x-hidden overflow-y-auto",
             "safe-bottom"
           )}>
@@ -440,7 +447,10 @@ function LayoutContent({ children, currentPage, onPageChange, onNavigate, dashbo
           
           {/* Mobile Header Buttons */}
           {isMobile && pageHeaderButtons && (
-            <div className="fixed top-14 left-0 right-0 z-40 flex items-center justify-center gap-1 px-2 py-1 border-b h-[58px]">
+            <div className={cn(
+              "fixed left-0 right-0 z-40 flex items-center justify-center gap-1 px-2 py-1 border-b h-[58px] bg-background/95 backdrop-blur-xl transition-all duration-300",
+              !isVisible ? "top-0" : "top-14"
+            )}>
               <div className="flex items-center gap-1 [&>button]:h-8 [&>button]:text-xs [&>button]:px-2">
                 {pageHeaderButtons}
               </div>

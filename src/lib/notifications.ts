@@ -106,7 +106,7 @@ export function getDueDateReminders(
         reminders.push({
           id: `due_${account.id}_${dueDate.getTime()}`,
           title: "Vencimento de Fatura",
-          message: `A fatura do ${account.name} vence em ${daysUntilDue} dia(s). Valor: ${formatCurrency(amount)}`,
+          message: `A fatura do ${account.name} vence em ${daysUntilDue} dia(s). Valor: ${formatCurrency(amount * 100)}`,
           type: "reminder",
           date: today,
           read: false,
@@ -164,7 +164,7 @@ export function getOverdueBillAlerts(
         alerts.push({
           id: `overdue_${account.id}_${dueDate.getTime()}`,
           title: "Fatura Vencida",
-          message: `A fatura do ${account.name} está vencida há ${daysOverdue} dia(s). Valor: ${formatCurrency(amount)}`,
+          message: `A fatura do ${account.name} está vencida há ${daysOverdue} dia(s). Valor: ${formatCurrency(amount * 100)}`,
           type: "alert",
           date: today,
           read: false,

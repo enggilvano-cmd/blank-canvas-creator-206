@@ -220,7 +220,7 @@ export function CreditCardBillCard({
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Usado</span>
-            <span>{formatCents(totalBalance * 100)} / {formatCents((limit_amount ?? 0) * 100)}</span>
+            <span>{formatCents(totalBalance * 100)} / {formatCents(limit_amount ?? 0)}</span>
           </div>
           <Progress value={limitUsedPercentage} className="h-2" />
           <div className="flex justify-between text-xs">
