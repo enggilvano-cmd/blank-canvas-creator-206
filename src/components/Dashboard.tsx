@@ -85,7 +85,8 @@ export function Dashboard({
     customStartDate,
     customEndDate,
     transactionsKey,  // Passar key das transações para monitorar mudanças
-    transactions  // ✅ NOVO: Passar transações para cálculo em memória
+    transactions,  // ✅ NOVO: Passar transações para cálculo em memória
+    fixedTransactions // ✅ Passar transações fixas para cálculo
   );
 
   // Calcular intervalo de datas para os cards de provisões

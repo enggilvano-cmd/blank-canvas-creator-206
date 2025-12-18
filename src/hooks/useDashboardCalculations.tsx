@@ -11,13 +11,15 @@ export function useDashboardCalculations(
   customStartDate: Date | undefined,
   customEndDate: Date | undefined,
   transactionsKey?: string,  // Para monitorar mudanças nas transações
-  allTransactions?: Transaction[]  // NOVO: Receber transações para calcular em memória
+  allTransactions?: Transaction[],  // NOVO: Receber transações para calcular em memória
+  fixedTransactions?: Transaction[] // NOVO: Receber transações fixas para projeção
 ) {
   
   console.log('🎯 useDashboardCalculations called with:', {
     accountsCount: accounts.length,
     dateFilter,
     transactionsKey,
+    fixedTransactionsCount: fixedTransactions?.length
   });
 
   // Calcular date range baseado no filtro (memoizado para estabilidade)
@@ -91,18 +93,47 @@ export function useDashboardCalculations(
       return true;
     });
 
+    // Identificar instâncias já geradas no período para não duplicar
+    const instanceParentIds = new Set(
+      filteredTransactions
+        .filter(t => t.parent_transaction_id)
+        .map(t => t.parent_transaction_id)
+    );
+
+    // Filtrar transações fixas que se aplicam ao período e ainda não foram geradas (projeção)
+    const projectedFixedTransactions = (fixedTransactions || []).filter(ft => {
+      // Se já tem instância gerada no período, ignorar o template
+      if (instanceParentIds.has(ft.id)) return false;
+
+      // Verificar se a data de início é anterior ou igual ao fim do período
+      const ftDate = new Date(ft.date);
+      if (dateRange.dateTo && ftDate > new Date(dateRange.dateTo)) return false;
+      
+      // Verificar se a transação fixa foi criada após o fim do período (não deve aparecer)
+      // (Já coberto acima)
+
+      // Verificar se é uma transferência (excluir se for pai de transferência, igual RPC)
+      if (ft.to_account_id) return false;
+
+      return true;
+    });
+
     console.log('✅ Filtered transactions:', {
       totalFiltered: filteredTransactions.length,
+      projectedFixed: projectedFixedTransactions.length,
       byType: {
         income: filteredTransactions.filter(t => t.type === 'income').length,
         expense: filteredTransactions.filter(t => t.type === 'expense').length,
       },
     });
 
+    // Combinar transações reais e projetadas para os totais
+    const allPeriodTransactions = [...filteredTransactions, ...projectedFixedTransactions];
+
     // Calcular totais gerais
-    const incomeTransactions = filteredTransactions.filter(t => t.type === 'income');
-    const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense');
-    const creditTransactions = filteredTransactions.filter(t => {
+    const incomeTransactions = allPeriodTransactions.filter(t => t.type === 'income');
+    const expenseTransactions = allPeriodTransactions.filter(t => t.type === 'expense');
+    const creditTransactions = allPeriodTransactions.filter(t => {
       const account = accounts.find(a => a.id === t.account_id);
       return t.type === 'expense' && account?.type === 'credit';
     });
@@ -112,9 +143,15 @@ export function useDashboardCalculations(
     const periodExpenses = expenseTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
     const creditCardExpenses = creditTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
 
-    // Pendentes
-    const pendingExpTransactions = filteredTransactions.filter(t => t.type === 'expense' && t.status === 'pending');
-    const pendingIncTransactions = filteredTransactions.filter(t => t.type === 'income' && t.status === 'pending');
+    // Pendentes (inclui todas as projetadas fixas, pois ainda não aconteceram/foram geradas)
+    const pendingExpTransactions = [
+      ...filteredTransactions.filter(t => t.type === 'expense' && t.status === 'pending'),
+      ...projectedFixedTransactions.filter(t => t.type === 'expense') // Fixas projetadas contam como pendentes
+    ];
+    const pendingIncTransactions = [
+      ...filteredTransactions.filter(t => t.type === 'income' && t.status === 'pending'),
+      ...projectedFixedTransactions.filter(t => t.type === 'income') // Fixas projetadas contam como pendentes
+    ];
 
     const pendingExpenses = pendingExpTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
     const pendingIncome = pendingIncTransactions.reduce((sum, t) => sum + (t.amount * 100), 0);
@@ -129,7 +166,7 @@ export function useDashboardCalculations(
       pendingExpensesCount: pendingExpTransactions.length,
       pendingIncomeCount: pendingIncTransactions.length,
     };
-  }, [allTransactions, dateRange, accounts]);
+  }, [allTransactions, fixedTransactions, dateRange, accounts]);
   // acc.balance vem em REAIS do banco, converter para CENTAVOS para formatCurrency
   const totalBalance = useMemo(() => 
     accounts
@@ -144,22 +181,28 @@ export function useDashboardCalculations(
     [accounts]
   );
 
-  // acc.balance e acc.limit_amount vêm em REAIS do banco, converter para CENTAVOS
+  // acc.balance vem em REAIS, mas acc.limit_amount vem em CENTAVOS do banco
   const creditAvailable = useMemo(() => 
     accounts
       .filter((acc) => !acc.ignored && acc.type === 'credit')
       .reduce((sum, acc) => {
-        const limit = acc.limit_amount || 0;
-        const balance = acc.balance;
+        const limit = acc.limit_amount || 0; // Já está em CENTAVOS
+        const balance = acc.balance; // Está em REAIS
+        
+        // Converter balance para centavos para fazer a conta
+        const balanceInCents = balance * 100;
+
         // Se balance é negativo: dívida = abs(balance), disponível = limit - dívida
         // Se balance é positivo: crédito a favor, disponível = limit + crédito
-        if (balance < 0) {
-          const debt = Math.abs(balance);
-          return sum + (limit - debt);
+        let available = 0;
+        if (balanceInCents < 0) {
+          const debt = Math.abs(balanceInCents);
+          available = limit - debt;
         } else {
           // Tem crédito a favor do cliente
-          return sum + (limit + balance);
+          available = limit + balanceInCents;
         }
+        return sum + available; // Já está em centavos
       }, 0),
     [accounts]
   );
@@ -172,7 +215,7 @@ export function useDashboardCalculations(
       .reduce((sum, acc) => {
         // Balance negativo = dívida (limite utilizado)
         if (acc.balance < 0) {
-          return sum + Math.abs(acc.balance);
+          return sum + (Math.abs(acc.balance) * 100); // Converter para centavos
         }
         return sum;
       }, 0),
