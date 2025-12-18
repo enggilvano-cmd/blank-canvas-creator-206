@@ -424,7 +424,7 @@ export function AccountsPage({
                               Pagar Fatura
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between gap-4">
                             <Label htmlFor={`ignore-switch-${account.id}`} className="flex items-center gap-2 cursor-pointer">
                               <EyeOff className="h-4 w-4 mr-2" />
                               Ignorar no Saldo
