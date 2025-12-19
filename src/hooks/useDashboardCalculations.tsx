@@ -71,8 +71,19 @@ export function useDashboardCalculations(
     // Filtrar transações baseado no período
     const isInPeriod = (transactionDate: string | Date) => {
       const txDate = typeof transactionDate === 'string' ? new Date(transactionDate) : transactionDate;
-      if (dateRange.dateFrom && txDate < new Date(dateRange.dateFrom)) return false;
-      if (dateRange.dateTo && txDate > new Date(dateRange.dateTo)) return false;
+      
+      if (dateRange.dateFrom) {
+        // Ensure start date is treated as start of day in local time
+        const startDate = new Date(dateRange.dateFrom + 'T00:00:00');
+        if (txDate < startDate) return false;
+      }
+      
+      if (dateRange.dateTo) {
+        // Ensure end date is treated as end of day in local time
+        const endDate = new Date(dateRange.dateTo + 'T23:59:59.999');
+        if (txDate > endDate) return false;
+      }
+      
       return true;
     };
 
@@ -107,7 +118,10 @@ export function useDashboardCalculations(
 
       // Verificar se a data de início é anterior ou igual ao fim do período
       const ftDate = new Date(ft.date);
-      if (dateRange.dateTo && ftDate > new Date(dateRange.dateTo)) return false;
+      if (dateRange.dateTo) {
+        const endDate = new Date(dateRange.dateTo + 'T23:59:59.999');
+        if (ftDate > endDate) return false;
+      }
       
       // Verificar se a transação fixa foi criada após o fim do período (não deve aparecer)
       // (Já coberto acima)
