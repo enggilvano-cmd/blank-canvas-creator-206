@@ -98,12 +98,11 @@ export function hasCreditInFavor(account: Account | undefined): boolean {
 }
 
 /**
- * Formata um número (em centavos) para o padrão brasileiro.
- * @param valueInCents O valor em centavos.
+ * Formata um número (em reais) para o padrão brasileiro.
+ * @param value O valor em reais.
  * @returns String formatada no padrão BR (vírgula como decimal, ponto como milhar).
  */
-export function formatBRNumber(valueInCents: number): string {
-  const value = valueInCents / 100;
+export function formatBRNumber(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

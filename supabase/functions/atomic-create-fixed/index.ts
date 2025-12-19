@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       {
         p_user_id: user.id,
         p_description: body.description,
-        p_amount: Math.round(body.amount), // Ensure integer (centavos)
+        p_amount: body.amount,
         p_date: body.date,
         p_type: body.type,
         p_category_id: body.category_id || null,

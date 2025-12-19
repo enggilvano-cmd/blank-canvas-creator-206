@@ -5,11 +5,10 @@ import type { ExportAccount, ExportCategory, ExportTransaction } from '@/types/e
 
 /**
  * Formata números para padrão brasileiro (vírgula como decimal, ponto como milhar)
- * Valores são assumidos estar em centavos
+ * Valores são assumidos estar em reais (float)
  */
-function formatBRNumber(valueInCents: number): string {
-  const valueInReais = valueInCents / 100;
-  return valueInReais.toLocaleString('pt-BR', {
+function formatBRNumber(value: number): string {
+  return value.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });

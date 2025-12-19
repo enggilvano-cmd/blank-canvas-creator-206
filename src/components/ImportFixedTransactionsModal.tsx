@@ -257,7 +257,6 @@ export function ImportFixedTransactionsModal({
       const valorInReais = Math.abs(valor);
       const existing = existingTransactions.find(tx => {
         const isSameDescription = normalizeString(tx.description) === normalizeString(descricao);
-        const isSameAmount = Math.abs(tx.amount) === valorInReais;
         const isSameAccount = tx.account_id === account.id;
         
         // Comparação de data segura (string split)
@@ -275,11 +274,8 @@ export function ImportFixedTransactionsModal({
              isSameCategory = tx.category_id === categoryId;
            }
         }
-
-        // Comparação de provisão
-        const isSameProvision = (tx.is_provision || false) === isProvision;
         
-        return isSameDescription && isSameAmount && isSameAccount && isSameDay && isSameType && isSameCategory && isSameProvision;
+        return isSameDescription && isSameAccount && isSameDay && isSameType && isSameCategory;
       });
 
       if (existing) {
