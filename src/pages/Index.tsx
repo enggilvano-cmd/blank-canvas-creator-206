@@ -300,6 +300,7 @@ const PlaniFlowApp = () => {
     date: Date;
     amount: number;
     accountId: string;
+    invoiceMonth?: string;
   } | null>(null);
   
   const [currentInvoiceValue, setCurrentInvoiceValue] = useState(0);
@@ -409,17 +410,18 @@ const PlaniFlowApp = () => {
     _transactionId: string,
     date: Date,
     amount: number,
-    accountId: string
+    accountId: string,
+    invoiceMonth?: string
   ) => {
     const transaction = markingAsPaidTransaction;
     if (!transaction) return;
-    await processMarkAsPaid(transaction, 'current', { date, amount, accountId });
+    await processMarkAsPaid(transaction, 'current', { date, amount, accountId, invoiceMonth });
   };
 
   const processMarkAsPaid = async (
     transaction: Transaction,
     scope: 'current' | 'current-and-remaining' | 'all',
-    data?: { date: Date; amount: number; accountId: string }
+    data?: { date: Date; amount: number; accountId: string; invoiceMonth?: string }
   ) => {
     try {
       const updatedData = data || markAsPaidData;
@@ -432,6 +434,7 @@ const PlaniFlowApp = () => {
           date: normalizeFormDate(updatedData.date),
           amount: updatedData.amount,
           account_id: updatedData.accountId,
+          invoice_month: updatedData.invoiceMonth,
         },
         scope
       );
@@ -560,7 +563,7 @@ const PlaniFlowApp = () => {
               onAddAccount={() => setAddAccountModalOpen(true)}
               onEditAccount={openEditAccount}
               onDeleteAccount={handleDeleteAccount}
-              onPayCreditCard={(account) => openCreditPayment(account, 0, 0, account.balance < 0 ? Math.abs(account.balance) : 0)} 
+              onPayCreditCard={(account) => openCreditPayment(account, 0, 0, account.balance < 0 ? Math.round(Math.abs(account.balance) * 100) : 0)} 
               onTransfer={() => setTransferModalOpen(true)}
               onImportAccounts={handleImportAccounts}
               initialFilterType={accountFilterType}

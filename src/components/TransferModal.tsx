@@ -38,9 +38,11 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
 
   // ✅ Validação de saldo movida para o top level (fora do handler)
   const fromAccount = sourceAccounts.find(acc => acc.id === formData.fromAccountId);
+  // BUGFIX: O hook useBalanceValidation compara com account.balance que está em REAIS
+  // mas amountInCents está em CENTAVOS, então precisamos converter para reais
   const balanceValidation = useBalanceValidation({
     account: fromAccount,
-    amountInCents: formData.amountInCents,
+    amountInCents: formData.amountInCents / 100, // Converte centavos para reais
     transactionType: 'expense',
   });
 

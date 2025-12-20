@@ -52,13 +52,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Ensure amount is a proper decimal number with 2 decimal places
+    // This prevents JavaScript floating-point precision issues
+    const amountValue = parseFloat(parseFloat(body.amount).toFixed(2));
+    console.log('atomic-create-fixed: Amount processing:', {
+      original: body.amount,
+      processed: amountValue,
+      type: typeof amountValue
+    });
+
     // Call atomic SQL function
     const { data, error } = await supabaseClient.rpc(
       'atomic_create_fixed_transaction',
       {
         p_user_id: user.id,
         p_description: body.description,
-        p_amount: body.amount,
+        p_amount: amountValue,
         p_date: body.date,
         p_type: body.type,
         p_category_id: body.category_id || null,

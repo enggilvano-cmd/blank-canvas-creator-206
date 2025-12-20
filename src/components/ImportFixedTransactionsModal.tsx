@@ -157,12 +157,14 @@ export function ImportFixedTransactionsModal({
     
     // Parse valor com suporte robusto para formato brasileiro e numérico
     // Se vier como número do Excel, usa direto; se vier como string, trata formatação
+    // IMPORTANTE: Arredondar para 2 casas decimais para evitar erros de precisão de ponto flutuante
     const rawValorOriginal = extractValue(row, ['Valor', 'Amount', 'valor', 'amount']);
     let valor: number;
 
     if (typeof rawValorOriginal === 'number') {
-      // Valor já é número (vem direto do Excel) - em reais, converter para centavos
-      valor = Math.abs(rawValorOriginal);
+      // Valor já é número (vem direto do Excel) - arredondar para 2 casas decimais
+      // Usa Math.round(x * 100) / 100 para garantir precisão
+      valor = Math.round(Math.abs(rawValorOriginal) * 100) / 100;
     } else {
       // Valor é string - precisa fazer parse
       const rawValor = String(rawValorOriginal || '0').trim();
@@ -193,7 +195,8 @@ export function ImportFixedTransactionsModal({
       }
 
       const parsed = parseFloat(normalizedValue);
-      valor = Math.abs(parsed);
+      // Arredondar para 2 casas decimais para evitar erros de precisão de ponto flutuante
+      valor = Math.round(Math.abs(parsed) * 100) / 100;
     }
     
     const tipo = String(extractValue(row, ['Tipo', 'Type', 'tipo', 'type']) || '');
@@ -548,10 +551,17 @@ export function ImportFixedTransactionsModal({
           // Como a primeira transação (pai) já conta, subtraímos 1 para as filhas
           const monthsToGenerate = (12 - currentMonth) + 12 - 1;
 
-          // t.valor está em REAIS (não é multiplicado por 100 no parsing)
-          // Enviar diretamente em REAIS para a API
-          const amountInReais = Math.abs(t.valor);
+          // t.valor já está arredondado para 2 casas decimais no parsing
+          // Garantir novamente a precisão antes de enviar para a API
+          const amountInReais = Math.round(Math.abs(t.valor) * 100) / 100;
           const categoryId = categoryMap.get(normalizeString(t.categoria)) || null;
+
+          // Log detalhado para debug do valor
+          logger.info(`[ImportFixed] Enviando transação: ${t.descricao}`, {
+            valorOriginal: t.valor,
+            amountInReais,
+            tipo: typeof amountInReais
+          });
 
           // Log para debug da provisão
           if (t.isProvision) {

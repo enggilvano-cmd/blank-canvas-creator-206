@@ -17,7 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { getTodayString, createDateFromString } from "@/lib/dateUtils";
-import { getAvailableBalance } from "@/lib/formatters";
+import { getAvailableBalance, formatCurrency } from "@/lib/formatters";
 import { CurrencyInput } from "./forms/CurrencyInput";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { creditPaymentSchema } from "@/lib/validationSchemas";
@@ -26,8 +26,8 @@ import { CreditPaymentModalProps } from "@/types/formProps";
 import { useBalanceValidation } from "@/hooks/useBalanceValidation";
 import { DatePicker } from "@/components/ui/date-picker";
 
-// Helper para formatar moeda (R$)
-const formatBRL = (valueInCents: number) => {
+// Helper para formatar moeda (R$) - valor em CENTAVOS
+const formatCents = (valueInCents: number) => {
   // Converte centavos (ex: 12345) para Reais (123.45)
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -57,7 +57,9 @@ export function CreditPaymentModal({
   const { accounts: allAccounts = [] } = useAccounts();
   
   const bankAccounts = useMemo(
-    () => allAccounts.filter((acc) => acc.type !== "credit"),
+    () => allAccounts
+      .filter((acc) => acc.type !== "credit")
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
     [allAccounts]
   );
 
@@ -67,9 +69,11 @@ export function CreditPaymentModal({
     [allAccounts, formData.bankAccountId]
   );
 
+  // BUGFIX: O hook useBalanceValidation compara com account.balance que está em REAIS
+  // mas amountInCents está em CENTAVOS, então precisamos converter para reais
   const balanceValidation = useBalanceValidation({
     account: selectedBankAccount,
-    amountInCents: formData.amountInCents,
+    amountInCents: formData.amountInCents / 100, // Converte centavos para reais
     transactionType: 'expense',
   });
 
@@ -134,7 +138,7 @@ export function CreditPaymentModal({
     // ✅ BUGFIX P0: Usar validação já calculada no top level
     if (selectedBankAccount && !balanceValidation.isValid) {
       const limitText = selectedBankAccount.limit_amount
-        ? ` (incluindo limite de ${formatBRL(selectedBankAccount.limit_amount)})`
+        ? ` (incluindo limite de ${formatCurrency(selectedBankAccount.limit_amount)})`
         : "";
       toast({
         title: "Saldo Insuficiente",
@@ -152,7 +156,7 @@ export function CreditPaymentModal({
     if (amountInCents > totalDebtInCents + 100) { 
       toast({
         title: "Valor Inválido",
-        description: `O valor ${formatBRL(amountInCents)} é maior que a dívida total de ${formatBRL(totalDebtInCents)}. Para pagar mais, o valor excedente será tratado como crédito a favor.`,
+        description: `O valor ${formatCents(amountInCents)} é maior que a dívida total de ${formatCents(totalDebtInCents)}. Para pagar mais, o valor excedente será tratado como crédito a favor.`,
         variant: "destructive",
       });
       return;
@@ -225,19 +229,19 @@ export function CreditPaymentModal({
                 <p className="flex justify-between">
                   <span className="text-muted-foreground">Fatura Fechada:</span>
                   <span className="font-medium balance-negative">
-                    {formatBRL(invoiceValueNorm)}
+                    {formatCents(invoiceValueNorm)}
                   </span>
                 </p>
                 <p className="flex justify-between">
                   <span className="text-muted-foreground">Fatura Aberta:</span>
                   <span className="font-medium text-muted-foreground">
-                    {formatBRL(nextInvoiceValueNorm)}
+                    {formatCents(nextInvoiceValueNorm)}
                   </span>
                 </p>
                 <p className="flex justify-between text-base font-semibold border-t pt-1 mt-1">
                   <span className="text-foreground">Dívida Total:</span>
                   <span className="balance-negative">
-                    {formatBRL(totalDebtInCents)}
+                    {formatCents(totalDebtInCents)}
                   </span>
                 </p>
               </div>
@@ -270,9 +274,9 @@ export function CreditPaymentModal({
                           <span className="text-body font-medium">{selectedAccount.name}</span>
                         </div>
                         <div className="text-caption text-muted-foreground pl-5">
-                          {formatBRL(selectedAccount.balance)}
+                          {formatCurrency(selectedAccount.balance * 100)}
                           {hasLimit && (
-                            <span className="text-primary font-semibold"> + {formatBRL(selectedAccount.limit_amount || 0)} limite</span>
+                            <span className="text-primary font-semibold"> + {formatCurrency(selectedAccount.limit_amount || 0)} limite</span>
                           )}
                         </div>
                       </div>
@@ -298,10 +302,10 @@ export function CreditPaymentModal({
                           <div className="flex flex-col flex-1 min-w-0">
                             <span className="font-medium truncate text-body">{account.name}</span>
                             <span className="text-caption text-muted-foreground">
-                              {formatBRL(account.balance)}
+                              {formatCurrency(account.balance * 100)}
                               {hasLimit && (
                                 <span className="text-primary ml-1">
-                                  + {formatBRL(account.limit_amount || 0)} limite
+                                  + {formatCurrency(account.limit_amount || 0)} limite
                                 </span>
                               )}
                             </span>
@@ -327,7 +331,7 @@ export function CreditPaymentModal({
               >
                 <span className="font-medium text-xs">Pagar Fatura</span>
                 <span className="text-xs text-muted-foreground">
-                  {formatBRL(invoiceValueInCents)}
+                  {formatCents(invoiceValueInCents)}
                 </span>
               </Button>
               <Button
@@ -341,7 +345,7 @@ export function CreditPaymentModal({
               >
                 <span className="font-medium text-xs">Pagar Total</span>
                 <span className="text-xs text-muted-foreground">
-                  {formatBRL(totalDebtInCents)}
+                  {formatCents(totalDebtInCents)}
                 </span>
               </Button>
               <Button

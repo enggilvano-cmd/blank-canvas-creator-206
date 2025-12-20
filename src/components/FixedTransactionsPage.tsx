@@ -658,105 +658,40 @@ export function FixedTransactionsPage({
     }
 
     try {
-      // 1) Buscar transação principal (fixa) com status
-      const { data: mainTransaction, error: mainError } = await supabase
-        .from("transactions")
-        .select("id, status")
-        .eq("id", transactionToDelete.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Usar a edge function atomic-delete-transaction para garantir consistência
+      // A função SQL agora preserva transações CONCLUÍDAS e remove apenas PENDENTES
+      const { error } = await supabase.functions.invoke('atomic-delete-transaction', {
+        body: {
+          transaction_id: transactionToDelete.id,
+          scope: 'all', // Deletar todas as pendentes, preservar concluídas
+        }
+      });
 
-      if (mainError) throw mainError;
+      if (error) throw error;
 
-      // 2) Tentar remover filhas PENDENTES
-      const { error: deleteChildrenError } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("parent_transaction_id", transactionToDelete.id)
-        .eq("user_id", user.id)
-        .eq("status", "pending");
-
-      if (deleteChildrenError) {
-        logger.warn("Erro ao excluir filhas pendentes:", deleteChildrenError);
-        // Não lançamos erro aqui para tentar pelo menos remover a principal da lista (soft delete)
-      }
-
-      // Verificar se restaram filhos (completados ou os que não conseguimos deletar)
-      const { count: remainingChildrenCount, error: countError } = await supabase
+      // Verificar se restaram filhos CONCLUÍDOS após a exclusão
+      const { count: remainingChildrenCount } = await supabase
         .from("transactions")
         .select("*", { count: 'exact', head: true })
-        .eq("parent_transaction_id", transactionToDelete.id);
-      
-      if (countError) throw countError;
+        .eq("parent_transaction_id", transactionToDelete.id)
+        .eq("status", "completed");
 
-      const hasChildren = remainingChildrenCount !== null && remainingChildrenCount > 0;
-      const isCompleted = mainTransaction?.status === "completed";
-      const childrenDeletionFailed = !!deleteChildrenError;
+      const hasCompletedChildren = remainingChildrenCount !== null && remainingChildrenCount > 0;
 
-      // 3) Decidir se fazemos Soft Delete ou Hard Delete
-      // Soft Delete (apenas desmarcar is_fixed) se:
-      // - Principal está concluída
-      // - Tem filhos restantes
-      // - Falhou ao deletar filhos (para segurança)
-      if (isCompleted || hasChildren || childrenDeletionFailed) {
-        const { error: updateMainError } = await supabase
-          .from("transactions")
-          .update({ is_fixed: false })
-          .eq("id", transactionToDelete.id)
-          .eq("user_id", user.id);
-
-        if (updateMainError) throw updateMainError;
-
-        if (childrenDeletionFailed) {
-           toast({
-             title: "Transação atualizada",
-             description: "A transação foi removida da lista de fixas, mas algumas ocorrências pendentes podem não ter sido excluídas devido a um erro.",
-           });
-        } else {
-           toast({
-             title: "Transação removida",
-             description: "A transação foi removida da lista de fixas.",
-           });
-        }
-        
-        // Atualizar banco local imediatamente para refletir a remoção na UI
-        await offlineDatabase.deleteTransaction(transactionToDelete.id);
+      if (hasCompletedChildren) {
+        toast({
+          title: "Transação removida",
+          description: "A transação fixa foi removida. As ocorrências já concluídas foram preservadas.",
+        });
       } else {
-        // 4) Hard Delete da principal (se estiver pendente e sem filhos)
-        const { error: deleteMainError } = await supabase
-          .from("transactions")
-          .delete()
-          .eq("id", transactionToDelete.id)
-          .eq("user_id", user.id)
-          .eq("status", "pending");
-
-        if (deleteMainError) {
-          // Se falhar ao deletar (ex: restrição de chave estrangeira não detectada),
-          // fazemos um "soft delete" desmarcando como fixa.
-          logger.warn("Erro ao excluir transação fixa (hard delete), tentando soft delete:", deleteMainError);
-          
-          const { error: updateMainError } = await supabase
-            .from("transactions")
-            .update({ is_fixed: false })
-            .eq("id", transactionToDelete.id)
-            .eq("user_id", user.id);
-
-          if (updateMainError) throw updateMainError;
-          
-          toast({
-            title: "Transação removida",
-            description: "A transação foi removida da lista de fixas (soft delete).",
-          });
-        } else {
-          toast({
-            title: "Transação removida",
-            description: "A transação e suas ocorrências pendentes foram removidas.",
-          });
-        }
-        
-        // Atualizar banco local imediatamente para refletir a remoção na UI
-        await offlineDatabase.deleteTransaction(transactionToDelete.id);
+        toast({
+          title: "Transação removida",
+          description: "A transação e suas ocorrências pendentes foram removidas.",
+        });
       }
+      
+      // Atualizar banco local imediatamente para refletir a remoção na UI
+      await offlineDatabase.deleteTransaction(transactionToDelete.id);
 
       // 🔄 Sincronizar listas e dashboard imediatamente
       await invalidateTransactions();
@@ -770,7 +705,8 @@ export function FixedTransactionsPage({
       if (errorMessage.includes("Failed to send a request") || 
           errorMessage.includes("NetworkError") || 
           errorMessage.includes("fetch failed") ||
-          errorMessage.includes("Load failed")) {
+          errorMessage.includes("Load failed") ||
+          errorMessage.includes("FunctionsHttpError")) {
         logger.warn("Network error exception detected during delete, falling back to offline mode.");
         await deleteOffline();
         return;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CurrencyInput } from "@/components/forms/CurrencyInput";
+import { calculateInvoiceMonthByDue } from "@/lib/dateUtils";
 
 import { ACCOUNT_TYPE_LABELS } from '@/types';
 import { MarkAsPaidModalProps } from '@/types/formProps';
@@ -33,12 +34,29 @@ export function MarkAsPaidModal({
   const [accountId, setAccountId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Obter a conta selecionada para verificar se é cartão de crédito
+  const selectedAccount = useMemo(() => {
+    return accounts.find(acc => acc.id === accountId);
+  }, [accounts, accountId]);
+
+  // Calcular invoice_month automaticamente para cartões de crédito
+  const invoiceMonth = useMemo(() => {
+    if (!selectedAccount || selectedAccount.type !== 'credit') return undefined;
+    if (!selectedAccount.closing_date) return undefined;
+    
+    return calculateInvoiceMonthByDue(
+      date,
+      selectedAccount.closing_date,
+      selectedAccount.due_date || 10
+    );
+  }, [selectedAccount, date]);
+
   // Quando o modal abre, pré-preenche os valores
   useEffect(() => {
     if (open && transaction) {
       setDate(new Date());
-      // transaction.amount já está em centavos
-      setAmount(Math.abs(transaction.amount));
+      // transaction.amount está em REAIS no banco, converter para centavos para o CurrencyInput
+      setAmount(Math.round(Math.abs(transaction.amount) * 100));
       setAccountId(transaction.account_id);
       setIsSubmitting(false);  // ⚠️ Reset isSubmitting ao abrir modal
     }
@@ -57,8 +75,9 @@ export function MarkAsPaidModal({
     setIsSubmitting(true);
     
     try {
-      // Amount já está em centavos (valor do CurrencyInput)
-      onConfirm(transaction.id, date, amount, accountId);
+      // Amount está em centavos (do CurrencyInput), converter para reais antes de enviar
+      const amountInReais = amount / 100;
+      onConfirm(transaction.id, date, amountInReais, accountId, invoiceMonth);
       onOpenChange(false);
     } finally {
       // ⚠️ CRÍTICO: Sempre resetar isSubmitting

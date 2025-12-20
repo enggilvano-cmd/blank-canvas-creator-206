@@ -104,7 +104,8 @@ export interface MarkAsPaidModalProps extends BaseModalProps {
     transactionId: string,
     date: Date,
     amount: number,
-    accountId: string
+    accountId: string,
+    invoiceMonth?: string
   ) => void;
 }
 

@@ -499,9 +499,9 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                 onPayBill={() =>
                   onPayCreditCard(
                     details.account,
-                    details.currentBillAmount,
-                    details.nextBillAmount,
-                    totalDebt, // Passa a dívida total correta (soma das faturas)
+                    Math.round(details.currentBillAmount * 100), // Converte para centavos
+                    Math.round(details.nextBillAmount * 100), // Converte para centavos
+                    Math.round(totalDebt * 100), // Converte para centavos
                     details.currentInvoiceMonth // Passa o mês da fatura
                   )
                 }
@@ -561,7 +561,10 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
               const [year, month] = invoiceMonth.split('-').map(Number);
               return new Date(year, month - 1, selectedBillForDetails.account.closing_date || 1);
             })(),
-            total_amount: selectedBillForDetails.billDetails.currentBillAmount,
+            // BUGFIX: total_amount deve ser o valor BRUTO da fatura (soma das despesas)
+            // currentBillAmount já subtrai pagamentos, então precisamos somar de volta
+            total_amount: selectedBillForDetails.billDetails.currentBillAmount + 
+              selectedBillForDetails.billDetails.paymentTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0),
             paid_amount: selectedBillForDetails.billDetails.paymentTransactions.reduce(
               (sum, t) => sum + Math.abs(t.amount),
               0
@@ -573,13 +576,18 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
               const closingDateOfBill = new Date(year, month - 1, selectedBillForDetails.account.closing_date || 1);
               const isClosed = isPast(closingDateOfBill);
               
-              const due = Math.max(0, selectedBillForDetails.billDetails.currentBillAmount);
+              // BUGFIX: usar valor bruto (despesas) não o líquido (currentBillAmount já subtrai pagamentos)
+              const grossAmount = selectedBillForDetails.billDetails.currentBillAmount + 
+                selectedBillForDetails.billDetails.paymentTransactions.reduce((s, t) => s + Math.abs(t.amount), 0);
+              const due = Math.max(0, grossAmount);
               const paid = selectedBillForDetails.billDetails.paymentTransactions.reduce((s, t) => s + Math.abs(t.amount), 0);
               
               // Pago se não há valor a pagar OU se está fechada e foi paga
               return due <= 0 || (isClosed && paid >= due) ? "paid" : "pending";
             })(),
-            minimum_payment: selectedBillForDetails.billDetails.currentBillAmount * 0.15,
+            // BUGFIX: minimum_payment baseado no valor bruto
+            minimum_payment: (selectedBillForDetails.billDetails.currentBillAmount + 
+              selectedBillForDetails.billDetails.paymentTransactions.reduce((s, t) => s + Math.abs(t.amount), 0)) * 0.15,
             late_fee: 0,
             // CORREÇÃO: As transações já foram filtradas corretamente no onViewDetails
             transactions: selectedBillForDetails.transactions.filter((t) => {
