@@ -138,6 +138,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         } else {
           // Excluir transferências
           if (t.type !== type || t.type === 'transfer') return false;
+          
+          // Excluir transações vinculadas (parte de transferência/pagamento)
+          if (t.linked_transaction_id) return false;
+          if (t.to_account_id) return false;
         }
       }
 
@@ -232,7 +236,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
           query = query.eq('type', 'transfer');
         } else {
           // Excluir transferências
-          query = query.eq('type', type).neq('type', 'transfer');
+          query = query.eq('type', type)
+            .neq('type', 'transfer')
+            .is('linked_transaction_id', null)
+            .is('to_account_id', null);
         }
       }
 
@@ -405,7 +412,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
           query = query.eq('type', 'transfer');
         } else {
           // Excluir transferências
-          query = query.eq('type', type).neq('type', 'transfer');
+          query = query.eq('type', type)
+            .neq('type', 'transfer')
+            .is('linked_transaction_id', null)
+            .is('to_account_id', null);
         }
       }
 

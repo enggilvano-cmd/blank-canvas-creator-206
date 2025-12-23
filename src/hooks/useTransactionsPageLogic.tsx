@@ -304,7 +304,8 @@ export function useTransactionsPageLogic({
           p_date_to: dateTo || null,
           p_search: search || null,
           p_invoice_month: filterInvoiceMonth === 'all' ? 'all' : filterInvoiceMonth, // ✅ CORRIGIDO
-          p_include_transfers: true, // ✅ Incluir transferências nos totais da página de transações
+          // Excluir transferências dos totais quando filtrando por Receita ou Despesa
+          p_include_transfers: filterType === 'all' || filterType === 'transfer', 
         };
 
         logger.info("Fetching aggregated totals with params:", params);
