@@ -519,6 +519,12 @@ export function UserProfile() {
       {/* Dialog para configurar 2FA */}
       <AlertDialog open={showMfaSetup} onOpenChange={setShowMfaSetup}>
         <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader className="sr-only">
+            <AlertDialogTitle>Configuração de 2FA</AlertDialogTitle>
+            <AlertDialogDescription>
+              Configure a autenticação de dois fatores para sua conta.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           <TwoFactorSetup 
             onComplete={() => {
               setShowMfaSetup(false);

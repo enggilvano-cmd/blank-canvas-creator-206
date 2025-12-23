@@ -455,7 +455,30 @@ export function useTransactionMutations() {
         : null;
 
       if (!record || record.success === false) {
-        throw new Error(record?.error_message || 'Transação não encontrada ou já foi excluída');
+        const errorMsg = record?.error_message || 'Transação não encontrada ou já foi excluída';
+        
+        // Se a transação não foi encontrada, tentamos deletar diretamente via Supabase
+        // Isso serve como fallback caso a RPC tenha falhado em encontrar a transação por algum motivo
+        if (errorMsg === 'Transaction not found' || errorMsg.includes('não encontrada')) {
+          logger.warn(`[Delete] Transaction ${transactionId} not found via RPC, trying direct delete fallback...`);
+          
+          const { error: deleteError, count } = await supabase
+            .from('transactions')
+            .delete({ count: 'exact' })
+            .eq('id', transactionId)
+            .eq('user_id', user.id); // Segurança extra
+
+          if (deleteError) {
+            logger.error('[Delete] Direct delete failed:', deleteError);
+            // Se falhar também, assumimos que já foi deletada
+          } else if (count && count > 0) {
+            logger.info(`[Delete] Successfully deleted ${count} transaction(s) via direct fallback.`);
+          } else {
+            logger.warn(`[Delete] Transaction ${transactionId} really not found in DB (direct delete count=0).`);
+          }
+        } else {
+          throw new Error(errorMsg);
+        }
       }
 
       // ✅ Reembolsar provisão quando transação é deletada

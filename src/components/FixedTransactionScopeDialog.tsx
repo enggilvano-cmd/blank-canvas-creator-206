@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 export type FixedScope = "current" | "current-and-remaining" | "all";
@@ -34,6 +34,11 @@ export function FixedTransactionScopeDialog({
           <DialogTitle>
             {isDelete ? "Excluir Transação Fixa" : "Editar Transação Fixa"}
           </DialogTitle>
+          <DialogDescription>
+            {isDelete 
+              ? "Esta é uma transação recorrente. Escolha como deseja aplicar a exclusão."
+              : "Esta é uma transação recorrente. Escolha como deseja aplicar as alterações."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 pt-4">
