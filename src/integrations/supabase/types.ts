@@ -854,6 +854,7 @@ export type Database = {
               p_status?: string
               p_type?: string
               p_user_id: string
+              p_include_transfers?: boolean
             }
             Returns: {
               balance: number
@@ -875,6 +876,7 @@ export type Database = {
               p_status?: string
               p_type?: string
               p_user_id: string
+              p_include_transfers?: boolean
             }
             Returns: {
               balance: number

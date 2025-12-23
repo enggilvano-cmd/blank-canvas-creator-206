@@ -304,6 +304,7 @@ export function useTransactionsPageLogic({
           p_date_to: dateTo || null,
           p_search: search || null,
           p_invoice_month: filterInvoiceMonth === 'all' ? 'all' : filterInvoiceMonth, // ✅ CORRIGIDO
+          p_include_transfers: true, // ✅ Incluir transferências nos totais da página de transações
         };
 
         logger.info("Fetching aggregated totals with params:", params);
@@ -338,10 +339,10 @@ export function useTransactionsPageLogic({
         
         // Função para identificar transferências e outros itens a excluir (excluir dos totais)
         const shouldExclude = (t: typeof sourceTransactions[number]) => {
-          // 1. Transferências
-          if (t.type === 'transfer') return true;
-          if ((t as any).to_account_id) return true;
-          if (t.type === 'income' && (t as any).linked_transaction_id) return true; // Receita espelho
+          // 1. Transferências - AGORA INCLUÍDAS NA PÁGINA DE TRANSAÇÕES
+          // if (t.type === 'transfer') return true;
+          // if ((t as any).to_account_id) return true;
+          // if (t.type === 'income' && (t as any).linked_transaction_id) return true; // Receita espelho
           
           // 2. Saldo Inicial
           if (t.description === 'Saldo Inicial') return true;
@@ -394,10 +395,10 @@ export function useTransactionsPageLogic({
         }
 
         const localIncome = filtered
-          .filter(t => t.type === 'income')
+          .filter(t => t.type === 'income' || (t.type === 'transfer' && t.linked_transaction_id && !t.to_account_id))
           .reduce((sum, t) => sum + t.amount, 0);
         const localExpenses = filtered
-          .filter(t => t.type === 'expense')
+          .filter(t => t.type === 'expense' || (t.type === 'transfer' && (t.to_account_id || !t.linked_transaction_id)))
           .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
         setAggregatedTotals({
