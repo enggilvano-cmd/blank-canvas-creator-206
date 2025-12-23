@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, ArrowRightLeft, CreditCard, FileText } from "lucide-react";
+import { Plus, ArrowRightLeft, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface QuickActionsProps {
@@ -40,15 +40,6 @@ export const QuickActions = ({ onAddTransaction, onTransfer }: QuickActionsProps
         >
           <CreditCard className="h-5 w-5" />
           <span className="text-caption">Faturas</span>
-        </Button>
-        
-        <Button
-          onClick={() => navigate("/accounting-reports")}
-          className="h-auto flex-col gap-2 py-4"
-          variant="outline"
-        >
-          <FileText className="h-5 w-5" />
-          <span className="text-caption">Relatórios</span>
         </Button>
       </div>
     </Card>

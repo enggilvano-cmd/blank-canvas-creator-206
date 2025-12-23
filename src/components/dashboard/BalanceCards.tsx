@@ -26,6 +26,7 @@ interface BalanceCardsProps {
     customStartDate?: Date,
     customEndDate?: Date
   ) => void;
+  isFetching?: boolean; // ✅ NOVO: Indicador de loading
 }
 
 export function BalanceCards({
@@ -44,6 +45,7 @@ export function BalanceCards({
   getNavigationParams,
   onNavigateToAccounts,
   onNavigateToTransactions,
+  isFetching = false, // ✅ NOVO: Default false para não quebrar código existente
 }: BalanceCardsProps) {
   console.log('🎨 BalanceCards renderizado com valores:', {
     totalBalance,
@@ -54,24 +56,30 @@ export function BalanceCards({
     creditCardExpenses,
     pendingIncome,
     pendingExpenses,
+    isFetching,
   });
   return (
     <>
       <Card
-        className="financial-card cursor-pointer apple-interaction hover:scale-[1.02] transition-transform col-span-2 sm:col-span-1"
+        className={`financial-card cursor-pointer apple-interaction hover:scale-[1.02] transition-transform col-span-2 sm:col-span-1 ${isFetching ? 'opacity-60 pointer-events-none' : ''}`}
         onClick={() => onNavigateToAccounts?.()}
         role="button"
         tabIndex={0}
         aria-label={`Saldo Total: ${formatCurrency(totalBalance)}. Clique para ver contas`}
       >
-        <CardContent className="p-3 text-center">
+        <CardContent className="p-3 text-center relative">
           <div className="flex items-center justify-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <DollarSign className="h-3.5 w-3.5 text-primary" />
+              <DollarSign className={`h-3.5 w-3.5 text-primary ${isFetching ? 'animate-pulse' : ''}`} />
             </div>
           </div>
+          {isFetching && (
+            <div className="absolute top-2 right-2">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+            </div>
+          )}
           <p className="text-caption text-muted-foreground mb-1">
-            Saldo Total
+            Saldo Total Atual
           </p>
           <div
             className={`balance-text ${
@@ -80,8 +88,8 @@ export function BalanceCards({
           >
             {formatCurrency(totalBalance)}
           </div>
-          <p className="text-caption text-muted-foreground mt-1 opacity-70">
-            Soma de todas as contas
+          <p className="text-caption text-muted-foreground mt-1 opacity-70" title="O saldo mostrado é sempre o valor atual de todas as suas contas, independente dos filtros de data aplicados">
+            Saldo de hoje (não filtrado) 📌
           </p>
         </CardContent>
       </Card>

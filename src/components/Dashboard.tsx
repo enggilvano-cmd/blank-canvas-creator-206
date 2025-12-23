@@ -32,6 +32,7 @@ interface DashboardProps {
     customStartDate?: Date,
     customEndDate?: Date
   ) => void;
+  isFetching?: boolean; // ✅ NOVO: Indicador de loading para UX
 }
 
 export function Dashboard({
@@ -43,6 +44,7 @@ export function Dashboard({
   onAddAccount,
   onNavigateToAccounts,
   onNavigateToTransactions,
+  isFetching = false, // ✅ NOVO: Default false
 }: DashboardProps) {
   const { formatCurrency } = useSettings();
   
@@ -61,10 +63,14 @@ export function Dashboard({
     setCustomStartDate,
     customEndDate,
     setCustomEndDate,
+    getDateRange, // ✅ NOVO: função centralizada
     goToPreviousMonth,
     goToNextMonth,
     getNavigationParams,
   } = useDashboardFilters();
+
+  // ✅ MELHORADO: Usar getDateRange centralizado (sem duplicação)
+  const dateRange = useMemo(() => getDateRange(), [getDateRange]);
 
   const {
     totalBalance,
@@ -80,38 +86,15 @@ export function Dashboard({
     getPeriodLabel,
   } = useDashboardCalculations(
     accounts,
-    dateFilter,
-    selectedMonth,
-    customStartDate,
-    customEndDate,
-    transactionsKey,  // Passar key das transações para monitorar mudanças
-    transactions,  // ✅ NOVO: Passar transações para cálculo em memória
-    fixedTransactions // ✅ Passar transações fixas para cálculo
+    dateRange, // ✅ MELHORADO: Passa dateRange ao invés de filtros individuais
+    transactionsKey,
+    transactions,
+    fixedTransactions,
+    dateFilter, // Para getPeriodLabel
+    selectedMonth, // Para getPeriodLabel
+    customStartDate, // Para getPeriodLabel
+    customEndDate // Para getPeriodLabel
   );
-
-  // Calcular intervalo de datas para os cards de provisões
-  const dateRange = useMemo(() => {
-    if (dateFilter === 'all') {
-      return { dateFrom: undefined, dateTo: undefined };
-    } else if (dateFilter === 'current_month') {
-      const now = new Date();
-      return {
-        dateFrom: format(startOfMonth(now), 'yyyy-MM-dd'),
-        dateTo: format(endOfMonth(now), 'yyyy-MM-dd'),
-      };
-    } else if (dateFilter === 'month_picker') {
-      return {
-        dateFrom: format(startOfMonth(selectedMonth), 'yyyy-MM-dd'),
-        dateTo: format(endOfMonth(selectedMonth), 'yyyy-MM-dd'),
-      };
-    } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
-      return {
-        dateFrom: format(customStartDate, 'yyyy-MM-dd'),
-        dateTo: format(customEndDate, 'yyyy-MM-dd'),
-      };
-    }
-    return { dateFrom: undefined, dateTo: undefined };
-  }, [dateFilter, selectedMonth, customStartDate, customEndDate]);
 
   return (
     <div className="space-y-3 sm:space-y-4 fade-in max-w-screen-2xl mx-auto px-2 sm:px-0 pb-6 sm:pb-8 spacing-responsive-md">
@@ -148,6 +131,7 @@ export function Dashboard({
               getNavigationParams={getNavigationParams}
               onNavigateToAccounts={onNavigateToAccounts}
               onNavigateToTransactions={onNavigateToTransactions}
+              isFetching={isFetching}
             />
           </CardErrorBoundary>
         </div>

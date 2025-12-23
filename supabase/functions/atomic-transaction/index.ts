@@ -90,13 +90,37 @@ Deno.serve(async (req) => {
 
     console.log('RPC result:', JSON.stringify(result));
 
+    // ✅ BUG FIX: Validar se result existe e é array antes de acessar
+    if (!result || !Array.isArray(result) || result.length === 0) {
+      console.error('Invalid or empty result from RPC:', result);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Transaction creation failed: Invalid response from database',
+          success: false 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const record = result[0];
+    
+    // ✅ Validar se record tem estrutura esperada
+    if (!record || typeof record !== 'object') {
+      console.error('Invalid record structure:', record);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Transaction creation failed: Invalid record structure',
+          success: false 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (!record.success) {
       console.error('Transaction creation failed:', record.error_message);
       return new Response(
         JSON.stringify({ 
-          error: record.error_message,
+          error: record.error_message || 'Transaction creation failed',
           success: false 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

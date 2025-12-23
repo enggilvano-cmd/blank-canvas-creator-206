@@ -337,7 +337,7 @@ export function useAddTransactionForm({
 
         transactionsToCreate.push({
           description: formData.description,
-          amount: installmentAmount,
+          amount: installmentAmount / 100, // ✅ BUG FIX #1: Converter centavos → reais
           date: installmentDate,
           type: formData.type as "income" | "expense",
           category_id: formData.category_id,
@@ -364,7 +364,7 @@ export function useAddTransactionForm({
 
         transactionsToCreate.push({
           description: formData.description,
-          amount: installmentAmount,
+          amount: installmentAmount / 100, // ✅ BUG FIX #1: Converter centavos → reais
           date: installmentDate,
           type: formData.type as "income" | "expense",
           category_id: formData.category_id,

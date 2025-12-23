@@ -141,10 +141,6 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
         supabase
           .from('backup_schedules')
           .select('*')
-          .eq('user_id', user.id),
-        supabase
-          .from('period_closures')
-          .select('*')
           .eq('user_id', user.id)
       ]);
 
@@ -154,7 +150,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
       if (categories.error) throw categories.error;
       if (settings.error && settings.error.code !== 'PGRST116') throw settings.error;
       if (profile.error && profile.error.code !== 'PGRST116') throw profile.error;
-      // notification_settings, push_subscriptions, backup_schedules e period_closures podem não existir (são opcionais)
+      // notification_settings, push_subscriptions e backup_schedules podem não existir (são opcionais)
 
       const data = {
         // Dados principais
@@ -168,9 +164,8 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
         notification_settings: notificationSettings.data || [],
         push_subscriptions: pushSubscriptions.data || [],
         
-        // Dados de agendamento e períodos
+        // Dados de agendamento
         backup_schedules: backupSchedules.data || [],
-        period_closures: periodClosures.data || [],
         
         // Metadados
         exportDate: new Date().toISOString(),
@@ -186,8 +181,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
         data.profile !== null ||
         data.notification_settings.length > 0 ||
         data.push_subscriptions.length > 0 ||
-        data.backup_schedules.length > 0 ||
-        data.period_closures.length > 0
+        data.backup_schedules.length > 0
       );
       
       if (!hasData) {
@@ -207,7 +201,6 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
         notificationSettings: data.notification_settings.length,
         pushSubscriptions: data.push_subscriptions.length,
         backupSchedules: data.backup_schedules.length,
-        periodClosures: data.period_closures.length,
         backupVersion: data.backupVersion,
         totalSize: `${(JSON.stringify(data).length / 1024).toFixed(2)}KB`
       });
@@ -334,9 +327,6 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
         if (data.backup_schedules !== undefined && !Array.isArray(data.backup_schedules)) {
           throw new Error('Formato de agendamentos inválido - deve ser um array');
         }
-        if (data.period_closures !== undefined && !Array.isArray(data.period_closures)) {
-          throw new Error('Formato de períodos de encerramento inválido - deve ser um array');
-        }
 
         // Normalizar dados para versões antigas de backup (v1.0 ou sem versão)
         logger.debug('Normalizando dados do backup:', {
@@ -359,8 +349,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
           profile: data.profile && typeof data.profile === 'object' ? data.profile : null,
           notification_settings: Array.isArray(data.notification_settings) ? data.notification_settings : [],
           push_subscriptions: Array.isArray(data.push_subscriptions) ? data.push_subscriptions : [],
-          backup_schedules: Array.isArray(data.backup_schedules) ? data.backup_schedules : [],
-          period_closures: Array.isArray(data.period_closures) ? data.period_closures : []
+          backup_schedules: Array.isArray(data.backup_schedules) ? data.backup_schedules : []
         };
 
         const { data: { user } } = await supabase.auth.getUser();
@@ -375,8 +364,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
           hasProfile: normalizedData.profile !== null,
           notification_settings: normalizedData.notification_settings.length,
           push_subscriptions: normalizedData.push_subscriptions.length,
-          backup_schedules: normalizedData.backup_schedules.length,
-          period_closures: normalizedData.period_closures.length
+          backup_schedules: normalizedData.backup_schedules.length
         });
 
         // Validar se há QUALQUER dado para importar (não apenas accounts/categories/transactions)
@@ -388,8 +376,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
           normalizedData.profile !== null ||
           normalizedData.notification_settings.length > 0 ||
           normalizedData.push_subscriptions.length > 0 ||
-          normalizedData.backup_schedules.length > 0 ||
-          normalizedData.period_closures.length > 0
+          normalizedData.backup_schedules.length > 0
         );
         
         if (!hasDataToImport) {
@@ -452,7 +439,6 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
           'financial_audit',      // auditoria
           'audit_logs',           // logs de auditoria
           'transactions',         // depende de accounts e categories
-          'period_closures',      // depende de accounts
           'backup_schedules',     // agendamentos
           'push_subscriptions',   // subscrições push
           'notification_settings',// configurações de notificações
@@ -563,8 +549,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
           profile: { success: false, count: 0 },
           notification_settings: { success: false, count: 0 },
           push_subscriptions: { success: false, count: 0 },
-          backup_schedules: { success: false, count: 0 },
-          period_closures: { success: false, count: 0 }
+          backup_schedules: { success: false, count: 0 }
         };
 
         // 1️⃣ PROFILE (Independente - Opcional)
@@ -684,19 +669,6 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
             user_id: user.id
           }));
           importResults.backup_schedules = await insertData('backup_schedules', schedulesToInsert, true);
-        }
-
-        // 9️⃣ PERIOD CLOSURES (Independente - Opcional)
-        if (normalizedData.period_closures?.length > 0) {
-          const periodsToInsert = normalizedData.period_closures.map((period: any) => {
-            const newAccountId = period.account_id ? (accountIdMap.get(period.account_id) || period.account_id) : period.account_id;
-            return {
-              ...period,
-              account_id: newAccountId,
-              user_id: user.id
-            };
-          });
-          importResults.period_closures = await insertData('period_closures', periodsToInsert, true);
         }
 
         // Contar sucessos e falhas

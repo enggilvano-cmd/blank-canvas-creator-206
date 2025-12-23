@@ -9,6 +9,7 @@ import { EditScope } from "@/components/TransactionScopeDialog";
 
 interface UseTransactionsPageLogicProps {
   transactions: Transaction[];
+  allTransactions?: Transaction[]; // ✅ NOVO: Para cálculo correto de totais no fallback
   accounts: Account[];
   categories: Category[];
   filterType: "all" | "income" | "expense" | "transfer";
@@ -43,6 +44,7 @@ interface UseTransactionsPageLogicProps {
 
 export function useTransactionsPageLogic({
   transactions,
+  allTransactions, // ✅ NOVO: Todas as transações sem paginação
   accounts,
   categories,
   filterType,
@@ -92,16 +94,19 @@ export function useTransactionsPageLogic({
     return accounts.filter((account) => account.type === filterAccountType);
   }, [accounts, filterAccountType]);
 
+  // ✅ CENTRALIZADO: Função para atualizar dateRange (evita duplicação)
+  const updateDateRange = (startDate: Date, endDate: Date) => {
+    onDateFromChange(format(startDate, 'yyyy-MM-dd'));
+    onDateToChange(format(endDate, 'yyyy-MM-dd'));
+  };
+
   // Handle date filter changes
   const handleDateFilterChange = (value: "all" | "current_month" | "month_picker" | "custom") => {
     onPeriodFilterChange(value);
     
     if (value === "current_month") {
       const now = new Date();
-      const start = startOfMonth(now);
-      const end = endOfMonth(now);
-      onDateFromChange(format(start, 'yyyy-MM-dd'));
-      onDateToChange(format(end, 'yyyy-MM-dd'));
+      updateDateRange(startOfMonth(now), endOfMonth(now)); // ✅ Usa função centralizada
     } else if (value === "all") {
       onDateFromChange(undefined);
       onDateToChange(undefined);
@@ -110,17 +115,13 @@ export function useTransactionsPageLogic({
 
   const handleMonthChange = (newMonth: Date) => {
     onSelectedMonthChange(newMonth);
-    const start = startOfMonth(newMonth);
-    const end = endOfMonth(newMonth);
-    onDateFromChange(format(start, 'yyyy-MM-dd'));
-    onDateToChange(format(end, 'yyyy-MM-dd'));
+    updateDateRange(startOfMonth(newMonth), endOfMonth(newMonth)); // ✅ Usa função centralizada
   };
 
   // Update date range when custom dates change
   useEffect(() => {
     if (periodFilter === "custom" && customStartDate && customEndDate) {
-      onDateFromChange(format(customStartDate, 'yyyy-MM-dd'));
-      onDateToChange(format(customEndDate, 'yyyy-MM-dd'));
+      updateDateRange(customStartDate, customEndDate); // ✅ Usa função centralizada
     }
   }, [customStartDate, customEndDate, periodFilter]);
 
@@ -267,15 +268,8 @@ export function useTransactionsPageLogic({
     customEndDate,
     accounts,
     categories,
-    onFilterTypeChange,
-    onFilterStatusChange,
-    onFilterIsFixedChange,
-    onFilterIsProvisionChange,
-    onFilterAccountTypeChange,
-    onFilterAccountChange,
-    onFilterCategoryChange,
-    onFilterInvoiceMonthChange,
-    handleDateFilterChange,
+    // ✅ REMOVIDO: Funções onChange são estáveis (não precisam estar aqui)
+    // onFilterTypeChange, onFilterStatusChange, etc.
   ]);
 
   const clearAllFilters = () => {
@@ -299,16 +293,17 @@ export function useTransactionsPageLogic({
 
         const params: Record<string, unknown> = {
           p_user_id: user.id,
-          p_type: filterType || null,
-          p_status: filterStatus || null,
-          p_account_id: filterAccount || null,
-          p_category_id: filterCategory || null,
-          p_account_type: filterAccountType || null,
+          p_type: filterType === 'all' ? 'all' : filterType, // ✅ CORRIGIDO: Passar 'all' ao invés de null
+          p_status: filterStatus === 'all' ? 'all' : filterStatus, // ✅ CORRIGIDO
+          p_account_id: filterAccount === 'all' ? 'all' : filterAccount, // ✅ CORRIGIDO
+          p_category_id: filterCategory === 'all' ? 'all' : filterCategory, // ✅ CORRIGIDO
+          p_account_type: filterAccountType === 'all' ? 'all' : filterAccountType, // ✅ CORRIGIDO
           p_is_fixed: filterIsFixed !== 'all' ? filterIsFixed === 'true' : null,
           p_is_provision: filterIsProvision !== 'all' ? filterIsProvision === 'true' : null,
           p_date_from: dateFrom || null,
           p_date_to: dateTo || null,
           p_search: search || null,
+          p_invoice_month: filterInvoiceMonth === 'all' ? 'all' : filterInvoiceMonth, // ✅ CORRIGIDO
         };
 
         logger.info("Fetching aggregated totals with params:", params);
@@ -332,20 +327,76 @@ export function useTransactionsPageLogic({
         }
       } catch (error) {
         logger.error("Error fetching aggregated totals:", error);
-        // Em caso de erro, calcular localmente EXCLUINDO TRANSFERÊNCIAS
-        const isTransferLike = (t: typeof transactions[number]) => {
+        
+        // ⚠️ FALLBACK: Cálculo local quando RPC falha
+        // IMPORTANTE: Usa allTransactions (não paginadas) para totais corretos
+        const sourceTransactions = allTransactions || transactions;
+        
+        if (!allTransactions) {
+          logger.warn('⚠️ Usando transactions paginadas para calcular totais. Resultado pode estar incorreto.');
+        }
+        
+        // Função para identificar transferências e outros itens a excluir (excluir dos totais)
+        const shouldExclude = (t: typeof sourceTransactions[number]) => {
+          // 1. Transferências
           if (t.type === 'transfer') return true;
           if ((t as any).to_account_id) return true;
-          // Excluir receitas espelho de transferências (transfer + linked_transaction_id)
-          if (t.type === 'transfer' && (t as any).linked_transaction_id) return true;
+          if (t.type === 'income' && (t as any).linked_transaction_id) return true; // Receita espelho
+          
+          // 2. Saldo Inicial
+          if (t.description === 'Saldo Inicial') return true;
+
+          // 3. Provisões positivas (overspent)
+          if (t.is_provision && t.amount > 0) return true;
+
+          // 4. Pai de transações fixas (templates)
+          // Se é fixa e não tem parent_id, é o template (pai). Se tem parent_id, é a instância (filha).
+          // O RPC exclui: (t.parent_transaction_id IS NOT NULL OR t.is_fixed IS NOT TRUE OR t.is_fixed IS NULL)
+          // Ou seja, mantem se: tem pai OU não é fixa.
+          // Logo, EXCLUI se: não tem pai E é fixa.
+          if (t.is_fixed && !t.parent_transaction_id) return true;
+
           return false;
         };
 
-        const nonTransfer = transactions.filter(t => !isTransferLike(t));
-        const localIncome = nonTransfer
+        // Aplicar filtros localmente para garantir que o fallback respeite os filtros selecionados
+        let filtered = sourceTransactions.filter(t => !shouldExclude(t));
+
+        if (filterType !== 'all') filtered = filtered.filter(t => t.type === filterType);
+        if (filterStatus !== 'all') filtered = filtered.filter(t => t.status === filterStatus);
+        if (filterAccount !== 'all') filtered = filtered.filter(t => t.account_id === filterAccount);
+        if (filterCategory !== 'all') filtered = filtered.filter(t => t.category_id === filterCategory);
+        if (filterAccountType !== 'all') {
+          filtered = filtered.filter(t => {
+            const account = accounts.find(a => a.id === t.account_id);
+            return account?.type === filterAccountType;
+          });
+        }
+        // Conversão segura para string para comparação com filtros
+        if (filterIsFixed !== 'all') filtered = filtered.filter(t => String(!!t.is_fixed) === filterIsFixed);
+        if (filterIsProvision !== 'all') filtered = filtered.filter(t => String(!!t.is_provision) === filterIsProvision);
+        if (filterInvoiceMonth !== 'all') filtered = filtered.filter(t => t.invoice_month === filterInvoiceMonth);
+        
+        if (dateFrom) {
+          // Ajuste de fuso horário pode ser necessário dependendo de como dateFrom vem
+          // Mas assumindo YYYY-MM-DD string simples:
+          const from = new Date(dateFrom + 'T00:00:00');
+          filtered = filtered.filter(t => new Date(t.date) >= from);
+        }
+        if (dateTo) {
+          const to = new Date(dateTo + 'T23:59:59');
+          filtered = filtered.filter(t => new Date(t.date) <= to);
+        }
+        
+        if (search) {
+          const searchLower = search.toLowerCase();
+          filtered = filtered.filter(t => t.description.toLowerCase().includes(searchLower));
+        }
+
+        const localIncome = filtered
           .filter(t => t.type === 'income')
           .reduce((sum, t) => sum + t.amount, 0);
-        const localExpenses = nonTransfer
+        const localExpenses = filtered
           .filter(t => t.type === 'expense')
           .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
@@ -354,7 +405,8 @@ export function useTransactionsPageLogic({
           expenses: localExpenses,
           balance: localIncome - localExpenses,
         });
-        logger.info("Using local calculation for totals (excluding transfers):", { localIncome, localExpenses });
+        
+        logger.info('Using local calculation for totals (with filters):', { localIncome, localExpenses });
       }
     };
 

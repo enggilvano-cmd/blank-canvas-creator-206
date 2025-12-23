@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
-import { addMonths, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import type { Transaction, DateFilterType } from '@/types';
-import { createDateFromString } from '@/lib/dateUtils';
+import { addMonths, subMonths, startOfMonth, endOfMonth, format } from 'date-fns';
+import type { DateFilterType } from '@/types';
 import { usePersistedFilters } from './usePersistedFilters';
 
 interface DashboardFiltersState {
@@ -54,50 +53,38 @@ export function useDashboardFilters() {
     }));
   }, [setFilters]);
 
-  const getFilteredTransactions = useCallback((transactions: Transaction[]) => {
-    let filtered = transactions;
-
-    if (dateFilter === 'current_month') {
+  // ✅ CENTRALIZADO: Cálculo de dateRange para evitar duplicação
+  // Usado por useDashboardCalculations e componentes que precisam do intervalo
+  const getDateRange = useCallback(() => {
+    if (dateFilter === 'all') {
+      return { dateFrom: undefined, dateTo: undefined };
+    } else if (dateFilter === 'current_month') {
       const now = new Date();
-      const start = startOfMonth(now);
-      const end = endOfMonth(now);
-      filtered = filtered.filter((t) => {
-        const transactionDate = typeof t.date === 'string' 
-          ? createDateFromString(t.date) 
-          : t.date;
-        return isWithinInterval(transactionDate, { start, end });
-      });
+      return {
+        dateFrom: format(startOfMonth(now), 'yyyy-MM-dd'),
+        dateTo: format(endOfMonth(now), 'yyyy-MM-dd'),
+      };
     } else if (dateFilter === 'month_picker') {
-      const start = startOfMonth(selectedMonth);
-      const end = endOfMonth(selectedMonth);
-      filtered = filtered.filter((t) => {
-        const transactionDate = typeof t.date === 'string' 
-          ? createDateFromString(t.date) 
-          : t.date;
-        return isWithinInterval(transactionDate, { start, end });
-      });
+      return {
+        dateFrom: format(startOfMonth(selectedMonth), 'yyyy-MM-dd'),
+        dateTo: format(endOfMonth(selectedMonth), 'yyyy-MM-dd'),
+      };
     } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
-      filtered = filtered.filter((t) => {
-        const transactionDate = typeof t.date === 'string' 
-          ? createDateFromString(t.date) 
-          : t.date;
-        return isWithinInterval(transactionDate, {
-          start: customStartDate,
-          end: customEndDate,
-        });
-      });
+      return {
+        dateFrom: format(customStartDate, 'yyyy-MM-dd'),
+        dateTo: format(customEndDate, 'yyyy-MM-dd'),
+      };
     }
-
-    return filtered;
+    return { dateFrom: undefined, dateTo: undefined };
   }, [dateFilter, selectedMonth, customStartDate, customEndDate]);
 
   const goToPreviousMonth = useCallback(() => {
     setSelectedMonth((prev) => subMonths(prev, 1));
-  }, []);
+  }, [setSelectedMonth]);
 
   const goToNextMonth = useCallback(() => {
     setSelectedMonth((prev) => addMonths(prev, 1));
-  }, []);
+  }, [setSelectedMonth]);
 
   const getNavigationParams = useCallback(() => {
     if (dateFilter === 'current_month') {
@@ -139,7 +126,7 @@ export function useDashboardFilters() {
     setCustomStartDate,
     customEndDate,
     setCustomEndDate,
-    getFilteredTransactions,
+    getDateRange, // ✅ NOVO: Centralizado para evitar duplicação
     goToPreviousMonth,
     goToNextMonth,
     getNavigationParams,

@@ -86,7 +86,7 @@ export function useDashboardData() {
           .eq('user_id', user.id)
           .gte('date', dateFrom)
           .order('date', { ascending: false })
-          .limit(500), // Reasonable limit for dashboard
+          // ✅ BUG FIX #3: Remover limite de 500 para carregar TODAS as transações dos últimos 12 meses
         
         supabase
           .from('categories')
@@ -163,4 +163,13 @@ export function useTransactionsFromDashboard() {
 export function useCategoriesFromDashboard() {
   const { data } = useDashboardData();
   return data?.categories || [];
+}
+
+/**
+ * ✅ Helper hook to expose isFetching state for UI loading indicators
+ * Fixes: "Frozen Screen" UX - shows visual feedback when filters change
+ */
+export function useDashboardFetchingState() {
+  const { isFetching } = useDashboardData();
+  return isFetching;
 }

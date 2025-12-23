@@ -12,8 +12,20 @@ describe('useDashboardCalculations', () => {
       { id: '5', name: 'Meal Voucher', balance: 300, type: 'meal_voucher', created_at: '', user_id: '' },
     ];
 
+    const dateRange = { dateFrom: undefined, dateTo: undefined };
+    
     const { result } = renderHook(() => 
-      useDashboardCalculations(accounts, 'all', new Date(), undefined, undefined, 'key', [])
+      useDashboardCalculations(
+        accounts, 
+        dateRange, 
+        'key', 
+        [], 
+        undefined, 
+        'all', 
+        new Date(), 
+        undefined, 
+        undefined
+      )
     );
 
     expect(result.current.totalBalance).toBe((1000 + 2000 + 5000 + 300) * 100);

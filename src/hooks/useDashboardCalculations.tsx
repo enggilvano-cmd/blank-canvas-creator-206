@@ -3,52 +3,29 @@ import type { Account, DateFilterType, Transaction } from '@/types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { logger } from '@/lib/logger';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useDashboardCalculations(
   accounts: Account[],
-  dateFilter: DateFilterType,
-  selectedMonth: Date,
-  customStartDate: Date | undefined,
-  customEndDate: Date | undefined,
+  dateRange: { dateFrom?: string; dateTo?: string }, // ✅ RECEBE dateRange ao invés de calcular
   transactionsKey?: string,  // Para monitorar mudanças nas transações
   allTransactions?: Transaction[],  // NOVO: Receber transações para calcular em memória
-  fixedTransactions?: Transaction[] // NOVO: Receber transações fixas para projeção
+  fixedTransactions?: Transaction[], // NOVO: Receber transações fixas para projeção
+  dateFilter?: DateFilterType, // ✅ Apenas para getPeriodLabel
+  selectedMonth?: Date, // ✅ Apenas para getPeriodLabel
+  customStartDate?: Date, // ✅ Apenas para getPeriodLabel
+  customEndDate?: Date // ✅ Apenas para getPeriodLabel
 ) {
   
   console.log('🎯 useDashboardCalculations called with:', {
     accountsCount: accounts.length,
-    dateFilter,
+    dateRange,
     transactionsKey,
     fixedTransactionsCount: fixedTransactions?.length
   });
-
-  // Calcular date range baseado no filtro (memoizado para estabilidade)
-  // IMPORTANTE: Deve vir ANTES de calculateTotalsFromTransactions
-  const dateRange = useMemo(() => {
-    if (dateFilter === 'all') {
-      return { dateFrom: undefined, dateTo: undefined };
-    } else if (dateFilter === 'current_month') {
-      const now = new Date();
-      return {
-        dateFrom: format(startOfMonth(now), 'yyyy-MM-dd'),
-        dateTo: format(endOfMonth(now), 'yyyy-MM-dd'),
-      };
-    } else if (dateFilter === 'month_picker') {
-      return {
-        dateFrom: format(startOfMonth(selectedMonth), 'yyyy-MM-dd'),
-        dateTo: format(endOfMonth(selectedMonth), 'yyyy-MM-dd'),
-      };
-    } else if (dateFilter === 'custom' && customStartDate && customEndDate) {
-      return {
-        dateFrom: format(customStartDate, 'yyyy-MM-dd'),
-        dateTo: format(customEndDate, 'yyyy-MM-dd'),
-      };
-    }
-    return { dateFrom: undefined, dateTo: undefined };
-  }, [dateFilter, selectedMonth, customStartDate, customEndDate]);
   
   // Função auxiliar para calcular totais baseado em transações em memória
-  // Isso bypassa completamente a RPC que está quebrada
+  // Usada como FALLBACK se a RPC falhar (ex: offline)
   const calculateTotalsFromTransactions = useCallback(() => {
     if (!allTransactions) {
       return {
@@ -63,25 +40,24 @@ export function useDashboardCalculations(
       };
     }
 
-    console.log('💾 Calculating totals from memory (bypassing broken RPC):', {
+    console.log('💾 Calculating totals from memory (fallback):', {
       totalTransactions: allTransactions.length,
       dateRange,
     });
 
-    // Filtrar transações baseado no período
+    // ✅ BUG FIX #2: Comparar datas como strings YYYY-MM-DD para evitar problemas de fuso horário
     const isInPeriod = (transactionDate: string | Date) => {
-      const txDate = typeof transactionDate === 'string' ? new Date(transactionDate) : transactionDate;
+      // Converter para string YYYY-MM-DD se for Date
+      const txDateStr = typeof transactionDate === 'string' 
+        ? transactionDate 
+        : transactionDate.toISOString().split('T')[0];
       
-      if (dateRange.dateFrom) {
-        // Ensure start date is treated as start of day in local time
-        const startDate = new Date(dateRange.dateFrom + 'T00:00:00');
-        if (txDate < startDate) return false;
+      if (dateRange.dateFrom && txDateStr < dateRange.dateFrom) {
+        return false;
       }
       
-      if (dateRange.dateTo) {
-        // Ensure end date is treated as end of day in local time
-        const endDate = new Date(dateRange.dateTo + 'T23:59:59.999');
-        if (txDate > endDate) return false;
+      if (dateRange.dateTo && txDateStr > dateRange.dateTo) {
+        return false;
       }
       
       return true;
@@ -92,11 +68,17 @@ export function useDashboardCalculations(
       // Excluir transações de Saldo Inicial
       if (t.description === 'Saldo Inicial') return false;
       
-      // Excluir se tem to_account_id (transferências pai)
+      // Excluir transferências (RPC exclui type='transfer' sempre)
+      if (t.type === 'transfer') return false;
       if (t.to_account_id) return false;
-      
-      // Excluir APENAS receitas espelho de transferências
-      if (t.type === 'transfer' && t.linked_transaction_id) return false;
+      if (t.type === 'income' && t.linked_transaction_id) return false;
+
+      // EXCLUIR apenas o PAI de transações fixas (templates)
+      // Se for fixa (is_fixed=true) e NÃO tiver parent_transaction_id, é um template
+      if (t.is_fixed && !t.parent_transaction_id) return false;
+
+      // EXCLUIR provisões positivas (overspent)
+      if (t.is_provision && t.amount > 0) return false;
       
       // Filtrar por período
       if (!isInPeriod(t.date)) return false;
@@ -104,45 +86,8 @@ export function useDashboardCalculations(
       return true;
     });
 
-    // Identificar instâncias já geradas no período para não duplicar
-    const instanceParentIds = new Set(
-      filteredTransactions
-        .filter(t => t.parent_transaction_id)
-        .map(t => t.parent_transaction_id)
-    );
-
-    // Filtrar transações fixas que se aplicam ao período e ainda não foram geradas (projeção)
-    const projectedFixedTransactions = (fixedTransactions || []).filter(ft => {
-      // Se já tem instância gerada no período, ignorar o template
-      if (instanceParentIds.has(ft.id)) return false;
-
-      // Verificar se a data de início é anterior ou igual ao fim do período
-      const ftDate = new Date(ft.date);
-      if (dateRange.dateTo) {
-        const endDate = new Date(dateRange.dateTo + 'T23:59:59.999');
-        if (ftDate > endDate) return false;
-      }
-      
-      // Verificar se a transação fixa foi criada após o fim do período (não deve aparecer)
-      // (Já coberto acima)
-
-      // Verificar se é uma transferência (excluir se for pai de transferência, igual RPC)
-      if (ft.to_account_id) return false;
-
-      return true;
-    });
-
-    console.log('✅ Filtered transactions:', {
-      totalFiltered: filteredTransactions.length,
-      projectedFixed: projectedFixedTransactions.length,
-      byType: {
-        income: filteredTransactions.filter(t => t.type === 'income').length,
-        expense: filteredTransactions.filter(t => t.type === 'expense').length,
-      },
-    });
-
-    // Combinar transações reais e projetadas para os totais
-    const allPeriodTransactions = [...filteredTransactions, ...projectedFixedTransactions];
+    // Combinar transações reais (sem projeções para bater com a página de transações)
+    const allPeriodTransactions = [...filteredTransactions];
 
     // Calcular totais gerais
     const incomeTransactions = allPeriodTransactions.filter(t => t.type === 'income');
@@ -157,15 +102,9 @@ export function useDashboardCalculations(
     const periodExpenses = expenseTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
     const creditCardExpenses = creditTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
 
-    // Pendentes (inclui todas as projetadas fixas, pois ainda não aconteceram/foram geradas)
-    const pendingExpTransactions = [
-      ...filteredTransactions.filter(t => t.type === 'expense' && t.status === 'pending'),
-      ...projectedFixedTransactions.filter(t => t.type === 'expense') // Fixas projetadas contam como pendentes
-    ];
-    const pendingIncTransactions = [
-      ...filteredTransactions.filter(t => t.type === 'income' && t.status === 'pending'),
-      ...projectedFixedTransactions.filter(t => t.type === 'income') // Fixas projetadas contam como pendentes
-    ];
+    // Pendentes (apenas as que existem no banco)
+    const pendingExpTransactions = filteredTransactions.filter(t => t.type === 'expense' && t.status === 'pending');
+    const pendingIncTransactions = filteredTransactions.filter(t => t.type === 'income' && t.status === 'pending');
 
     const pendingExpenses = pendingExpTransactions.reduce((sum, t) => sum + (Math.abs(t.amount) * 100), 0);
     const pendingIncome = pendingIncTransactions.reduce((sum, t) => sum + (t.amount * 100), 0);
@@ -249,24 +188,55 @@ export function useDashboardCalculations(
   });
 
   useEffect(() => {
-    // ✅ Usar cálculo em memória (bypassa RPC completamente)
-    // Isso é mais confiável e responde imediatamente às mudanças
-    const result = calculateTotalsFromTransactions();
-    setAggregatedTotals(result);
-    
-    console.log('✅ Dashboard totals (from memory):', result);
-  }, [calculateTotalsFromTransactions]);
+    const fetchTotals = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Tentar buscar via RPC primeiro (mais rápido e leve)
+        const { data, error } = await supabase.rpc('get_dashboard_metrics', {
+          p_user_id: user.id,
+          p_date_from: dateRange.dateFrom || null,
+          p_date_to: dateRange.dateTo || null
+        });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          console.log('✅ Dashboard totals (from RPC):', data[0]);
+          setAggregatedTotals({
+            periodIncome: Number(data[0].period_income) * 100, // Converter para centavos
+            periodExpenses: Number(data[0].period_expenses) * 100,
+            balance: Number(data[0].balance) * 100,
+            creditCardExpenses: Number(data[0].credit_card_expenses) * 100,
+            pendingExpenses: Number(data[0].pending_expenses) * 100,
+            pendingIncome: Number(data[0].pending_income) * 100,
+            pendingExpensesCount: Number(data[0].pending_expenses_count),
+            pendingIncomeCount: Number(data[0].pending_income_count),
+          });
+        }
+      } catch (error) {
+        logger.error('Error fetching dashboard metrics via RPC, falling back to memory:', error);
+        
+        // Fallback: Usar cálculo em memória se RPC falhar
+        const result = calculateTotalsFromTransactions();
+        setAggregatedTotals(result);
+      }
+    };
+
+    fetchTotals();
+  }, [dateRange, transactionsKey, calculateTotalsFromTransactions]);
 
 
   const getPeriodLabel = () => {
-    if (dateFilter === 'all') {
+    if (!dateFilter || dateFilter === 'all') {
       return 'Todas as transações';
     } else if (dateFilter === 'current_month') {
       return new Date().toLocaleDateString('pt-BR', {
         month: 'long',
         year: 'numeric',
       });
-    } else if (dateFilter === 'month_picker') {
+    } else if (dateFilter === 'month_picker' && selectedMonth) {
       return selectedMonth.toLocaleDateString('pt-BR', {
         month: 'long',
         year: 'numeric',

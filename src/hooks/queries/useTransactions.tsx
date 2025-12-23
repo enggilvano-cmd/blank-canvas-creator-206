@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
@@ -96,7 +96,21 @@ export function useTransactions(params: UseTransactionsParams = {}) {
   const { user } = useAuth();
   const { invalidateTransactions, invalidateCategories } = useQueryInvalidation();
   const isOnline = useOnlineStatus();
+  const queryClient = useQueryClient();
 
+  // ⚠️ TECHNICAL DEBT: Filter Logic Duplication
+  // Esta lógica de filtro está duplicada entre:
+  // 1. Frontend (JS) - filterTransactionsInMemory() aqui
+  // 2. Backend (SQL) - Query builder no Supabase abaixo
+  // 
+  // PROBLEMA: Se alterar um filtro (ex: lógica de is_fixed), precisa alterar em 2 lugares
+  // SOLUÇÃO FUTURA:
+  // - Opção 1: Usar RPC function no Supabase que aceita filtros como JSON
+  // - Opção 2: Criar DSL (Domain Specific Language) compartilhado
+  // - Opção 3: Migrar filtros complexos para Views materializadas
+  // 
+  // Por enquanto: Manter comentários sincronizados entre ambos
+  
       // Helper para filtrar transações em memória (usado offline)
   const filterTransactionsInMemory = async (transactions: Transaction[]) => {
     // Carregar contas e categorias para enriquecer dados e filtrar por tipo de conta
@@ -178,6 +192,21 @@ export function useTransactions(params: UseTransactionsParams = {}) {
       if (!user) return 0;
 
       if (!isOnline) {
+        // ⚠️ PERFORMANCE CONCERN: Offline Memory Usage
+        // Atualmente carrega TODOS os dados (12 meses) para RAM para fazer count
+        // 
+        // PROBLEMA: Pode causar:
+        // - Consumo alto de memória (10k+ transações = 5-10MB)
+        // - Lentidão em dispositivos com pouca RAM
+        // - Travamento em datasets muito grandes
+        // 
+        // SOLUÇÃO FUTURA (Planejamento):
+        // - Implementar COUNT direto no IndexedDB usando índices
+        // - Criar índices compostos para cada combinação de filtro comum
+        // - Usar Web Workers para processar filtros em thread separada
+        // - Implementar paginação virtual (windowing) com react-window
+        // 
+        // Por enquanto: Aceitar limitação de 12 meses offline
         const allTransactions = await offlineDatabase.getTransactions(user.id, 12); // Busca 1 ano offline
         const filtered = await filterTransactionsInMemory(allTransactions);
         return filtered.length;
@@ -267,6 +296,13 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       if (!isOnline) {
         // Use optimized offline database with performance tracking
+        // 
+        // ⚠️ NOTA: IndexedDB tem limitações de performance:
+        // - Sem suporte nativo para GROUP BY, HAVING, agregações complexas
+        // - Filtros complexos precisam ser feitos em memória
+        // - Sorting é feito pela API do IndexedDB mas limitado
+        // 
+        // Por isso usamos híbrido: IndexedDB + filtros em JS
         const startTime = performance.now();
         const allTransactions = await offlineDatabase.getTransactions(
           user.id, 
@@ -482,11 +518,69 @@ export function useTransactions(params: UseTransactionsParams = {}) {
       if (error) throw error;
       return data;
     },
+    onMutate: async (transactionData) => {
+      // ✅ OPTIMISTIC UPDATE: Atualiza UI imediatamente antes da resposta do servidor
+      
+      // Cancela queries em andamento para evitar conflito
+      await queryClient.cancelQueries({ queryKey: queryKeys.transactions() });
+      
+      // Snapshot do estado anterior para rollback
+      const previousTransactions = queryClient.getQueryData(
+        [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, sortBy, sortOrder, isOnline]
+      );
+      
+      // Cria transação otimista com ID temporário
+      const optimisticTransaction: TransactionWithRelations = {
+        id: `temp-${Date.now()}`,
+        user_id: user!.id,
+        description: transactionData.description,
+        amount: transactionData.amount,
+        date: transactionData.date,
+        type: transactionData.type,
+        category_id: transactionData.category_id,
+        account_id: transactionData.account_id,
+        status: transactionData.status,
+        invoice_month: transactionData.invoiceMonth || null,
+        invoice_month_overridden: !!transactionData.invoiceMonth,
+        is_fixed: false,
+        is_provision: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        installments: null,
+        current_installment: null,
+        parent_transaction_id: null,
+        linked_transaction_id: null,
+        to_account_id: null,
+      };
+      
+      // Atualiza cache com transação otimista
+      queryClient.setQueryData(
+        [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, sortBy, sortOrder, isOnline],
+        (old: TransactionWithRelations[] | undefined) => {
+          return old ? [optimisticTransaction, ...old] : [optimisticTransaction];
+        }
+      );
+      
+      // Atualiza count otimisticamente
+      queryClient.setQueryData(
+        [...queryKeys.transactions(), 'count', search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, isOnline],
+        (old: number | undefined) => (old || 0) + 1
+      );
+      
+      return { previousTransactions };
+    },
     onSuccess: () => {
       // ✅ Invalidação imediata dispara refetch automático sem delay
       invalidateTransactions();
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // ✅ ROLLBACK: Restaura estado anterior em caso de erro
+      if (context?.previousTransactions) {
+        queryClient.setQueryData(
+          [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, sortBy, sortOrder, isOnline],
+          context.previousTransactions
+        );
+      }
       logger.error('Error adding transaction:', error);
     },
   });
@@ -592,6 +686,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
   return {
     transactions: query.data || [],
     isLoading: query.isLoading || countQuery.isLoading,
+    isFetching: query.isFetching || countQuery.isFetching, // ✅ NOVO: Expor isFetching para UX
     error: query.error || countQuery.error,
     refetch: query.refetch,
     totalCount: countQuery.data || 0,

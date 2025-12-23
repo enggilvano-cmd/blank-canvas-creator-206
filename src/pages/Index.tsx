@@ -253,6 +253,7 @@ const PlaniFlowApp = () => {
   const {
     transactions: allTransactions,
     isLoading: loadingAllTransactions,
+    isFetching: fetchingAllTransactions, // ✅ NOVO: Para indicadores visuais de loading
   } = useTransactions({
     pageSize: null, // Buscar todas para cálculos corretos
     // ✅ CRÍTICO: Manter enabled=true SEMPRE para que refetch aconteça mesmo em outras páginas
@@ -472,6 +473,7 @@ const PlaniFlowApp = () => {
       transactions={allTransactions}
       fixedTransactions={fixedTransactions || []}
       categories={categories}
+      isFetching={fetchingAllTransactions} // ✅ NOVO: Passa estado de fetching para indicadores visuais
       onTransfer={() => setTransferModalOpen(true)}
       onAddAccount={() => setAddAccountModalOpen(true)}
       onAddTransaction={() => {

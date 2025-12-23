@@ -259,12 +259,6 @@ npm run test -- --watch
   - Merge de classes Tailwind
   - Classes condicionais
 
-- ✅ **Reports** (100% cobertura)
-  - calculateDRE (Demonstração do Resultado)
-  - calculateBalanceSheet (Balanço Patrimonial)
-  - calculateCashFlow (Fluxo de Caixa)
-  - Filtros por período
-
 #### Componentes UI
 - ✅ **Button** (100% cobertura)
   - Renderização

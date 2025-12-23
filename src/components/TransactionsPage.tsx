@@ -160,6 +160,7 @@ export function TransactionsPage({
     hasCompletedTransactions,
   } = useTransactionsPageLogic({
     transactions,
+    allTransactions, // ✅ NOVO: Para cálculo correto de totais no fallback
     accounts,
     categories,
     filterType,
