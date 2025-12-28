@@ -348,10 +348,7 @@ export function useTransactionsPageLogic({
           // 2. Saldo Inicial
           if (t.description === 'Saldo Inicial') return true;
 
-          // 3. Provisões positivas (overspent)
-          if (t.is_provision && t.amount > 0) return true;
-
-          // 4. Pai de transações fixas (templates)
+          // 3. Pai de transações fixas (templates)
           // Se é fixa e não tem parent_id, é o template (pai). Se tem parent_id, é a instância (filha).
           // O RPC exclui: (t.parent_transaction_id IS NOT NULL OR t.is_fixed IS NOT TRUE OR t.is_fixed IS NULL)
           // Ou seja, mantem se: tem pai OU não é fixa.

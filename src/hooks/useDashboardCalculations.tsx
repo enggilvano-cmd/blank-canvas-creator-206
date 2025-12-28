@@ -77,9 +77,6 @@ export function useDashboardCalculations(
       // Se for fixa (is_fixed=true) e NÃO tiver parent_transaction_id, é um template
       if (t.is_fixed && !t.parent_transaction_id) return false;
 
-      // EXCLUIR provisões positivas (overspent)
-      if (t.is_provision && t.amount > 0) return false;
-      
       // Filtrar por período
       if (!isInPeriod(t.date)) return false;
       
