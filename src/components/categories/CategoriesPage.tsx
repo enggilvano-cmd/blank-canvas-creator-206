@@ -8,9 +8,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Edit, Trash2, Search, Tag, TrendingUp, TrendingDown, ArrowUpDown, MoreVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { AddCategoryModal } from "@/components/AddCategoryModal";
-import { EditCategoryModal } from "@/components/EditCategoryModal";
-import { ImportCategoriesModal } from "@/components/ImportCategoriesModal";
+import { AddCategoryModal } from "./AddCategoryModal";
+import { EditCategoryModal } from "./EditCategoryModal";
+import { ImportCategoriesModal } from "@/components/import/ImportCategoriesModal";
 import { getUserId, withErrorHandling } from "@/lib/supabase-utils";
 import type { Category } from "@/types";
 import { queryKeys } from "@/lib/queryClient";

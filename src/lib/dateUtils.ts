@@ -326,3 +326,21 @@ export function calculateBillDetails(
     nextInvoiceMonth,    // <-- ADICIONADO: mês (YYYY-MM) da próxima fatura
   };
 }
+
+/**
+ * Verifica se uma data está dentro de um intervalo (inclusivo).
+ */
+export function isDateInRange(date: Date, start: Date, end: Date): boolean {
+  return date >= start && date <= end;
+}
+
+/**
+ * Retorna o intervalo de datas para um mês específico.
+ * @param year O ano.
+ * @param month O mês (1-12).
+ */
+export function getMonthDateRange(year: number, month: number): { start: Date, end: Date } {
+  const start = new Date(year, month - 1, 1);
+  const end = new Date(year, month, 0);
+  return { start, end };
+}

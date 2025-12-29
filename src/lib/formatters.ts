@@ -38,6 +38,12 @@ export function formatCurrency(
   currency: string = 'BRL', 
   locale?: string
 ): string {
+  if (valueInCents === null || valueInCents === undefined) {
+    throw new Error('Value is required');
+  }
+  if (typeof valueInCents === 'number' && (isNaN(valueInCents) || !isFinite(valueInCents))) {
+    throw new Error('Invalid number');
+  }
   const value = valueInCents / 100;
   const finalLocale = locale || CURRENCY_LOCALES[currency] || 'pt-BR';
   
@@ -107,4 +113,27 @@ export function formatBRNumber(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+/**
+ * Formata uma data para o padrão brasileiro.
+ * @param date A data a ser formatada.
+ * @param formatStr O formato desejado ('short' ou 'long').
+ * @returns A data formatada.
+ */
+export function formatDate(date: Date | string, formatStr: 'short' | 'long' = 'short'): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (formatStr === 'short') {
+    return new Intl.DateTimeFormat('pt-BR').format(d);
+  }
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(d);
+}
+
+/**
+ * Formata um número como porcentagem.
+ * @param value O valor (ex: 0.5 para 50%).
+ * @returns A string formatada.
+ */
+export function formatPercentage(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 2 }).format(value);
 }

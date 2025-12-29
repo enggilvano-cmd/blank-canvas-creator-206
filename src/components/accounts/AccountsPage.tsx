@@ -27,7 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAccounts } from "@/hooks/queries/useAccounts";
-import { ImportAccountsModal } from "@/components/ImportAccountsModal";
+import { ImportAccountsModal } from "@/components/import/ImportAccountsModal";
 import { useSettings } from "@/context/SettingsContext";
 import { AccountFilterDialog } from "@/components/accounts/AccountFilterDialog";
 import { AccountFilterChips } from "@/components/accounts/AccountFilterChips";

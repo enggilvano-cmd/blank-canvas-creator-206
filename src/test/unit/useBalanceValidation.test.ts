@@ -120,7 +120,7 @@ describe('useBalanceValidation', () => {
 
       expect(result.current.isValid).toBe(false);
       expect(result.current.status).toBe('danger');
-      expect(result.current.message).toContain('Limite de crédito excedido');
+      expect(result.current.message).toContain('Limite excedido');
     });
 
     it('should show warning when approaching credit limit', () => {
@@ -140,7 +140,7 @@ describe('useBalanceValidation', () => {
 
       expect(result.current.isValid).toBe(true);
       expect(result.current.status).toBe('warning');
-      expect(result.current.message).toContain('Atenção');
+      expect(result.current.message).toContain('Próximo ao limite');
     });
   });
 

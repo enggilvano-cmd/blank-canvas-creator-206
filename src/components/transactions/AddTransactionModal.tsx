@@ -7,10 +7,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { AddTransactionModalProps } from "@/types/formProps";
 import { useAddTransactionForm } from "@/hooks/useAddTransactionForm";
-import { TransactionFormFields } from "./add-transaction/TransactionFormFields";
-import { AccountCategoryFields } from "./add-transaction/AccountCategoryFields";
-import { InvoiceMonthSelector } from "./add-transaction/InvoiceMonthSelector";
-import { InstallmentOptions } from "./add-transaction/InstallmentOptions";
+import { TransactionFormFields } from "../add-transaction/TransactionFormFields";
+import { AccountCategoryFields } from "../add-transaction/AccountCategoryFields";
+import { InvoiceMonthSelector } from "../add-transaction/InvoiceMonthSelector";
+import { InstallmentOptions } from "../add-transaction/InstallmentOptions";
 
 export function AddTransactionModal({
   open,

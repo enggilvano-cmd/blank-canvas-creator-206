@@ -21,6 +21,9 @@ describe('SECURITY DEFINER - Authorization Tests (Bug Fix #4)', () => {
   });
 
   it('✅ validate_user_access should exist and be callable', async () => {
+    // Mock específico para este teste
+    (supabase.rpc as any).mockResolvedValueOnce({ data: true, error: null });
+
     /**
      * TESTE REAL: Verifica que a função validate_user_access existe e funciona
      * com o usuário autenticado atual

@@ -85,7 +85,7 @@ export function useDashboardData() {
           `)
           .eq('user_id', user.id)
           .gte('date', dateFrom)
-          .order('date', { ascending: false })
+          .order('date', { ascending: false }),
           // ✅ BUG FIX #3: Remover limite de 500 para carregar TODAS as transações dos últimos 12 meses
         
         supabase

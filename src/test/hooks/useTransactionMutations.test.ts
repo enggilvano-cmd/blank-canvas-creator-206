@@ -12,6 +12,15 @@ vi.mock('@/integrations/supabase/client', () => ({
     functions: {
       invoke: vi.fn(),
     },
+    rpc: vi.fn(() => Promise.resolve({ data: null, error: null })),
+    from: vi.fn(() => {
+      const builder: any = {
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: (resolve: any) => resolve({ error: null, count: 1 }),
+      };
+      return builder;
+    }),
     auth: {
       getUser: vi.fn(),
     },
@@ -102,9 +111,8 @@ describe('useTransactionMutations', () => {
         status: 'completed',
       };
 
-      await result.current.handleAddTransaction(transactionData);
+      await expect(result.current.handleAddTransaction(transactionData)).rejects.toThrow();
 
-      // Should not throw, should handle gracefully with toast
       expect(mockInvoke).toHaveBeenCalled();
     });
 
@@ -213,27 +221,23 @@ describe('useTransactionMutations', () => {
 
   describe('handleDeleteTransaction', () => {
     it('should successfully delete a transaction', async () => {
-      const mockInvoke = vi.mocked(supabase.functions.invoke);
-      mockInvoke.mockResolvedValueOnce({
-        data: { success: true, deleted: 1 },
-        error: null,
-      });
+      const mockRpc = vi.mocked(supabase.rpc);
+      mockRpc.mockResolvedValueOnce({ data: { success: true }, error: null });
 
       const { result } = renderHook(() => useTransactionMutations(), { wrapper });
 
       await result.current.handleDeleteTransaction('tx-123', 'current');
 
-      expect(mockInvoke).toHaveBeenCalledWith('atomic-delete-transaction', {
-        body: {
-          transaction_id: 'tx-123',
-          scope: 'current',
-        },
+      expect(mockRpc).toHaveBeenCalledWith('atomic_delete_transaction', {
+        p_user_id: 'test-user-id',
+        p_transaction_id: 'tx-123',
+        p_scope: 'current',
       });
     });
 
     it('should handle deletion of multiple transactions', async () => {
-      const mockInvoke = vi.mocked(supabase.functions.invoke);
-      mockInvoke.mockResolvedValueOnce({
+      const mockRpc = vi.mocked(supabase.rpc);
+      mockRpc.mockResolvedValueOnce({
         data: { success: true, deleted: 5 },
         error: null,
       });
@@ -243,19 +247,24 @@ describe('useTransactionMutations', () => {
       await result.current.handleDeleteTransaction('tx-123', 'all');
 
       await waitFor(() => {
-        expect(mockInvoke).toHaveBeenCalledWith('atomic-delete-transaction', {
-          body: expect.objectContaining({
-            scope: 'all',
-          }),
+        expect(mockRpc).toHaveBeenCalledWith('atomic_delete_transaction', {
+          p_user_id: 'test-user-id',
+          p_transaction_id: 'tx-123',
+          p_scope: 'all',
         });
       });
     });
 
     it('should handle transaction not found error', async () => {
-      const mockInvoke = vi.mocked(supabase.functions.invoke);
-      mockInvoke.mockResolvedValueOnce({
-        data: { success: false, error: 'Transaction not found' },
-        error: null,
+      const mockRpc = vi.mocked(supabase.rpc);
+      mockRpc.mockResolvedValueOnce({
+        data: null,
+        error: {
+          message: 'Transaction not found',
+          code: 'P0001',
+          details: '',
+          hint: '',
+        },
       });
 
       const { result } = renderHook(() => useTransactionMutations(), { wrapper });

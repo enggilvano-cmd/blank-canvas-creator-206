@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { getTodayString, createDateFromString } from "@/lib/dateUtils";
 import { getAvailableBalance, formatCurrency } from "@/lib/formatters";
-import { CurrencyInput } from "./forms/CurrencyInput";
+import { CurrencyInput } from "@/components/forms/CurrencyInput";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { creditPaymentSchema } from "@/lib/validationSchemas";
 import { z } from "zod";

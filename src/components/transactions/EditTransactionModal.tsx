@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories } from "@/hooks/useCategories";
 import { TransactionScopeDialog, EditScope } from "./TransactionScopeDialog";
-import { FixedTransactionScopeDialog, FixedScope } from "./FixedTransactionScopeDialog";
+import { FixedTransactionScopeDialog, FixedScope } from "../fixedtransactions/FixedTransactionScopeDialog";
 import { EditTransactionModalProps } from "@/types/formProps";
 import { TransactionUpdate } from "@/types";
 import { useEditTransactionScope } from "@/hooks/edit-transaction/useEditTransactionScope";
 import { useEditTransactionForm } from "@/hooks/edit-transaction/useEditTransactionForm";
-import { EditTransactionFormFields } from "./edit-transaction/EditTransactionFormFields";
+import { EditTransactionFormFields } from "../edit-transaction/EditTransactionFormFields";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 

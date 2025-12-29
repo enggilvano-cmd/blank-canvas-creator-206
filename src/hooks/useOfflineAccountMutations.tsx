@@ -176,7 +176,7 @@ export function useOfflineAccountMutations() {
     await processOfflineAdd(accountData);
   }, [isOnline, user, queryClient, toast, processOfflineAdd]);
 
-  const processOfflineEdit = useCallback(async (accountId: string, accountData: any) => {
+  const processOfflineEdit = useCallback(async (accountId: string, accountData: Partial<Account>) => {
     try {
       // 1. Queue operation
       await offlineQueue.enqueue({
@@ -217,10 +217,10 @@ export function useOfflineAccountMutations() {
               await offlineDatabase.saveTransactions([updatedTx as unknown as Transaction]);
               
               // Update React Query Cache for transactions
-              queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+              queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: Transaction[] | undefined) => {
                   if (!oldData) return oldData;
                   if (Array.isArray(oldData)) {
-                      return oldData.map((t: any) => t.id === initialTx.id ? updatedTx : t);
+                      return oldData.map((t) => t.id === initialTx.id ? updatedTx : t);
                   }
                   return oldData;
               });
@@ -228,7 +228,7 @@ export function useOfflineAccountMutations() {
           } else if (newInitialBalance !== 0) {
               // Create new transaction if it doesn't exist
               const txTempId = `temp-tx-${Date.now()}`;
-              const newTx = {
+              const newTx: Transaction = {
                   id: txTempId,
                   user_id: user?.id || 'offline-user',
                   description: 'Saldo Inicial',
@@ -240,6 +240,20 @@ export function useOfflineAccountMutations() {
                   status: 'completed',
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
+                  // Add missing required properties for Transaction type
+                  invoice_month: null,
+                  invoice_month_overridden: false,
+                  is_fixed: false,
+                  is_installment: false,
+                  is_provision: false,
+                  installment_number: null,
+                  total_installments: null,
+                  parent_transaction_id: null,
+                  original_transaction_id: null,
+                  recurrence_id: null,
+                  to_account_id: null,
+                  category: undefined,
+                  account: undefined
               };
 
               await offlineQueue.enqueue({
@@ -255,9 +269,9 @@ export function useOfflineAccountMutations() {
                   }
               });
 
-              await offlineDatabase.saveTransactions([newTx as any]);
+              await offlineDatabase.saveTransactions([newTx]);
               
-              queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+              queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: Transaction[] | undefined) => {
                   if (!oldData) return [newTx];
                   if (Array.isArray(oldData)) {
                       return [newTx, ...oldData];

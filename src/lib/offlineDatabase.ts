@@ -1,5 +1,5 @@
 import { logger } from './logger';
-import type { Transaction, Account, Category } from '@/types';
+import type { Transaction, Account, Category, TransactionDTO } from '@/types';
 import { getMonthsAgoUTC } from './timezone';
 
 const DB_NAME = 'planiflow-offline';
@@ -84,7 +84,7 @@ class OfflineDatabase {
         request.onsuccess = () => {
           const cursor = request.result;
           if (cursor) {
-            const tx = cursor.value as Transaction;
+            const tx = cursor.value as TransactionDTO;
             const txDate = new Date(tx.date).getTime();
             
             if (txDate < cutoffTime) {
@@ -171,7 +171,7 @@ class OfflineDatabase {
 
   // === MÉTODOS DE SINCRONIZAÇÃO INTELIGENTE ===
 
-  async syncTransactions(transactions: Transaction[], userId: string, dateFrom: string): Promise<void> {
+  async syncTransactions(transactions: TransactionDTO[], userId: string, dateFrom: string): Promise<void> {
     if (!this.db) await this.init();
 
     // ✅ BUG FIX #8: Check quota before saving
@@ -188,7 +188,7 @@ class OfflineDatabase {
     }
 
     // 1. Read local transactions (readonly) to minimize write lock time
-    const localTxs = await new Promise<Transaction[]>((resolve, reject) => {
+    const localTxs = await new Promise<TransactionDTO[]>((resolve, reject) => {
       const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
       const store = tx.objectStore(STORES.TRANSACTIONS);
       const index = store.index('user_id');
@@ -245,11 +245,11 @@ class OfflineDatabase {
     });
   }
 
-  async syncFixedTransactions(transactions: Transaction[], userId: string): Promise<void> {
+  async syncFixedTransactions(transactions: TransactionDTO[], userId: string): Promise<void> {
     if (!this.db) await this.init();
 
     // 1. Read local transactions (readonly)
-    const localTxs = await new Promise<Transaction[]>((resolve, reject) => {
+    const localTxs = await new Promise<TransactionDTO[]>((resolve, reject) => {
       const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
       const store = tx.objectStore(STORES.TRANSACTIONS);
       const index = store.index('user_id');
@@ -392,6 +392,14 @@ class OfflineDatabase {
 
   async saveTransactions(transactions: Transaction[]): Promise<void> {
     if (!this.db) await this.init();
+
+    // Validate transactions
+    for (const tx of transactions) {
+      if (!tx.id || !tx.user_id || tx.amount === undefined || !tx.date || !tx.description) {
+        throw new Error(`Invalid transaction data: ${JSON.stringify(tx)}`);
+      }
+    }
+
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readwrite');
       const store = tx.objectStore(STORES.TRANSACTIONS);
@@ -422,19 +430,20 @@ class OfflineDatabase {
       request.onsuccess = () => {
         const allTransactions = request.result || [];
         // Filtrar apenas transações fixas (is_fixed = true e parent_transaction_id = null)
-        const fixedTransactions = allTransactions.filter(txData => 
+        const fixedTransactions = allTransactions.filter((txData: TransactionDTO) => 
           txData.is_fixed === true && 
           (txData.parent_transaction_id === null || txData.parent_transaction_id === undefined)
         );
 
         // Join with categories and accounts
-        const enrichedTransactions = fixedTransactions.map(tx => ({
+        const enrichedTransactions = fixedTransactions.map((tx: TransactionDTO) => ({
             ...tx,
+            date: new Date(tx.date),
             category: tx.category_id ? categoryMap.get(tx.category_id) : undefined,
             account: tx.account_id ? accountMap.get(tx.account_id) : undefined
         }));
 
-        enrichedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        enrichedTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
         resolve(enrichedTransactions);
       };
       request.onerror = () => reject(request.error);
@@ -476,30 +485,35 @@ class OfflineDatabase {
           if (!cursor) {
             // Sort results in memory (more efficient than sorting entire dataset)
             results.sort((a, b) => {
-              const aValue = sortBy === 'date' ? new Date(a.date).getTime() : a.amount;
-              const bValue = sortBy === 'date' ? new Date(b.date).getTime() : b.amount;
+              const aValue = sortBy === 'date' ? a.date.getTime() : a.amount;
+              const bValue = sortBy === 'date' ? b.date.getTime() : b.amount;
               return sortOrder === 'desc' ? (bValue - aValue) : (aValue - bValue);
             });
             resolve(results);
             return;
           }
           
-          const txData = cursor.value as Transaction;
+          const txData = cursor.value as TransactionDTO;
           const txDate = new Date(txData.date).getTime();
           
           // Filter by date range
           if (txDate >= cutoffTime) {
+            const transaction: Transaction = {
+              ...txData,
+              date: new Date(txData.date)
+            };
+
             // Skip offset records
             if (offset && skipped < offset) {
               skipped++;
             } else if (!limit || collected < limit) {
-              results.push(txData);
+              results.push(transaction);
               collected++;
             } else {
               // We have enough records
               results.sort((a, b) => {
-                const aValue = sortBy === 'date' ? new Date(a.date).getTime() : a.amount;
-                const bValue = sortBy === 'date' ? new Date(b.date).getTime() : b.amount;
+                const aValue = sortBy === 'date' ? a.date.getTime() : a.amount;
+                const bValue = sortBy === 'date' ? b.date.getTime() : b.amount;
                 return sortOrder === 'desc' ? (bValue - aValue) : (aValue - bValue);
               });
               resolve(results);
@@ -521,14 +535,18 @@ class OfflineDatabase {
           const cutoffDateStr = getMonthsAgoUTC(monthsBack);
           const cutoffDate = new Date(cutoffDateStr);
           
-          const filtered = allTransactions.filter(txData => {
-            const txDate = new Date(txData.date);
-            return txDate >= cutoffDate;
-          });
+          const filtered = allTransactions
+            .map((txData: TransactionDTO) => ({
+              ...txData,
+              date: new Date(txData.date)
+            }))
+            .filter(tx => {
+              return tx.date >= cutoffDate;
+            });
 
           filtered.sort((a, b) => {
-            const aValue = sortBy === 'date' ? new Date(a.date).getTime() : a.amount;
-            const bValue = sortBy === 'date' ? new Date(b.date).getTime() : b.amount;
+            const aValue = sortBy === 'date' ? a.date.getTime() : a.amount;
+            const bValue = sortBy === 'date' ? b.date.getTime() : b.amount;
             return sortOrder === 'desc' ? (bValue - aValue) : (aValue - bValue);
           });
           
@@ -702,6 +720,45 @@ class OfflineDatabase {
     });
   }
 
+  async getTransactionById(id: string): Promise<Transaction | undefined> {
+    return this.getTransaction(id);
+  }
+
+  async getAccountById(id: string): Promise<Account | undefined> {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+       const tx = this.db!.transaction([STORES.ACCOUNTS], 'readonly');
+       const req = tx.objectStore(STORES.ACCOUNTS).get(id);
+       req.onsuccess = () => resolve(req.result);
+       req.onerror = () => resolve(undefined);
+    });
+  }
+
+  async getCategoryById(id: string): Promise<Category | undefined> {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+       const tx = this.db!.transaction([STORES.CATEGORIES], 'readonly');
+       const req = tx.objectStore(STORES.CATEGORIES).get(id);
+       req.onsuccess = () => resolve(req.result);
+       req.onerror = () => resolve(undefined);
+    });
+  }
+
+  async deleteAccount(id: string): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction([STORES.ACCOUNTS], 'readwrite');
+      const store = tx.objectStore(STORES.ACCOUNTS);
+      store.delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async clear(): Promise<void> {
+    return this.clearAll();
+  }
+
   async setLastSync(key: string, timestamp: number): Promise<void> {
     if (!this.db) await this.init();
     return new Promise((resolve, reject) => {
@@ -716,7 +773,7 @@ class OfflineDatabase {
   async clearAll(): Promise<void> {
     if (!this.db) await this.init();
     return new Promise((resolve, reject) => {
-      const storeNames = [STORES.TRANSACTIONS, STORES.ACCOUNTS, STORES.CATEGORIES, STORES.METADATA];
+      const storeNames = [STORES.TRANSACTIONS, STORES.ACCOUNTS, STORES.CATEGORIES, STORES.METADATA, STORES.OPERATIONS_QUEUE];
       const tx = this.db!.transaction(storeNames, 'readwrite');
       storeNames.forEach(name => tx.objectStore(name).clear());
       tx.oncomplete = () => {
@@ -724,6 +781,17 @@ class OfflineDatabase {
         resolve();
       };
       tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async getAllTransactions(): Promise<Transaction[]> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
+      const store = tx.objectStore(STORES.TRANSACTIONS);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
     });
   }
 }

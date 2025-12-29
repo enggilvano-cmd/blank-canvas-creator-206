@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { Layout } from "@/components/Layout";
-import { Dashboard } from "@/components/Dashboard";
-import { DebugDashboard } from "@/components/DebugDashboard";
+import { Dashboard } from "@/components/dashboard/Dashboard";
+import { DebugDashboard } from "@/components/debug/DebugDashboard";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { TransactionHeader } from "@/components/transactions/TransactionHeader";
@@ -12,47 +12,47 @@ import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
 
 // Lazy load componentes pesados para otimizar bundle
 const AccountsPage = lazy(() => 
-  import("@/components/AccountsPage").then(m => ({ default: m.AccountsPage }))
+  import("@/components/accounts/AccountsPage").then(m => ({ default: m.AccountsPage }))
 );
 const CreditBillsPage = lazy(() => 
-  import("@/components/CreditBillsPage").then(m => ({ default: m.CreditBillsPage }))
+  import("@/components/creditbills/CreditBillsPage").then(m => ({ default: m.CreditBillsPage }))
 );
 const TransactionsPage = lazy(() => 
-  import("@/components/TransactionsPage").then(m => ({ default: m.TransactionsPage }))
+  import("@/components/transactions/TransactionsPage").then(m => ({ default: m.TransactionsPage }))
 );
 const CategoriesPage = lazy(() => 
-  import("@/components/CategoriesPage").then(m => ({ default: m.CategoriesPage }))
+  import("@/components/categories/CategoriesPage").then(m => ({ default: m.CategoriesPage }))
 );
 const AnalyticsPage = lazy(() => 
-  import("@/components/AnalyticsPage")
+  import("@/components/analytics/AnalyticsPage")
 );
 const SystemSettings = lazy(() => 
-  import("@/components/SystemSettings")
+  import("@/components/settings/SystemSettings")
 );
 const UserManagement = lazy(() => 
-  import("@/components/UserManagement").then(m => ({ default: m.UserManagement }))
+  import("@/components/settings/UserManagement").then(m => ({ default: m.UserManagement }))
 );
 const FixedTransactionsPage = lazy(() => 
-  import("@/components/FixedTransactionsPage").then(m => ({ default: m.FixedTransactionsPage }))
+  import("@/components/fixedtransactions/FixedTransactionsPage").then(m => ({ default: m.FixedTransactionsPage }))
 );
 const UserProfile = lazy(() => 
-  import("@/components/UserProfile").then(m => ({ default: m.UserProfile }))
+  import("@/components/settings/UserProfile").then(m => ({ default: m.UserProfile }))
 );
 const SettingsPage = lazy(() => 
-  import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage }))
+  import("@/components/settings/SettingsPage").then(m => ({ default: m.SettingsPage }))
 );
 const BybitPage = lazy(() => 
   import("@/pages/BybitPage")
 );
 import { useSettings } from "@/context/SettingsContext";
-import { AddAccountModal } from "@/components/AddAccountModal";
-import { AddCategoryModal } from "@/components/AddCategoryModal";
-import { AddTransactionModal } from "@/components/AddTransactionModal";
-import { ImportTransactionsModal } from "@/components/ImportTransactionsModal";
-import { EditAccountModal } from "@/components/EditAccountModal";
-import { EditTransactionModal } from "@/components/EditTransactionModal";
-import { TransferModal } from "@/components/TransferModal";
-import { CreditPaymentModal } from "@/components/CreditPaymentModal";
+import { AddAccountModal } from "@/components/accounts/AddAccountModal";
+import { AddCategoryModal } from "@/components/categories/AddCategoryModal";
+import { AddTransactionModal } from "@/components/transactions/AddTransactionModal";
+import { ImportTransactionsModal } from "@/components/import/ImportTransactionsModal";
+import { EditAccountModal } from "@/components/accounts/EditAccountModal";
+import { EditTransactionModal } from "@/components/transactions/EditTransactionModal";
+import { TransferModal } from "@/components/transactions/TransferModal";
+import { CreditPaymentModal } from "@/components/creditbills/CreditPaymentModal";
 import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,8 +68,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
 import { useAccountHandlers } from "@/hooks/useAccountHandlers";
 import { useTransactionHandlers, useOfflineTransactionMutations, useOfflineTransferMutations, useOfflineCreditPaymentMutations, useOfflineCategoryMutations, useOfflineInstallmentMutations } from "@/hooks/useTransactionHandlers";
-import { TransactionScopeDialog, EditScope } from "@/components/TransactionScopeDialog";
-import { MarkAsPaidModal } from "@/components/MarkAsPaidModal";
+import { TransactionScopeDialog, EditScope } from "@/components/transactions/TransactionScopeDialog";
+import { MarkAsPaidModal } from "@/components/transactions/MarkAsPaidModal";
 import { FormErrorBoundary } from "@/components/ui/form-error-boundary";
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";

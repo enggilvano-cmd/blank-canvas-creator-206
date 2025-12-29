@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import * as Sentry from '@sentry/react';
 import { logger } from '@/lib/logger';
+import { monitoring } from '@/lib/monitoring';
 
 interface Props {
   children: ReactNode;
@@ -39,6 +40,13 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({
       error,
       errorInfo,
+    });
+
+    // Track error in monitoring service
+    monitoring.trackError(error, {
+      component: 'ErrorBoundary',
+      action: 'render',
+      metadata: { componentStack: errorInfo.componentStack }
     });
 
     // Send error to Sentry with full context

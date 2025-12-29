@@ -6,10 +6,14 @@ import './index.css'
 // Critical imports only - load others lazily
 import { SplashScreen } from './components/SplashScreen'
 import { logger } from './lib/logger'
+import { monitoring } from './lib/monitoring'
 
 // Lazy load heavy modules to reduce initial bundle
 const initializeApp = async () => {
   try {
+    // Initialize monitoring
+    monitoring.initialize();
+
     // Track session start
     try {
       sessionStorage.setItem('session_start', Date.now().toString());

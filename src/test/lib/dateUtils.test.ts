@@ -13,7 +13,8 @@ describe('dateUtils', () => {
     it('should handle invalid inputs gracefully', () => {
       const date = createDateFromString('invalid');
       expect(date).toBeInstanceOf(Date);
-      expect(date.getFullYear()).toBe(1970); // Fallback
+      // Check timestamp instead of year to avoid timezone issues (1969 vs 1970)
+      expect(date.getTime()).toBe(0); 
     });
 
     it('should handle null inputs', () => {
@@ -37,7 +38,8 @@ describe('dateUtils', () => {
 
   describe('calculateInvoiceMonthByDue', () => {
     it('should calculate correct invoice month for purchases before closing', () => {
-      const purchaseDate = new Date('2024-11-12');
+      // Use noon to avoid timezone shifts
+      const purchaseDate = new Date('2024-11-12T12:00:00');
       const closingDate = 30;
       const dueDate = 10;
       
@@ -46,7 +48,7 @@ describe('dateUtils', () => {
     });
 
     it('should calculate correct invoice month for purchases after closing', () => {
-      const purchaseDate = new Date('2024-12-05');
+      const purchaseDate = new Date('2024-12-05T12:00:00');
       const closingDate = 30;
       const dueDate = 10;
       
@@ -55,7 +57,8 @@ describe('dateUtils', () => {
     });
 
     it('should handle year transitions', () => {
-      const purchaseDate = new Date('2024-12-31');
+      // Use noon to avoid timezone shifts
+      const purchaseDate = new Date('2024-12-31T12:00:00');
       const closingDate = 30;
       const dueDate = 10;
       

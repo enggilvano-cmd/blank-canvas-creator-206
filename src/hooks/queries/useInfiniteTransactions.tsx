@@ -367,7 +367,6 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       return data;
     },
     onSuccess: async () => {
-    onSuccess: async () => {
       // ✅ P2-1 FIX: Usar hook centralizado para invalidação
       await invalidateTransactions();
     },
@@ -390,8 +389,6 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       if (error) throw error;
       return data;
     },
-    onSuccess: async () => {
-      await Promise.all([
     onSuccess: async () => {
       // ✅ P2-1 FIX: Usar hook centralizado para invalidação
       await invalidateTransactions();

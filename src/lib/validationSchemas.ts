@@ -115,7 +115,8 @@ export const addCategorySchema = z.object({
     .string()
     .trim()
     .min(1, { message: "O nome é obrigatório" })
-    .max(50, { message: "O nome deve ter no máximo 50 caracteres" }),
+    .max(50, { message: "O nome deve ter no máximo 50 caracteres" })
+    .refine(val => !/[<>]/.test(val), { message: "Caracteres inválidos detectados" }),
   
   type: z.enum(["income", "expense", "both"], {
     required_error: "Selecione o tipo da categoria",
@@ -155,7 +156,8 @@ const addTransactionBaseSchema = z.object({
     .min(1, { message: "A descrição é obrigatória" })
     .max(MAX_DESCRIPTION_LENGTH, { 
       message: `A descrição deve ter no máximo ${MAX_DESCRIPTION_LENGTH} caracteres` 
-    }),
+    })
+    .refine(val => !/[<>]/.test(val), { message: "Caracteres inválidos detectados" }),
   
   amount: z
     .number({ invalid_type_error: "O valor deve ser um número" })

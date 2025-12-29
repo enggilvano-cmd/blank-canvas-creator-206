@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { User, Shield, Key, Activity, ShieldCheck, ShieldOff } from 'lucide-react';
-import { TwoFactorSetup } from './TwoFactorSetup';
+import { TwoFactorSetup } from "@/components/TwoFactorSetup";
 import { logger } from '@/lib/logger';
 import {
   AlertDialog,

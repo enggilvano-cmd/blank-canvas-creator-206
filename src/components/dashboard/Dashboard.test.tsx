@@ -70,12 +70,15 @@ describe('Dashboard Component', () => {
 
   it('should render dashboard without crashing', () => {
     renderDashboard();
-    expect(screen.getByText(/dashboard|saldo|transações|contas/i)).toBeInTheDocument();
+    const elements = screen.getAllByText(/dashboard|saldo|transações|contas/i);
+    expect(elements.length).toBeGreaterThan(0);
   });
 
   it('should display account balance information', () => {
     renderDashboard();
-    expect(screen.queryByText(/saldo|balance/i) || screen.getByRole('heading')).toBeTruthy();
+    const balanceElements = screen.queryAllByText(/saldo|balance/i);
+    const headingElements = screen.queryAllByRole('heading');
+    expect(balanceElements.length > 0 || headingElements.length > 0).toBeTruthy();
   });
 
   it('should render with empty transactions', () => {
@@ -93,7 +96,7 @@ describe('Dashboard Component', () => {
         />
       </QueryClientProvider>
     );
-    expect(screen.getByRole('heading')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading')[0]).toBeInTheDocument();
   });
 
   it('should update when transactions prop changes', async () => {
@@ -127,7 +130,7 @@ describe('Dashboard Component', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByRole('heading')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading')[0]).toBeInTheDocument();
   });
 
   it('should call onAddTransaction when add button is clicked', async () => {
@@ -147,7 +150,7 @@ describe('Dashboard Component', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByRole('heading')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading')[0]).toBeInTheDocument();
   });
 
   it('should handle multiple accounts correctly', () => {
@@ -176,6 +179,6 @@ describe('Dashboard Component', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByRole('heading')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading')[0]).toBeInTheDocument();
   });
 });

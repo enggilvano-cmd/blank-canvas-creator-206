@@ -9,7 +9,7 @@
  * - Retry logic consistente
  */
 
-import { useCallback, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { logger } from './logger';
 
 /**
@@ -220,5 +220,4 @@ export function useLazyState<T>(
   return [state, setState];
 }
 
-// Re-export useState para consistência
-import { useState } from 'react';
+

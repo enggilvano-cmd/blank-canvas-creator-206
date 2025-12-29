@@ -9,13 +9,15 @@ import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { getErrorMessage } from '@/types/errors';
 import { notifyFixedTransactionsChange } from '@/hooks/useFixedTransactions';
 
+import { Transaction } from '@/types';
+
 export function useOfflineFixedTransactionMutations() {
   const isOnline = useOnlineStatus();
   const { toast } = useToast();
   const { user } = useAuth();
   const { invalidateTransactions } = useQueryInvalidation();
 
-  const processOfflineAdd = useCallback(async (transactionData: any) => {
+  const processOfflineAdd = useCallback(async (transactionData: Partial<Transaction>) => {
     try {
       await offlineQueue.enqueue({
         type: 'add_fixed_transaction',
@@ -96,7 +98,7 @@ export function useOfflineFixedTransactionMutations() {
     await processOfflineAdd(transactionData);
   }, [isOnline, user, invalidateTransactions, toast, processOfflineAdd]);
 
-  const processOfflineEdit = useCallback(async (transactionId: string, updates: any, scope: any) => {
+  const processOfflineEdit = useCallback(async (transactionId: string, updates: Partial<Transaction>, scope: 'current' | 'current-and-remaining' | 'all') => {
     try {
       await offlineQueue.enqueue({
         type: 'edit',
@@ -127,7 +129,7 @@ export function useOfflineFixedTransactionMutations() {
 
   const handleEditFixedTransaction = useCallback(async (
     transactionId: string,
-    updates: any,
+    updates: Partial<Transaction>,
     scope: 'current' | 'current-and-remaining' | 'all' = 'current'
   ) => {
     if (isOnline) {

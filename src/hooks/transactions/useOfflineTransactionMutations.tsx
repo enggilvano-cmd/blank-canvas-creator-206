@@ -64,7 +64,7 @@ export function useOfflineTransactionMutations() {
         const category = categories.find(c => c.id === transactionData.category_id);
         const account = accounts.find(a => a.id === transactionData.account_id);
 
-        const optimisticTransaction: any = {
+        const optimisticTransaction: Transaction = {
           id: tempId,
           description: transactionData.description,
           amount: transactionData.amount,
@@ -79,10 +79,20 @@ export function useOfflineTransactionMutations() {
           updated_at: new Date().toISOString(),
           category,
           account,
-          user_id: user.id
+          user_id: user.id,
+          // Add missing required properties
+          is_fixed: false,
+          is_installment: false,
+          is_provision: false,
+          installment_number: null,
+          total_installments: null,
+          parent_transaction_id: null,
+          original_transaction_id: null,
+          recurrence_id: null,
+          to_account_id: null
         };
 
-        queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
+        queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: Transaction[] | undefined) => {
           if (!oldData) return [optimisticTransaction];
           if (Array.isArray(oldData)) {
             return [optimisticTransaction, ...oldData];

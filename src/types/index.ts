@@ -37,29 +37,28 @@ export interface CreditBill {
   transactions: Transaction[];
 }
 
-export interface Transaction {
+export interface TransactionDTO {
   id: string;
   description: string;
   amount: number;
-  date: Date | string;
+  date: string;
   type: "income" | "expense" | "transfer";
   category_id: string;
   account_id: string;
   status: "pending" | "completed";
   user_id?: string;
-  to_account_id?: string | null; // For transfers
-  installments?: number | null; // Number of installments for installment transactions
-  current_installment?: number | null; // Current installment number (1-based)
-  parent_transaction_id?: string | null; // ID linking installment transactions together
-  linked_transaction_id?: string | null; // Para vincular pagamentos/transferências
-  invoice_month?: string | null; // Month of credit card invoice (YYYY-MM)
-  invoice_month_overridden?: boolean | null; // True when user manually sets invoice month
+  to_account_id?: string | null;
+  installments?: number | null;
+  current_installment?: number | null;
+  parent_transaction_id?: string | null;
+  linked_transaction_id?: string | null;
+  invoice_month?: string | null;
+  invoice_month_overridden?: boolean | null;
   is_fixed?: boolean | null;
   is_recurring?: boolean | null;
   is_provision?: boolean | null;
   created_at?: string;
   updated_at?: string;
-  // Relations from JOINs
   category?: {
     id: string;
     name: string;
@@ -87,6 +86,10 @@ export interface Transaction {
       color: string;
     } | null;
   } | null;
+}
+
+export interface Transaction extends Omit<TransactionDTO, 'date'> {
+  date: Date;
 }
 
 // Para o store, garantindo que a data seja um objeto Date

@@ -82,7 +82,7 @@ describe('AddTransactionModal', () => {
 
   it('should require amount field', async () => {
     renderModal(true);
-    const amountInput = document.querySelector('input[type="number"]');
+    const amountInput = screen.getByLabelText('Valor');
     expect(amountInput).toBeTruthy();
   });
 

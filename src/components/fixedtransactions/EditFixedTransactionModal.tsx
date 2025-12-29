@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories } from "@/hooks/useCategories";
 import { createDateFromString } from "@/lib/dateUtils";
-import { EditTransactionFormFields } from "./edit-transaction/EditTransactionFormFields";
+import { EditTransactionFormFields } from "@/components/edit-transaction/EditTransactionFormFields";
 
 import { Transaction, Account } from "@/types";
 

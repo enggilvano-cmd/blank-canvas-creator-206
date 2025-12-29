@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { PREDEFINED_COLORS, ACCOUNT_TYPE_LABELS } from "@/types";
-import { ColorPicker } from "./forms/ColorPicker";
+import { ColorPicker } from "@/components/forms/ColorPicker";
 import { CurrencyInput } from "@/components/forms/CurrencyInput";
 import { AddAccountModalProps } from "@/types/formProps";
 import { useOfflineAccountMutations } from "@/hooks/useTransactionHandlers";

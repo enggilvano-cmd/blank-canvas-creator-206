@@ -1,5 +1,7 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 import { performanceMonitor } from './performanceMonitor';
+import { monitoring } from './monitoring';
+import { logger } from './logger';
 
 /**
  * Centralized React Query client configuration with intelligent caching
@@ -22,6 +24,24 @@ import { performanceMonitor } from './performanceMonitor';
  */
 // ✅ BUG FIX #11: Request deduplication enabled
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      logger.error(`Query error: ${JSON.stringify(query.queryKey)}`, error);
+      monitoring.trackError(error as Error, {
+        action: 'query_error',
+        metadata: { queryKey: query.queryKey },
+      });
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      logger.error('Mutation error', error);
+      monitoring.trackError(error as Error, {
+        action: 'mutation_error',
+        metadata: { mutationKey: mutation.options.mutationKey },
+      });
+    },
+  }),
   defaultOptions: {
     queries: {
       // Intelligent default caching - increased for better performance
@@ -57,7 +77,6 @@ export const queryClient = new QueryClient({
 });
 
 // ✅ BUG FIX #9: Remove console.logs em produção
-import { logger } from './logger';
 import { globalResourceManager } from './globalResourceManager';
 import { createQueryInvalidationHelper } from './queryInvalidationHelper';
 

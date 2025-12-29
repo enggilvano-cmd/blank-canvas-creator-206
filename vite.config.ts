@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => ({
           'react-vendor': ['react', 'react-dom'],
           'query-vendor': ['@tanstack/react-query'],
           'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          'form-vendor': ['react-hook-form', 'zod', '@hookform/resolvers'],
           'supabase-vendor': ['@supabase/supabase-js'],
           
           // Heavy components
@@ -29,14 +30,14 @@ export default defineConfig(({ mode }) => ({
           
           // App chunks
           'components-chunk': [
-            './src/components/AnalyticsPage.tsx',
-            './src/components/FixedTransactionsPage.tsx',
-            './src/components/TransactionsPage.tsx'
+            './src/components/analytics/AnalyticsPage.tsx',
+            './src/components/fixedtransactions/FixedTransactionsPage.tsx',
+            './src/components/transactions/TransactionsPage.tsx'
           ],
           'import-chunk': [
-            './src/components/ImportTransactionsModal.tsx',
-            './src/components/ImportAccountsModal.tsx',
-            './src/components/ImportCategoriesModal.tsx'
+            './src/components/import/ImportTransactionsModal.tsx',
+            './src/components/import/ImportAccountsModal.tsx',
+            './src/components/import/ImportCategoriesModal.tsx'
           ]
         },
         // Optimize chunk size

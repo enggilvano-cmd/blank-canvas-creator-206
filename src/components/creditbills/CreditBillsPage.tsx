@@ -17,10 +17,10 @@ import { useTransactions } from "@/hooks/queries/useTransactions";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { AppTransaction, Account } from "@/types";
 import { calculateBillDetails, calculateInvoiceMonthByDue } from "@/lib/dateUtils";
-import { CreditCardBillCard } from "@/components/CreditCardBillCard";
-import { CreditBillDetailsModal } from "@/components/CreditBillDetailsModal";
+import { CreditCardBillCard } from "@/components/creditbills/CreditCardBillCard";
+import { CreditBillDetailsModal } from "@/components/creditbills/CreditBillDetailsModal";
 import { cn as _cn } from "@/lib/utils";
-import { format, addMonths, isPast } from "date-fns";
+import { format, addMonths, isPast, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CreditBillFilterDialog } from "@/components/creditbills/CreditBillFilterDialog";
 import { CreditBillFilterChips } from "@/components/creditbills/CreditBillFilterChips";
@@ -49,12 +49,17 @@ interface CreditBillsPageProps {
 
 export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBillsPageProps) {
   const { accounts: allAccounts = [] } = useAccounts();
+  
+  // PERFORMANCE OPTIMIZATION: Limit to last 12 months to avoid fetching entire history
+  const dateFrom = useMemo(() => subMonths(new Date(), 12).toISOString(), []);
+
   // ✅ P0-4 FIX: Usar pageSize: null para carregar todas sem limite artificial
   const { transactions: allTransactions = [] } = useTransactions({ 
     page: 0, 
     pageSize: null, // Carrega todas as transações de cartão (sem limite)
     type: 'all',
-    accountType: 'credit'
+    accountType: 'credit',
+    dateFrom
   });
   const { settings } = useSettings();
   

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createDateFromString, getTodayString } from "@/lib/dateUtils";
-import { CurrencyInput } from "./forms/CurrencyInput";
+import { CurrencyInput } from "@/components/forms/CurrencyInput";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/formatters";
 import { getErrorMessage } from "@/types/errors";

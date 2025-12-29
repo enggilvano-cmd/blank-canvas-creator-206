@@ -504,9 +504,11 @@ export function useTransactionMutations() {
       // Quando deleta um lançamento, os cálculos de provisões mudam
       notifyFixedTransactionsChange();
 
+      const deletedCount = record?.deleted_count ?? 1;
+
       toast({
         title: 'Sucesso',
-        description: `${record.deleted_count ?? 1} transação(ões) excluída(s)`,
+        description: `${deletedCount} transação(ões) excluída(s)`,
       });
     } catch (error: unknown) {
       // Rollback

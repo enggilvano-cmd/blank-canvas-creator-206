@@ -12,13 +12,15 @@ vi.mock('@/integrations/supabase/client', () => ({
     functions: {
       invoke: vi.fn(),
     },
-    from: vi.fn(() => ({
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          error: null,
-        })),
-      })),
-    })),
+    rpc: vi.fn(() => Promise.resolve({ data: [{ success: true, transaction_id: 'tx-123' }], error: null })),
+    from: vi.fn(() => {
+      const builder: any = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: (resolve: any) => resolve({ error: null }),
+      };
+      return builder;
+    }),
   },
 }));
 
@@ -105,16 +107,12 @@ describe('useInstallmentMutations', () => {
 
       await result.current.handleAddInstallmentTransactions(installments);
 
-      expect(mockInvoke).toHaveBeenCalledTimes(3);
-      expect(mockInvoke).toHaveBeenCalledWith('atomic-transaction', {
-        body: expect.objectContaining({
-          transaction: expect.objectContaining({
-            description: 'Purchase 1/3',
-            amount: 10000,
-            date: '2025-01-01',
-          }),
-        }),
-      });
+      expect(supabase.rpc).toHaveBeenCalledTimes(3);
+      expect(supabase.rpc).toHaveBeenCalledWith('atomic_create_transaction', expect.objectContaining({
+        p_description: 'Purchase 1/3',
+        p_amount: 100,
+        p_date: '2025-01-01',
+      }));
     });
 
     it('should link installments with parent_transaction_id', async () => {
@@ -162,16 +160,18 @@ describe('useInstallmentMutations', () => {
       expect(mockUpdate).toHaveBeenCalledWith({
         installments: 2,
         current_installment: 1,
-        parent_transaction_id: 'parent-tx',
+        parent_transaction_id: 'tx-123',
       });
     });
 
     it('should handle credit limit error in installments', async () => {
-      const mockInvoke = vi.mocked(supabase.functions.invoke);
-      mockInvoke.mockResolvedValueOnce({
+      vi.mocked(supabase.rpc).mockResolvedValueOnce({
         data: null,
         error: {
           message: 'Credit limit exceeded. Available: 10000 | Limit: 50000 | Used: 40000 | Requested: 15000',
+          details: '',
+          hint: '',
+          code: '400'
         },
       });
 
@@ -193,13 +193,12 @@ describe('useInstallmentMutations', () => {
       await result.current.handleAddInstallmentTransactions(installments);
 
       // Should handle gracefully without throwing
-      expect(mockInvoke).toHaveBeenCalled();
+      expect(supabase.rpc).toHaveBeenCalled();
     });
 
     it('should handle invoice month for credit card installments', async () => {
-      const mockInvoke = vi.mocked(supabase.functions.invoke);
-      mockInvoke.mockResolvedValue({ 
-        data: { transaction: { id: 'tx-1' } }, 
+      vi.mocked(supabase.rpc).mockResolvedValue({ 
+        data: [{ transaction_id: 'tx-1', success: true }], 
         error: null 
       });
 
@@ -216,19 +215,16 @@ describe('useInstallmentMutations', () => {
           status: 'completed',
           currentInstallment: 1,
           invoiceMonth: '2025-02',
+          invoiceMonthOverridden: true,
         },
       ];
 
       await result.current.handleAddInstallmentTransactions(installments);
 
-      expect(mockInvoke).toHaveBeenCalledWith('atomic-transaction', {
-        body: expect.objectContaining({
-          transaction: expect.objectContaining({
-            invoice_month: '2025-02',
-            invoice_month_overridden: true,
-          }),
-        }),
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith('atomic_create_transaction', expect.objectContaining({
+        p_invoice_month: '2025-02',
+        p_invoice_month_overridden: true,
+      }));
     });
   });
 });

@@ -1,30 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
-import type { Transaction } from '@/types';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 
 describe('useDashboardFilters', () => {
-  const createMockTransaction = (overrides?: Partial<Transaction>): Transaction => ({
-    id: 'test-tx-id',
-    description: 'Test Transaction',
-    amount: 10000,
-    date: '2025-01-15',
-    type: 'expense',
-    status: 'completed',
-    account_id: 'test-account-id',
-    category_id: 'test-category-id',
-    user_id: 'test-user',
-    created_at: '2025-01-15T10:00:00Z',
-    updated_at: '2025-01-15T10:00:00Z',
-    installments: undefined,
-    current_installment: undefined,
-    parent_transaction_id: undefined,
-    is_fixed: false,
-    to_account_id: undefined,
-    linked_transaction_id: undefined,
-    invoice_month: undefined,
-    invoice_month_overridden: false,
-    ...overrides,
+  beforeEach(() => {
+    localStorage.clear();
   });
 
   describe('Initial state', () => {
@@ -38,111 +19,64 @@ describe('useDashboardFilters', () => {
     });
   });
 
-  describe('Filter transactions - current_month', () => {
-    it('should filter transactions for current month', () => {
+  describe('getDateRange', () => {
+    it('should return correct range for current_month', () => {
       const { result } = renderHook(() => useDashboardFilters());
       
       const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      
-      const transactions = [
-        createMockTransaction({ date: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-15` }),
-        createMockTransaction({ date: `${currentYear}-${String(currentMonth + 2).padStart(2, '0')}-15` }),
-        createMockTransaction({ date: `${currentYear - 1}-12-15` }),
-      ];
+      const expectedFrom = format(startOfMonth(now), 'yyyy-MM-dd');
+      const expectedTo = format(endOfMonth(now), 'yyyy-MM-dd');
 
-      const filtered = result.current.getFilteredTransactions(transactions);
+      const range = result.current.getDateRange();
 
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].date).toBe(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-15`);
+      expect(range.dateFrom).toBe(expectedFrom);
+      expect(range.dateTo).toBe(expectedTo);
     });
-  });
 
-  describe('Filter transactions - month_picker', () => {
-    it('should filter transactions for selected month', () => {
+    it('should return correct range for month_picker', () => {
       const { result } = renderHook(() => useDashboardFilters());
+      const selectedDate = new Date(2025, 0, 15); // Jan 15, 2025
 
-      const selectedDate = new Date(2025, 0, 1); // January 2025
-      
       act(() => {
         result.current.setDateFilter('month_picker');
         result.current.setSelectedMonth(selectedDate);
       });
 
-      const transactions = [
-        createMockTransaction({ date: '2025-01-15' }),
-        createMockTransaction({ date: '2025-02-15' }),
-        createMockTransaction({ date: '2024-12-15' }),
-      ];
-
-      const filtered = result.current.getFilteredTransactions(transactions);
-
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].date).toBe('2025-01-15');
-    });
-  });
-
-  describe('Filter transactions - custom', () => {
-    it('should filter transactions for custom date range', () => {
-      const { result } = renderHook(() => useDashboardFilters());
-
-      const startDate = new Date(2025, 0, 1); // Jan 1, 2025
-      const endDate = new Date(2025, 0, 31); // Jan 31, 2025
+      const range = result.current.getDateRange();
       
+      // Should be full month of Jan 2025
+      expect(range.dateFrom).toBe('2025-01-01');
+      expect(range.dateTo).toBe('2025-01-31');
+    });
+
+    it('should return correct range for custom dates', () => {
+      const { result } = renderHook(() => useDashboardFilters());
+      const startDate = new Date(2025, 0, 10);
+      const endDate = new Date(2025, 0, 20);
+
       act(() => {
         result.current.setDateFilter('custom');
         result.current.setCustomStartDate(startDate);
         result.current.setCustomEndDate(endDate);
       });
 
-      const transactions = [
-        createMockTransaction({ date: '2025-01-15' }),
-        createMockTransaction({ date: '2025-02-15' }),
-        createMockTransaction({ date: '2024-12-15' }),
-      ];
+      const range = result.current.getDateRange();
 
-      const filtered = result.current.getFilteredTransactions(transactions);
-
-      expect(filtered).toHaveLength(1);
-      expect(filtered[0].date).toBe('2025-01-15');
+      expect(range.dateFrom).toBe('2025-01-10');
+      expect(range.dateTo).toBe('2025-01-20');
     });
 
-    it('should return all transactions if custom dates not set', () => {
-      const { result } = renderHook(() => useDashboardFilters());
-
-      act(() => {
-        result.current.setDateFilter('custom');
-      });
-
-      const transactions = [
-        createMockTransaction({ date: '2025-01-15' }),
-        createMockTransaction({ date: '2025-02-15' }),
-      ];
-
-      const filtered = result.current.getFilteredTransactions(transactions);
-
-      expect(filtered).toHaveLength(2);
-    });
-  });
-
-  describe('Filter transactions - all', () => {
-    it('should return all transactions when filter is "all"', () => {
+    it('should return undefined range for all', () => {
       const { result } = renderHook(() => useDashboardFilters());
 
       act(() => {
         result.current.setDateFilter('all');
       });
 
-      const transactions = [
-        createMockTransaction({ date: '2025-01-15' }),
-        createMockTransaction({ date: '2024-06-15' }),
-        createMockTransaction({ date: '2023-12-15' }),
-      ];
+      const range = result.current.getDateRange();
 
-      const filtered = result.current.getFilteredTransactions(transactions);
-
-      expect(filtered).toHaveLength(3);
+      expect(range.dateFrom).toBeUndefined();
+      expect(range.dateTo).toBeUndefined();
     });
   });
 
@@ -157,7 +91,12 @@ describe('useDashboardFilters', () => {
       });
 
       const newMonth = result.current.selectedMonth;
-      expect(newMonth.getMonth()).toBe((initialMonth.getMonth() - 1 + 12) % 12);
+      // Check if month changed correctly (handling year wrap)
+      const expectedMonth = new Date(initialMonth);
+      expectedMonth.setMonth(expectedMonth.getMonth() - 1);
+      
+      expect(newMonth.getMonth()).toBe(expectedMonth.getMonth());
+      expect(newMonth.getFullYear()).toBe(expectedMonth.getFullYear());
     });
 
     it('should navigate to next month', () => {
@@ -170,13 +109,22 @@ describe('useDashboardFilters', () => {
       });
 
       const newMonth = result.current.selectedMonth;
-      expect(newMonth.getMonth()).toBe((initialMonth.getMonth() + 1) % 12);
+      const expectedMonth = new Date(initialMonth);
+      expectedMonth.setMonth(expectedMonth.getMonth() + 1);
+
+      expect(newMonth.getMonth()).toBe(expectedMonth.getMonth());
+      expect(newMonth.getFullYear()).toBe(expectedMonth.getFullYear());
     });
   });
 
   describe('Navigation parameters', () => {
     it('should return correct params for current_month', () => {
       const { result } = renderHook(() => useDashboardFilters());
+
+      // Ensure state is clean
+      act(() => {
+        result.current.setDateFilter('current_month');
+      });
 
       const params = result.current.getNavigationParams();
 

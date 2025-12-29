@@ -8,46 +8,46 @@ import { logger } from './logger';
 
 // Heavy data visualization components
 export const AnalyticsPage = lazy(() => 
-  import('@/components/AnalyticsPage')
+  import('@/components/analytics/AnalyticsPage')
 );
 
 // Complex transaction components  
 export const FixedTransactionsPage = lazy(() => 
-  import('@/components/FixedTransactionsPage').then(module => ({ default: module.FixedTransactionsPage }))
+  import('@/components/fixedtransactions/FixedTransactionsPage').then(module => ({ default: module.FixedTransactionsPage }))
 );
 
 export const TransactionsPage = lazy(() => 
-  import('@/components/TransactionsPage').then(module => ({ default: module.TransactionsPage }))
+  import('@/components/transactions/TransactionsPage').then(module => ({ default: module.TransactionsPage }))
 );
 
 // Import/Export modals - only loaded when needed
 export const ImportTransactionsModal = lazy(() => 
-  import('@/components/ImportTransactionsModal').then(module => ({ default: module.ImportTransactionsModal }))
+  import('@/components/import/ImportTransactionsModal').then(module => ({ default: module.ImportTransactionsModal }))
 );
 
 export const ImportAccountsModal = lazy(() => 
-  import('@/components/ImportAccountsModal').then(module => ({ default: module.ImportAccountsModal }))
+  import('@/components/import/ImportAccountsModal').then(module => ({ default: module.ImportAccountsModal }))
 );
 
 export const ImportCategoriesModal = lazy(() => 
-  import('@/components/ImportCategoriesModal').then(module => ({ default: module.ImportCategoriesModal }))
+  import('@/components/import/ImportCategoriesModal').then(module => ({ default: module.ImportCategoriesModal }))
 );
 
 export const ImportFixedTransactionsModal = lazy(() => 
-  import('@/components/ImportFixedTransactionsModal').then(module => ({ default: module.ImportFixedTransactionsModal }))
+  import('@/components/import/ImportFixedTransactionsModal').then(module => ({ default: module.ImportFixedTransactionsModal }))
 );
 
 // Settings and configuration pages
 export const SettingsPage = lazy(() => 
-  import('@/components/SettingsPage').then(module => ({ default: module.SettingsPage }))
+  import('@/components/settings/SettingsPage').then(module => ({ default: module.SettingsPage }))
 );
 
 export const SystemSettings = lazy(() => 
-  import('@/components/SystemSettings')
+  import('@/components/settings/SystemSettings')
 );
 
 export const DatabasePerformanceTest = lazy(() => 
-  import('@/components/DatabasePerformanceTest').then(module => ({ default: module.DatabasePerformanceTest }))
+  import('@/components/debug/DatabasePerformanceTest').then(module => ({ default: module.DatabasePerformanceTest }))
 );
 
 // PWA and debugging components - removed as components don't exist

@@ -39,9 +39,7 @@ export function useEditTransactionForm(
 
   useEffect(() => {
     if (open && transaction) {
-      const transactionDate = typeof transaction.date === 'string' ? 
-        createDateFromString(transaction.date.split('T')[0]) : 
-        transaction.date;
+      const transactionDate = transaction.date;
       
       const transactionType = transaction.type === "transfer" ? "expense" : transaction.type;
       

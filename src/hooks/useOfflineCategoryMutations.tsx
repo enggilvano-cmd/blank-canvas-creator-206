@@ -17,7 +17,7 @@ export function useOfflineCategoryMutations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const processOfflineAdd = useCallback(async (categoryData: any) => {
+  const processOfflineAdd = useCallback(async (categoryData: Omit<Category, 'id' | 'created_at' | 'updated_at' | 'user_id'> & { color?: string }) => {
     try {
       const tempId = `temp-${Date.now()}`;
       const newCategory: Category = {
@@ -111,7 +111,7 @@ export function useOfflineCategoryMutations() {
     await processOfflineAdd(categoryData);
   }, [isOnline, user, queryClient, toast, processOfflineAdd]);
 
-  const processOfflineEdit = useCallback(async (categoryId: string, categoryData: any) => {
+  const processOfflineEdit = useCallback(async (categoryId: string, categoryData: Partial<Category>) => {
     try {
       // 1. Queue operation
       await offlineQueue.enqueue({

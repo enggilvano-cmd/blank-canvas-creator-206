@@ -27,14 +27,14 @@ import { AddFixedTransactionModal } from "./AddFixedTransactionModal";
 import { EditFixedTransactionModal } from "./EditFixedTransactionModal";
 import { Skeleton } from "@/components/ui/skeleton";
 // FixedTransactionPageActions is available but unused currently
-import { ImportFixedTransactionsModal } from "./ImportFixedTransactionsModal";
+import { ImportFixedTransactionsModal } from "@/components/import/ImportFixedTransactionsModal";
 import { loadXLSX } from "@/lib/lazyImports";
 import { formatBRNumber } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
 import { FixedTransactionFilterDialog } from "@/components/fixedtransactions/FixedTransactionFilterDialog";
 import { FixedTransactionFilterChips } from "@/components/fixedtransactions/FixedTransactionFilterChips";
-import { FixedTransactionList } from "./fixedtransactions/FixedTransactionList";
+import { FixedTransactionList } from "./FixedTransactionList";
 import type { Category, Account, Transaction } from "@/types";
 
 interface FixedTransactionsFilters {

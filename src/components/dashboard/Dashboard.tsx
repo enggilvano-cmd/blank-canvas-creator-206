@@ -3,12 +3,12 @@ import type { Account, Transaction, Category, AccountFilterType, TransactionFilt
 import { useDashboardFilters } from '@/hooks/useDashboardFilters';
 import { useDashboardCalculations } from '@/hooks/useDashboardCalculations';
 import { useComponentPerformance } from '@/hooks/useComponentPerformance';
-import { FilterCard } from './dashboard/FilterCard';
-import { BalanceCards } from './dashboard/BalanceCards';
-import { FinancialEvolutionChart } from './dashboard/FinancialEvolutionChart';
-import { AccountsSummary } from './dashboard/AccountsSummary';
-import { RecentTransactions } from './dashboard/RecentTransactions';
-import { ProvisionedTransactionsByCategory } from './dashboard/ProvisionedTransactionsByCategory';
+import { FilterCard } from './FilterCard';
+import { BalanceCards } from './BalanceCards';
+import { FinancialEvolutionChart } from './FinancialEvolutionChart';
+import { AccountsSummary } from './AccountsSummary';
+import { RecentTransactions } from './RecentTransactions';
+import { ProvisionedTransactionsByCategory } from './ProvisionedTransactionsByCategory';
 
 import { CardErrorBoundary } from '@/components/ui/card-error-boundary';
 import { ListErrorBoundary } from '@/components/ui/list-error-boundary';

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
 import { getErrorMessage, handleError } from './errorUtils';
 import { withTimeout, TimeoutError } from './timeout'; // ✅ BUG FIX #3: Timeout import
-import type { Transaction, Account, Category } from '@/types';
+import type { Transaction, Account, Category, TransactionDTO } from '@/types';
 import { toast } from 'sonner';
 import { queryClient, queryKeys } from './queryClient';
 import { getMonthsAgoUTC } from './timezone';
@@ -338,7 +338,7 @@ class OfflineSyncManager {
       const QUERY_TIMEOUT = 30000;
 
       // Transactions - Fetch all with pagination to avoid data loss
-      let allTransactions: Transaction[] = [];
+      let allTransactions: TransactionDTO[] = [];
       let page = 0;
       const pageSize = 1000;
       let hasMore = true;
@@ -359,7 +359,7 @@ class OfflineSyncManager {
         if (error) throw error;
 
         if (pageData && pageData.length > 0) {
-          allTransactions = [...allTransactions, ...(pageData as Transaction[])];
+          allTransactions = [...allTransactions, ...(pageData as TransactionDTO[])];
           if (pageData.length < pageSize) {
             hasMore = false;
           } else {
@@ -392,7 +392,7 @@ class OfflineSyncManager {
 
       if (fixedTransactions) {
         // Salvar transações fixas no banco local e remover as que foram excluídas
-        await offlineDatabase.syncFixedTransactions(fixedTransactions as Transaction[], user.id);
+        await offlineDatabase.syncFixedTransactions(fixedTransactions as TransactionDTO[], user.id);
       }
 
       // Accounts

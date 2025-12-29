@@ -108,14 +108,16 @@ describe('useBalanceValidation', () => {
 
     it('should validate available credit for expense', async () => {
       const mockFrom = vi.mocked(supabase.from);
-      mockFrom.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            data: [],
-            error: null,
-          })),
-        })),
-      } as never);
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
+        data: [],
+        error: null,
+        then: function(resolve: any) { resolve({ data: [], error: null }) }
+      };
+      
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await validateBalanceForEdit(
         creditAccount,
@@ -135,14 +137,16 @@ describe('useBalanceValidation', () => {
 
     it('should reject when exceeding credit limit', async () => {
       const mockFrom = vi.mocked(supabase.from);
-      mockFrom.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            data: [],
-            error: null,
-          })),
-        })),
-      } as never);
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
+        data: [],
+        error: null,
+        then: function(resolve: any) { resolve({ data: [], error: null }) }
+      };
+      
+      mockFrom.mockReturnValue(mockChain as any);
 
       const result = await validateBalanceForEdit(
         creditAccount,
@@ -155,7 +159,7 @@ describe('useBalanceValidation', () => {
       );
 
       expect(result.isValid).toBe(false);
-      expect(result.errorMessage).toContain('Limite de crédito excedido');
+      expect(result.message).toContain('Limite excedido');
     });
 
     it('should consider pending transactions when validating credit', async () => {

@@ -7,9 +7,9 @@ import { TransactionTableSkeleton } from "@/components/transactions/TransactionT
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { TransactionStatsCards } from "@/components/transactions/TransactionStatsCards";
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
-import { ImportTransactionsModal } from "./ImportTransactionsModal";
+import { ImportTransactionsModal } from "@/components/import/ImportTransactionsModal";
 import { EditScope, TransactionScopeDialog } from "./TransactionScopeDialog";
-import { FixedTransactionScopeDialog, FixedScope } from "./FixedTransactionScopeDialog";
+import { FixedTransactionScopeDialog, FixedScope } from "../fixedtransactions/FixedTransactionScopeDialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useTransactionsPageLogic } from "@/hooks/useTransactionsPageLogic";
 import { useComponentPerformance } from "@/hooks/useComponentPerformance";

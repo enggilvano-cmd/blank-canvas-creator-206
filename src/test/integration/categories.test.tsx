@@ -1,8 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCategories } from '@/hooks/useCategories';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode } from 'react';
 
 describe('Category Integration Tests', () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  const wrapper = ({ children }: { children: ReactNode }) => {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  };
+
   const mockCategories = [
     {
       id: 'cat-1',
@@ -33,7 +51,7 @@ describe('Category Integration Tests', () => {
 
   describe('Category Filtering', () => {
     it('should filter expense categories', () => {
-      const { result } = renderHook(() => useCategories());
+      const { result } = renderHook(() => useCategories(), { wrapper });
 
       act(() => {
         // Simulate categories loaded

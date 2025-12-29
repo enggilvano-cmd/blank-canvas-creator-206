@@ -4,6 +4,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
+import { formatInUserTimezone } from '@/lib/timezone';
 
 export function useDashboardCalculations(
   accounts: Account[],
@@ -16,13 +17,6 @@ export function useDashboardCalculations(
   customStartDate?: Date, // ✅ Apenas para getPeriodLabel
   customEndDate?: Date // ✅ Apenas para getPeriodLabel
 ) {
-  
-  console.log('🎯 useDashboardCalculations called with:', {
-    accountsCount: accounts.length,
-    dateRange,
-    transactionsKey,
-    fixedTransactionsCount: fixedTransactions?.length
-  });
   
   // Função auxiliar para calcular totais baseado em transações em memória
   // Usada como FALLBACK se a RPC falhar (ex: offline)
@@ -40,17 +34,10 @@ export function useDashboardCalculations(
       };
     }
 
-    console.log('💾 Calculating totals from memory (fallback):', {
-      totalTransactions: allTransactions.length,
-      dateRange,
-    });
-
     // ✅ BUG FIX #2: Comparar datas como strings YYYY-MM-DD para evitar problemas de fuso horário
     const isInPeriod = (transactionDate: string | Date) => {
-      // Converter para string YYYY-MM-DD se for Date
-      const txDateStr = typeof transactionDate === 'string' 
-        ? transactionDate 
-        : transactionDate.toISOString().split('T')[0];
+      // Converter para string YYYY-MM-DD usando o timezone do usuário para garantir consistência
+      const txDateStr = formatInUserTimezone(transactionDate, 'yyyy-MM-dd');
       
       if (dateRange.dateFrom && txDateStr < dateRange.dateFrom) {
         return false;

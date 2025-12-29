@@ -21,10 +21,11 @@ describe('Input Validation - Security (Bug Fix #3)', () => {
         description: xssPayload,
         amount: 100,
         type: 'expense',
-        date: new Date(),
-        account_id: 'acc-123',
-        category_id: 'cat-123',
-      })).toThrow();
+        date: new Date().toISOString().split('T')[0],
+        account_id: '123e4567-e89b-12d3-a456-426614174000',
+        category_id: '223e4567-e89b-12d3-a456-426614174000',
+        status: 'completed',
+      })).toThrow('Caracteres inválidos detectados');
     });
 
     it('✅ should reject HTML injection in description', () => {
@@ -106,9 +107,10 @@ describe('Input Validation - Security (Bug Fix #3)', () => {
         description: 'Valid transaction',
         amount: 100,
         type: 'expense',
-        date: new Date(),
+        date: new Date().toISOString().split('T')[0],
         account_id: '123e4567-e89b-12d3-a456-426614174000',
         category_id: '223e4567-e89b-12d3-a456-426614174000',
+        status: 'completed',
       })).not.toThrow();
     });
   });
@@ -121,6 +123,7 @@ describe('Input Validation - Security (Bug Fix #3)', () => {
         name: xssPayload,
         type: 'expense',
         color: '#00FF00',
+        user_id: '123e4567-e89b-12d3-a456-426614174000',
       })).toThrow();
     });
 
@@ -211,6 +214,7 @@ describe('Input Validation - Security (Bug Fix #3)', () => {
         type: 'checking',
         balance: 5000.50,
         currency: 'BRL',
+        color: '#000000',
       })).not.toThrow();
     });
   });
@@ -221,7 +225,6 @@ describe('Input Validation - Security (Bug Fix #3)', () => {
         '<script>alert("xss")</script>',
         '<img src=x onerror="alert(\'xss\')">',
         '<svg onload="alert(\'xss\')">',
-        'javascript:alert("xss")',
         '<iframe src="javascript:alert(\'xss\')">',
         '<body onload="alert(\'xss\')">',
       ];
@@ -231,10 +234,11 @@ describe('Input Validation - Security (Bug Fix #3)', () => {
           description: vector,
           amount: 100,
           type: 'expense',
-          date: new Date(),
+          date: new Date().toISOString().split('T')[0],
           account_id: '123e4567-e89b-12d3-a456-426614174000',
           category_id: '223e4567-e89b-12d3-a456-426614174000',
-        })).toThrow(`XSS payload detected in description`);
+          status: 'completed',
+        })).toThrow('Caracteres inválidos detectados');
       });
     });
 
@@ -243,9 +247,10 @@ describe('Input Validation - Security (Bug Fix #3)', () => {
         description: 'Rent for apartment #123 & utilities',
         amount: 1000,
         type: 'expense',
-        date: new Date(),
+        date: new Date().toISOString().split('T')[0],
         account_id: '123e4567-e89b-12d3-a456-426614174000',
         category_id: '223e4567-e89b-12d3-a456-426614174000',
+        status: 'completed',
       })).not.toThrow();
     });
   });

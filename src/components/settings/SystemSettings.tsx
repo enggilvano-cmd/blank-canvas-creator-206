@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DatabasePerformanceTest } from "./DatabasePerformanceTest";
+import { DatabasePerformanceTest } from "@/components/debug/DatabasePerformanceTest";
 import { Settings, Database } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
