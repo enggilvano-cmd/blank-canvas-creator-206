@@ -70,7 +70,8 @@ export function CreditCardBillCard({
   } = billDetails;
 
   // Calcula o percentual de limite usado
-  const limitUsedPercentage = (limit_amount ?? 0) > 0 ? (totalBalance / (limit_amount ?? 1)) * 100 : 0;
+  // FIX: totalBalance está em reais e limit_amount em centavos. Multiplicamos totalBalance por 100.
+  const limitUsedPercentage = (limit_amount ?? 0) > 0 ? ((totalBalance * 100) / (limit_amount ?? 1)) * 100 : 0;
   
   // ✅ LÓGICA CORRIGIDA: Cálculo de fechamento e vencimento
   // O currentInvoiceMonth representa o mês de VENCIMENTO da fatura

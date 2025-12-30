@@ -224,15 +224,22 @@ export function calculateBillDetails(
 
   const nextBillStart = new Date(currentBillEnd.getTime() + 24 * 60 * 60 * 1000);
   
+  // ✅ BUGFIX: Determina o mês da próxima fatura corretamente
+  // Se nextBillStart já está no próximo mês (ex: fechou dia 30, start dia 1), usa o mês atual do start
+  // Se nextBillStart ainda está no mesmo mês (ex: fechou dia 25, start dia 26), avança um mês
+  const nextBillMonth = nextBillStart.getMonth() === currentBillEnd.getMonth()
+    ? nextBillStart.getMonth() + 1
+    : nextBillStart.getMonth();
+
   // ✅ BUGFIX: Mesmo ajuste para a próxima fatura
   let nextBillEnd = new Date(
     nextBillStart.getFullYear(),
-    nextBillStart.getMonth() + 1,
+    nextBillMonth,
     closingDate, 12, 0, 0
   );
   
   // Calcula qual seria o mês correto antes do ajuste
-  const expectedNextMonth = nextBillStart.getMonth() + 1 > 11 ? 0 : nextBillStart.getMonth() + 1;
+  const expectedNextMonth = nextBillMonth > 11 ? 0 : nextBillMonth;
   if (nextBillEnd.getMonth() !== expectedNextMonth) {
     nextBillEnd = new Date(
       nextBillStart.getFullYear(),
@@ -305,15 +312,20 @@ export function calculateBillDetails(
     else {
       const belongsToNextBill = effectiveInvoiceMonth === nextInvoiceMonth;
       // APENAS transações concluídas são contabilizadas na próxima fatura
-      if (belongsToNextBill && t.type === 'expense' && t.status === 'completed') {
-        nextBillAmount += Math.abs(t.amount);
+      if (belongsToNextBill && t.status === 'completed') {
+        if (t.type === 'expense') {
+          nextBillAmount += Math.abs(t.amount);
+        } else if (t.type === 'income') {
+          nextBillAmount -= Math.abs(t.amount);
+        }
       }
     }
   }
 
   // 4. Usa os novos valores calculados
   const totalBalance = newTotalBalance; // Saldo devedor total (correto)
-  const availableLimit = (account.limit_amount || 0) - totalBalance; // Limite disponível (correto)
+  // Fix: limit_amount is in cents, totalBalance is in units. Convert totalBalance to cents.
+  const availableLimit = (account.limit_amount || 0) - Math.round(totalBalance * 100); // Limite disponível (correto)
   // --- FIM DA CORREÇÃO ---
 
   return {

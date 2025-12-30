@@ -290,7 +290,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
       if (filterPaymentStatus === "pending" && isPaid) return false;
 
       // Filtro de saldo zerado
-      if (hideZeroBalance && details.currentBillAmount === 0) return false;
+      // FIX: Só oculta se a próxima fatura TAMBÉM for zero, para não esconder dívidas futuras
+      if (hideZeroBalance && details.currentBillAmount === 0 && details.nextBillAmount === 0) return false;
 
       return true;
     });
@@ -377,7 +378,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                   Limite Usado
                 </p>
                 <div className="balance-text balance-negative">
-                  {formatCents(totalSummary.usedLimit * 100)}
+                  {formatCents(totalSummary.usedLimit)}
                 </div>
               </div>
             </div>
