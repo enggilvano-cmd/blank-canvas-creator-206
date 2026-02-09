@@ -132,7 +132,7 @@ export function ProvisionedTransactionsByCategory({
       </CardHeader>
       <CardContent className="space-y-3">
         {categoryTotals.length > 0 ? (
-          <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
+          <div className="space-y-3">
             {categoryTotals.map((category) => {
               const percentage = category.totalProvisioned > 0 
                 ? (category.totalCompleted / category.totalProvisioned) * 100 
