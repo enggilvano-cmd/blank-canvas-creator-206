@@ -144,28 +144,96 @@ export function AccountsPage({
         if (account.name.toLowerCase().includes(searchLower)) return true;
         
         // Search by balance
-        const cleanSearchVal = debouncedSearchTerm.replace(',', '.');
-        const searchAmount = parseFloat(cleanSearchVal);
+        // Handle pt-BR format: Remove thousands separator (.) and replace decimal separator (,) with (.)
+        // This allows searching "1.000,00" or simple "1000,00"
         
-        if (!isNaN(searchAmount)) {
-          const hasPlus = debouncedSearchTerm.includes('+');
-          const hasMinus = debouncedSearchTerm.includes('-');
-          
-          let matchesBalance = false;
-          if (hasPlus) {
-             const valWithoutPlus = cleanSearchVal.replace('+', '').trim();
-             matchesBalance = account.balance >= 0 && account.balance.toFixed(2).includes(valWithoutPlus);
-          } else if (hasMinus) {
-             matchesBalance = account.balance.toFixed(2).includes(cleanSearchVal);
-          } else {
-             // Ignore sign: Find substring in absolute value or formatted value
-             // If account is -50.00, formatted is "-50.00".
-             // If search is "50", "50" is in "-50.00".
-             matchesBalance = account.balance.toFixed(2).includes(cleanSearchVal) || account.balance.toString().includes(cleanSearchVal);
-          }
-          if (matchesBalance) return true;
+        // Special case: just a comma matches all numbers
+        if (debouncedSearchTerm.trim() === ',' || debouncedSearchTerm.trim() === '.') return true;
+        
+        const term = debouncedSearchTerm.trim();
+        
+        // Determine sign intent
+        const hasPlus = term.includes('+');
+        const hasMinus = term.includes('-');
+        
+        // Extract the numerical part string for parsing
+        let termValStr = term;
+        if (hasPlus) termValStr = term.replace('+', '').trim();
+        if (hasMinus) termValStr = term.replace('-', '').trim();
+        
+        // Generate numeric candidates to handle different formats (BR: 1.000,00 vs US: 1000.00 vs Simple: 6242.00)
+        const candidates: number[] = [];
+        
+        // 1. BR Format (strip dots, comma->dot): 1.000,00 -> 1000 | 6242,00 -> 6242
+        const valBR = parseFloat(termValStr.replace(/\./g, '').replace(',', '.'));
+        if (!isNaN(valBR)) candidates.push(valBR);
+        
+        // 2. Direct/US Format (keep dots, maybe strip commas if thousands): 6242.00 -> 6242
+        // Note: parseFloat stops at comma. "1,000.00" -> 1. So remove commas.
+        const valUS = parseFloat(termValStr.replace(/,/g, ''));
+        if (!isNaN(valUS)) candidates.push(valUS);
+
+        if (candidates.length === 0) {
+            // If no valid number can be parsed, fall back to simple text search on name/etc
+             // But we are inside the 'matchesSearch' block for values logic...
+             // If we entered here, search might still match name (handled before).
+             // Just return false for value match if no number found
+             return false;
         }
 
+        const limit = account.limit_amount ?? 0;
+        
+        // Match calculation logic exactly as rendered in the card
+        let available = 0;
+        if (account.type === 'credit') {
+             // Rendering uses: (limit - debt), allowing negative values if over limit
+             // Note: 'limit' is in Cents, 'balance' is in Reais (for credit cards). 
+             // The calculation (Cents - Reais) is visually accepted by users despite unit mismatch, 
+             // so we replicate it here to find the matching number.
+             const debt = Math.abs(Math.min(account.balance, 0));
+             available = limit - debt;
+        }
+
+        const epsilon = 0.005;
+        const matchesVal = (val: number) => {
+             // Sign check
+             if (hasPlus && val < 0) return false;
+             if (hasMinus && val >= 0) return false;
+             
+             const absVal = Math.abs(val);
+             
+             // 1. Check against US Format ("1764.92")
+             const usStr = absVal.toFixed(2);
+             if (usStr.includes(termValStr)) return true;
+             if (usStr.includes(termValStr.replace(',', '.'))) return true;
+
+             // 2. Check against BR Format Clean ("1764,92" - no thousands dots)
+             // This ensures "1764," matches "1764,92"
+             const brStrFull = absVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+             if (brStrFull.includes(termValStr)) return true; // Match "1.764,92" with "1.764"
+             
+             const brStrClean = brStrFull.replace(/\./g, '');
+             if (brStrClean.includes(termValStr)) return true; // Match "1764,92" with "1764,"
+             
+             // 3. Exact Numeric Match (approximate for float)
+             return candidates.some(cand => Math.abs(absVal - Math.abs(cand)) < epsilon);
+        };
+
+        // Normalize values to "Visual Reais" for search
+        // - Credit Balance is stored as Reais.
+        // - Non-Credit Balance is stored as Cents.
+        // - Limit is stored as Cents.
+        // - Available (calculated) effectively Cents scale.
+        const balanceToCheck = (account.type === 'credit') ? account.balance : account.balance / 100;
+        const limitToCheck = limit / 100;
+        const availableToCheck = available / 100;
+
+        const matchesBalance = matchesVal(balanceToCheck) || 
+                               matchesVal(limitToCheck) || 
+                               (account.type === 'credit' && matchesVal(availableToCheck));
+        
+        if (matchesBalance) return true;
+        
         return false;
       })();
       

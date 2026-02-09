@@ -269,35 +269,74 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
     return allBillDetails.filter((details) => {
       // Search Term Filter (Name OR Amount)
       if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const matchesName = details.account.name.toLowerCase().includes(searchLower);
-        const searchAmount = searchTerm.replace(',', '.');
-        const isNumeric = !isNaN(parseFloat(searchAmount));
+        const term = searchTerm.trim();
+        const searchLower = term.toLowerCase();
+
+        // 1. Text Search (Name)
+        if (details.account.name.toLowerCase().includes(searchLower)) return true;
+
+        // 2. Numeric Search (Values)
+        // Determine sign intent
+        const hasPlus = term.includes('+');
+        const hasMinus = term.includes('-');
         
-        let matchesAmount = false;
-        if (isNumeric) {
-            const hasPlus = searchTerm.includes('+');
-            const hasMinus = searchTerm.includes('-');
-            const valWithoutSign = searchAmount.replace('+', '').replace('-', '');
-            
-            // Format amounts to check against
-            const amountStr = details.currentBillAmount.toFixed(2);
-            
-            if (hasPlus) {
-                // Strictly positive match (must be positive AND number parts match)
-                // Note: currentBillAmount is usually positive (debt) or negative (credit/paid)
-                // If it is > 0 it is a bill to pay.
-                matchesAmount = details.currentBillAmount >= 0 && amountStr.includes(valWithoutSign);
-            } else if (hasMinus) {
-                 // Strictly negative (credit)
-                 matchesAmount = details.currentBillAmount < 0 && amountStr.includes(searchAmount);
-            } else {
-                 // Ignore sign
-                 matchesAmount = amountStr.includes(searchAmount) || details.currentBillAmount.toString().includes(searchAmount);
-            }
-        }
+        // Extract the numerical part string for parsing
+        let termValStr = term;
+        if (hasPlus) termValStr = term.replace('+', '').trim();
+        if (hasMinus) termValStr = term.replace('-', '').trim();
         
-        if (!matchesName && !matchesAmount) return false;
+        // Generate numeric candidates
+        const candidates: number[] = [];
+        // BR Format (strip dots, comma->dot)
+        const valBR = parseFloat(termValStr.replace(/\./g, '').replace(',', '.'));
+        if (!isNaN(valBR)) candidates.push(valBR);
+        // US Format (keep dots)
+        const valUS = parseFloat(termValStr.replace(/,/g, ''));
+        if (!isNaN(valUS)) candidates.push(valUS);
+
+        if (candidates.length === 0) return false;
+
+        const epsilon = 0.005;
+        const matchesVal = (val: number) => {
+             // Sign check
+             if (hasPlus && val < 0) return false;
+             if (hasMinus && val >= 0) return false;
+             
+             const absVal = Math.abs(val);
+             
+             // 1. Check against US Format ("1764.92")
+             const usStr = absVal.toFixed(2);
+             if (usStr.includes(termValStr)) return true;
+             if (usStr.includes(termValStr.replace(',', '.'))) return true;
+
+             // 2. Check against BR Format Clean ("1764,92")
+             const brStrFull = absVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+             if (brStrFull.includes(termValStr)) return true;
+             
+             const brStrClean = brStrFull.replace(/\./g, '');
+             if (brStrClean.includes(termValStr)) return true;
+             
+             // 3. Exact Numeric Match
+             return candidates.some(cand => Math.abs(absVal - Math.abs(cand)) < epsilon);
+        };
+
+        // Normalize everything to Visual Reais
+        // currentBillAmount/nextBillAmount are in Reais (float) from calculateBillDetails
+        // limit_amount/availableLimit are in Cents (integer) from DB/calculation
+        // totalBalance (Used Limit) is in Reais (float) from calculateBillDetails
+        const currentBill = details.currentBillAmount;
+        const nextBill = details.nextBillAmount;
+        const limitVal = (details.account.limit_amount ?? 0) / 100;
+        const available = details.availableLimit / 100;
+        const usedLimit = details.totalBalance;
+
+        if (matchesVal(currentBill)) return true;
+        if (matchesVal(nextBill)) return true;
+        if (matchesVal(limitVal)) return true;
+        if (matchesVal(available)) return true;
+        if (matchesVal(usedLimit)) return true;
+
+        return false;
       }
 
       // Calcula se a fatura está fechada baseado no mês da fatura (não no mês selecionado)
