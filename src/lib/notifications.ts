@@ -86,8 +86,10 @@ export function getDueDateReminders(
       // If billAmounts is provided, use it. Otherwise fallback to balance (legacy behavior)
       // Note: billAmounts should contain the calculated invoice amount for the current month
       let amount = 0;
-      if (billAmounts && billAmounts[account.id] !== undefined) {
-        amount = billAmounts[account.id];
+      // Se billAmounts foi passado, prioriza o valor calculado (que considera pagamentos recentes)
+      // Se não houver valor (undefined), assume 0 para evitar fallback para saldo total (que inclui parcelas futuras)
+      if (billAmounts) {
+        amount = billAmounts[account.id] || 0;
       } else {
         // Fallback: use total balance if no specific bill amount is calculated
         // Only show if balance is negative (debt)
@@ -100,9 +102,9 @@ export function getDueDateReminders(
       }
 
       // Only show notification if:
-      // 1. It's within the reminder period
+      // 1. It's the due date (0) or one day before (1)
       // 2. There is an amount to pay (amount > 0)
-      if (daysUntilDue <= reminderDays && daysUntilDue >= 0 && amount > 0) {
+      if (daysUntilDue <= 1 && daysUntilDue >= 0 && amount > 0) {
         reminders.push({
           id: `due_${account.id}_${dueDate.getTime()}`,
           title: "Vencimento de Fatura",
@@ -150,8 +152,10 @@ export function getOverdueBillAlerts(
       
       // Determine the amount
       let amount = 0;
-      if (billAmounts && billAmounts[account.id] !== undefined) {
-        amount = billAmounts[account.id];
+      // Se billAmounts foi passado, prioriza o valor calculado (que considera pagamentos recentes)
+      // Se não houver valor (undefined), assume 0 para evitar fallback para saldo total (que inclui parcelas futuras)
+      if (billAmounts) {
+        amount = billAmounts[account.id] || 0;
       } else {
         // Fallback: use balance if negative (debt)
         if (account.balance < 0) {
@@ -247,4 +251,52 @@ export function getAllNotifications(accounts: NotificationAccount[], settings: N
   }
   
   return notifications.sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
+export interface NotificationTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  date: Date;
+  status: 'pending' | 'completed';
+  type: 'income' | 'expense';
+}
+
+// Get pending transaction reminders (bills to pay)
+export function getPendingTransactionReminders(
+  transactions: NotificationTransaction[]
+): Notification[] {
+  const reminders: Notification[] = [];
+  const todayStr = getTodayInUserTimezone();
+  const today = new Date(todayStr); // Data de hoje (user timezone)
+
+  transactions.forEach(transaction => {
+    // Garantir que é pendente e despesa
+    if (transaction.status !== 'pending' || transaction.type !== 'expense') return;
+
+    // Calcular dias até vencimento
+    const dueDate = toUserTimezone(new Date(transaction.date));
+    
+    // Normalizar para remover componente de horas no cálculo de dias
+    const dueTime = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()).getTime();
+    const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+    const daysUntilDue = Math.ceil((dueTime - todayTime) / (1000 * 60 * 60 * 24));
+
+    // Regra: Notificar apenas no dia (0) ou um dia antes (1)
+    if (daysUntilDue <= 1 && daysUntilDue >= 0) {
+       reminders.push({
+          id: `pending_tx_${transaction.id}`,
+          title: "Conta a Pagar",
+          message: `O pagamento "${transaction.description}" vence ${daysUntilDue === 0 ? 'hoje' : 'amanhã'}. Valor: ${formatCurrency(transaction.amount)}`,
+          type: "reminder",
+          date: today,
+          read: false,
+          actionType: "bill_payment", 
+          actionData: { transactionId: transaction.id }
+       });
+    }
+  });
+
+  return reminders;
 }

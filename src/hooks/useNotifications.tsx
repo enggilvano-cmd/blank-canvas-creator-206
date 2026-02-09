@@ -9,6 +9,7 @@ import {
   getDueDateReminders,
   getOverdueBillAlerts,
   getLowBalanceAlerts,
+  getPendingTransactionReminders,
   requestNotificationPermission,
   showSystemNotification,
 } from '@/lib/notifications';
@@ -113,6 +114,31 @@ export function useNotifications() {
         // Get overdue bill alerts
         const overdueAlerts = getOverdueBillAlerts(accounts, billAmounts);
         newNotifications.push(...overdueAlerts);
+
+        // --- NEW: Pending Transaction Reminders (Non-credit card bills) ---
+        // Fetch pending expense transactions for the next 2 days
+        const today = new Date();
+        const nextTwoDays = new Date(today);
+        nextTwoDays.setDate(today.getDate() + 2); // Look ahead slightly more than 1 day to be safe with timezones
+        
+        const { data: rawPendingTx } = await supabase
+          .from('transactions')
+          .select('id, description, amount, date, status, type')
+          .eq('user_id', user.id)
+          .eq('status', 'pending')
+          .eq('type', 'expense')
+          .gte('date', today.toISOString().split('T')[0]) 
+          .lte('date', nextTwoDays.toISOString().split('T')[0]);
+
+        if (rawPendingTx) {
+          const formattedTx = rawPendingTx.map(t => ({
+             ...t,
+             date: new Date(t.date)
+          })) as any[]; // Cast to match NotificationTransaction structure roughly
+
+          const txReminders = getPendingTransactionReminders(formattedTx);
+          newNotifications.push(...txReminders);
+        }
       }
 
       // Get low balance alerts
