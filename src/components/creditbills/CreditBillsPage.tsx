@@ -290,8 +290,10 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
       if (filterPaymentStatus === "pending" && isPaid) return false;
 
       // Filtro de saldo zerado
-      // FIX: Só oculta se a próxima fatura TAMBÉM for zero, para não esconder dívidas futuras
-      if (hideZeroBalance && details.currentBillAmount === 0 && details.nextBillAmount === 0) return false;
+      // ✅ FIX: Ocultar se o valor atual for zero ou negativo (paga ou com crédito)
+      // Removemos a verificação do nextBillAmount para permitir ocultar cartões pagos no mês atual
+      // mesmo que tenham faturas futuras. Se o usuário quiser ver o próximo mês, ele deve navegar.
+      if (hideZeroBalance && details.currentBillAmount <= 0.01) return false;
 
       return true;
     });
