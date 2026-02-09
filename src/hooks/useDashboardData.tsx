@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 import { createDateFromString } from '@/lib/dateUtils';
+import { useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 
 interface DashboardData {
   accounts: Account[];
@@ -27,6 +29,78 @@ interface DashboardData {
 export function useDashboardData() {
   const { user } = useAuth();
   const isOnline = useOnlineStatus();
+  const lastCleanupMonth = useRef<string | null>(null);
+
+  // ✅ Helper function to execute cleanup
+  const performCleanup = async (currentMonth: string) => {
+    if (!user) return;
+
+    try {
+      // ✅ CRITICAL FIX: Pass client date to ensure timezone-consistent month boundary detection
+      // Without this, timezone differences could cause wrong month's provisions to be deleted
+      const clientDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      
+      const { data: deletedCount, error } = await supabase.rpc('cleanup_expired_provisions', {
+        p_user_id: user.id,
+        p_client_date: clientDate,
+      });
+
+      if (error) {
+        logger.error('Error cleaning up expired provisions:', error);
+      } else if (deletedCount && deletedCount > 0) {
+        logger.info(
+          `✅ Cleanup: ${deletedCount} expired pending provision(s) from previous month removed`,
+          { 
+            deletedCount, 
+            month: currentMonth,
+            clientDate: clientDate,
+            timestamp: new Date().toISOString()
+          }
+        );
+        lastCleanupMonth.current = currentMonth;
+      } else {
+        logger.debug('No expired provisions to cleanup', { month: currentMonth });
+        lastCleanupMonth.current = currentMonth;
+      }
+    } catch (err) {
+      logger.error('Unexpected error during cleanup_expired_provisions:', err);
+    }
+  };
+
+  // ✅ CRITICAL FIX: Cleanup on dashboard load AND when month changes
+  // This handles two scenarios:
+  // 1. Initial load - cleanup any pending provisions from last month (if needed)
+  // 2. Month change detection - cleanup when calendar date rolls over
+  useEffect(() => {
+    if (!user || !isOnline) return;
+
+    const currentMonth = format(new Date(), 'yyyy-MM');
+    
+    // Cleanup on initial mount if month is different
+    if (lastCleanupMonth.current === null || lastCleanupMonth.current !== currentMonth) {
+      performCleanup(currentMonth);
+    }
+
+    // ✅ CRITICAL: Setup interval to detect month changes
+    // Checks every 30 seconds if month changed (e.g., 31 Jan 23:59 → 1 Feb 00:00)
+    // This ensures cleanup ALWAYS happens at month boundary, even if user stays online
+    const monthCheckInterval = setInterval(() => {
+      const now = format(new Date(), 'yyyy-MM');
+      
+      if (lastCleanupMonth.current !== now) {
+        logger.info(`📅 Month changed detected: ${lastCleanupMonth.current} → ${now}`, { 
+          timestamp: new Date().toISOString() 
+        });
+        performCleanup(now);
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => {
+      if (monthCheckInterval) {
+        clearInterval(monthCheckInterval);
+      }
+    };
+  }, [user?.id, isOnline]);
 
   return useQuery({
     queryKey: ['dashboard-data', user?.id],

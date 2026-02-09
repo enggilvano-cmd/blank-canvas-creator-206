@@ -108,12 +108,25 @@ const PlaniFlowApp = () => {
   const queryClient = useQueryClient();
   const isOnline = useOnlineStatus(); // Status de conexão para decisões de UI
 
-  // Cleanup expired provisions on mount
+  // ✅ IMPROVED: Cleanup expired provisions on mount with better error handling
   useEffect(() => {
     if (user && isOnline) {
-      supabase.rpc('cleanup_expired_provisions', { p_user_id: user.id })
-        .then(({ error }) => {
-          if (error) logger.error('Error cleaning up provisions:', error);
+      const clientDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      
+      supabase.rpc('cleanup_expired_provisions', { 
+        p_user_id: user.id,
+        p_client_date: clientDate
+      })
+        .then(({ data: deletedCount, error }) => {
+          if (error) {
+            logger.error('Error cleaning up expired provisions:', error);
+            // Don't show error toast - it's a background operation
+          } else if (deletedCount && deletedCount > 0) {
+            logger.info(`✅ Cleanup: ${deletedCount} expired provision(s) removed`, { deletedCount });
+          }
+        })
+        .catch((err) => {
+          logger.error('Unexpected error during cleanup_expired_provisions:', err);
         });
     }
   }, [user, isOnline]);
