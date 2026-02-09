@@ -12,7 +12,16 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { useTransactions } from "@/hooks/queries/useTransactions";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { AppTransaction, Account } from "@/types";
@@ -33,6 +42,8 @@ interface CreditBillsFilters {
   filterBillStatus: "all" | "open" | "closed";
   filterPaymentStatus: "all" | "paid" | "pending";
   hideZeroBalance: boolean;
+  sortBy: "date" | "amount";
+  sortOrder: "asc" | "desc";
 }
 
 interface CreditBillsPageProps {
@@ -73,6 +84,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
       filterBillStatus: "all",
       filterPaymentStatus: "all",
       hideZeroBalance: false,
+      sortBy: "date",
+      sortOrder: "asc",
     }
   );
 
@@ -83,6 +96,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
   const filterBillStatus = filters.filterBillStatus;
   const filterPaymentStatus = filters.filterPaymentStatus;
   const hideZeroBalance = filters.hideZeroBalance;
+  const sortBy = filters.sortBy;
+  const sortOrder = filters.sortOrder;
 
   // Setters
   const setSearchTerm = (value: string) => setFilters((prev) => ({ ...prev, searchTerm: value }));
@@ -91,6 +106,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
   const setFilterBillStatus = (value: typeof filters.filterBillStatus) => setFilters((prev) => ({ ...prev, filterBillStatus: value }));
   const setFilterPaymentStatus = (value: typeof filters.filterPaymentStatus) => setFilters((prev) => ({ ...prev, filterPaymentStatus: value }));
   const setHideZeroBalance = (value: boolean) => setFilters((prev) => ({ ...prev, hideZeroBalance: value }));
+  const setSortBy = (value: "date" | "amount") => setFilters((prev) => ({ ...prev, sortBy: value }));
+  const setSortOrder = (value: "asc" | "desc") => setFilters((prev) => ({ ...prev, sortOrder: value }));
 
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [selectedBillForDetails, setSelectedBillForDetails] = useState<{
@@ -203,6 +220,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
     setFilterBillStatus("all");
     setFilterPaymentStatus("all");
     setHideZeroBalance(false);
+    setSortBy("date");
+    setSortOrder("asc");
   };
 
   // Memo para calcular os detalhes da fatura do mês selecionado (alinhado ao mês exibido)
@@ -296,8 +315,25 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
       if (hideZeroBalance && details.currentBillAmount <= 0.01) return false;
 
       return true;
+    }).sort((a, b) => {
+      // Sorting logic
+      if (sortBy === "date") {
+        // Sort by Due Date (Vencimento)
+        // If due_date is missing, use closing_date, else 1
+        const dayA = a.account.due_date || (a.account.closing_date ? a.account.closing_date + 10 : 1);
+        const dayB = b.account.due_date || (b.account.closing_date ? b.account.closing_date + 10 : 1);
+        
+        return sortOrder === "asc" ? dayA - dayB : dayB - dayA;
+      } else if (sortBy === "amount") {
+        // Sort by Current Bill Amount
+        const amountA = a.currentBillAmount;
+        const amountB = b.currentBillAmount;
+        
+        return sortOrder === "asc" ? amountA - amountB : amountB - amountA;
+      }
+      return 0;
     });
-  }, [allBillDetails, filterBillStatus, filterPaymentStatus, hideZeroBalance, selectedMonthDate]);
+  }, [allBillDetails, filterBillStatus, filterPaymentStatus, hideZeroBalance, selectedMonthDate, sortBy, sortOrder]);
 
   // Memo para os TOTAIS (baseado nos cartões filtrados)
   const totalSummary = useMemo(() => {
@@ -446,8 +482,37 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                 />
               </div>
 
+              {/* Sort */}
+              <div className="flex gap-2">
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => setSortBy(value as "date" | "amount")}
+                >
+                  <SelectTrigger className="w-[110px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Data</SelectItem>
+                    <SelectItem value="amount">Valor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  title={`Ordenar ${sortOrder === "asc" ? "decrescente" : "crescente"}`}
+                  className="h-10 w-10 shrink-0"
+                >
+                  {sortOrder === "asc" ? (
+                    <ArrowUp className="h-4 w-4" />
+                  ) : (
+                    <ArrowDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
               {/* Period Navigation */}
-              <div className="flex items-center gap-2 px-3 border border-input rounded-md bg-background min-w-[220px]">
+              <div className="flex items-center gap-2 px-3 border border-input rounded-md bg-background min-w-[200px] justify-between h-10">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -456,7 +521,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="flex-1 text-center text-sm font-medium">
+                <span className="flex-1 text-center text-sm font-medium whitespace-nowrap">
                   {format(selectedInvoiceMonthDate, "MMM/yyyy", { locale: ptBR })}
                 </span>
                 <Button
