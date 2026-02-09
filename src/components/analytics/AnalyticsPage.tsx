@@ -2803,7 +2803,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value, isMobile)
+                        formatCurrencyForAxis(value / 100, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
@@ -3049,14 +3049,14 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(card.balance)}
+                        {formatCurrency(card.balance * 100)}
                       </span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between gap-2 text-caption border-t pt-2 mt-1">
                     <span className="font-medium text-foreground pl-5">Total</span>
                     <span className="font-medium flex-shrink-0 text-destructive">
-                      {formatCurrency(creditCardUsedData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(creditCardUsedData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -3086,14 +3086,14 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(card.balance)}
+                        {formatCurrency(card.balance * 100)}
                       </span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between gap-2 text-caption border-t pt-2 mt-1">
                     <span className="font-medium text-foreground pl-5">Total</span>
                     <span className="font-medium flex-shrink-0 text-destructive">
-                      {formatCurrency(creditCardUsedData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(creditCardUsedData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -3135,7 +3135,7 @@ export default function AnalyticsPage({
                     />
                     <YAxis
                       tickFormatter={(value) =>
-                        formatCurrencyForAxis(value, isMobile)
+                        formatCurrencyForAxis(value / 100, isMobile)
                       }
                       tick={{ fontSize: isMobile ? 9 : 11 }}
                       width={isMobile ? 35 : 60}
