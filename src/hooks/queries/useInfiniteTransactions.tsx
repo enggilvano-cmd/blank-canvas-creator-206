@@ -132,7 +132,26 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
 
       // Apply filters
       if (search) {
-        query = query.ilike('description', `%${search}%`);
+        const cleanSearch = search.replace(/"/g, '');
+        const searchAmountStr = search.replace(',', '.');
+        const searchAmount = parseFloat(searchAmountStr);
+        
+        if (!isNaN(searchAmount)) {
+          const hasPlus = search.includes('+');
+          const hasMinus = search.includes('-');
+          
+          if (hasPlus) {
+             const positiveAmount = Math.abs(searchAmount);
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${positiveAmount}`);
+          } else if (hasMinus) {
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${searchAmount}`);
+          } else {
+             const absAmount = Math.abs(searchAmount);
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${absAmount},amount.eq.${-absAmount}`);
+          }
+        } else {
+          query = query.ilike('description', `%${cleanSearch}%`);
+        }
       }
 
       if (type !== 'all') {

@@ -128,7 +128,29 @@ export function useTransactions(params: UseTransactionsParams = {}) {
       if (t.description === 'Saldo Inicial') return false;
 
       // Search
-      if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        const cleanSearchVal = search.replace(',', '.');
+        
+        const matchesDescription = t.description.toLowerCase().includes(searchLower);
+        
+        let matchesAmount = false;
+        // Fix: Improved logic for sign handling
+        // 1. If explicit '+' is used, strip it and ensure amount is positive
+        // 2. If explicit '-' is used, 'includes' works naturally for negatives
+        // 3. If no sign, 'includes' works naturally for both (as substring)
+        
+        if (search.includes('+')) {
+            const valWithoutPlus = cleanSearchVal.replace('+', '').trim();
+            // Check if amount is positive AND contains the number
+            matchesAmount = t.amount >= 0 && t.amount.toFixed(2).includes(valWithoutPlus);
+        } else {
+            // Standard check (finds "50" in "-50.00" and "50.00")
+            matchesAmount = t.amount.toFixed(2).includes(cleanSearchVal) || t.amount.toString().includes(cleanSearchVal);
+        }
+        
+        if (!matchesDescription && !matchesAmount) return false;
+      }
 
       // Type
       if (type !== 'all') {
@@ -227,7 +249,26 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       // Apply filters
       if (search) {
-        query = query.ilike('description', `%${search}%`);
+        const cleanSearch = search.replace(/"/g, '');
+        const searchAmountStr = search.replace(',', '.');
+        const searchAmount = parseFloat(searchAmountStr);
+        
+        if (!isNaN(searchAmount)) {
+          const hasPlus = search.includes('+');
+          const hasMinus = search.includes('-');
+          
+          if (hasPlus) {
+             const positiveAmount = Math.abs(searchAmount);
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${positiveAmount}`);
+          } else if (hasMinus) {
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${searchAmount}`);
+          } else {
+             const absAmount = Math.abs(searchAmount);
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${absAmount},amount.eq.${-absAmount}`);
+          }
+        } else {
+          query = query.ilike('description', `%${cleanSearch}%`);
+        }
       }
 
       if (type !== 'all') {
@@ -403,7 +444,26 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       // Apply filters
       if (search) {
-        query = query.ilike('description', `%${search}%`);
+        const cleanSearch = search.replace(/"/g, '');
+        const searchAmountStr = search.replace(',', '.');
+        const searchAmount = parseFloat(searchAmountStr);
+        
+        if (!isNaN(searchAmount)) {
+          const hasPlus = search.includes('+');
+          const hasMinus = search.includes('-');
+          
+          if (hasPlus) {
+             const positiveAmount = Math.abs(searchAmount);
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${positiveAmount}`);
+          } else if (hasMinus) {
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${searchAmount}`);
+          } else {
+             const absAmount = Math.abs(searchAmount);
+             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${absAmount},amount.eq.${-absAmount}`);
+          }
+        } else {
+          query = query.ilike('description', `%${cleanSearch}%`);
+        }
       }
 
       if (type !== 'all') {

@@ -847,9 +847,34 @@ export function FixedTransactionsPage({
 
   const filteredTransactions = useMemo(() => {
     let result = transactions.filter((transaction) => {
-      const matchesSearch = transaction.description
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      // Search Term Filter (Name OR Amount)
+      const matchesSearch = (() => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        const matchesName = transaction.description.toLowerCase().includes(searchLower);
+        
+        const searchAmount = searchTerm.replace(',', '.');
+        const isNumeric = !isNaN(parseFloat(searchAmount));
+        
+        let matchesAmount = false;
+        if (isNumeric) {
+             const hasPlus = searchTerm.includes('+');
+             const hasMinus = searchTerm.includes('-');
+             const valWithoutSign = searchAmount.replace('+', '').replace('-', '');
+             const amountStr = transaction.amount.toFixed(2);
+             
+             if (hasPlus) {
+                 matchesAmount = transaction.amount >= 0 && amountStr.includes(valWithoutSign);
+             } else if (hasMinus) {
+                 matchesAmount = transaction.amount < 0 && amountStr.includes(searchAmount);
+             } else {
+                 matchesAmount = amountStr.includes(searchAmount) || transaction.amount.toString().includes(searchAmount);
+             }
+        }
+        
+        return matchesName || matchesAmount;
+      })();
+
       const matchesType =
         filterType === "all" || transaction.type === filterType;
       const matchesCategory =

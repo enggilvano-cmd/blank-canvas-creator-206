@@ -136,9 +136,39 @@ export function AccountsPage({
   const filteredAccounts = accounts
     .filter((account) => {
       // \u2705 Use debounced search term for better performance
-      const matchesSearch = account.name
-        .toLowerCase()
-        .includes(debouncedSearchTerm.toLowerCase());
+      const matchesSearch = (() => {
+        if (!debouncedSearchTerm) return true;
+        const searchLower = debouncedSearchTerm.toLowerCase();
+        
+        // Search by name
+        if (account.name.toLowerCase().includes(searchLower)) return true;
+        
+        // Search by balance
+        const cleanSearchVal = debouncedSearchTerm.replace(',', '.');
+        const searchAmount = parseFloat(cleanSearchVal);
+        
+        if (!isNaN(searchAmount)) {
+          const hasPlus = debouncedSearchTerm.includes('+');
+          const hasMinus = debouncedSearchTerm.includes('-');
+          
+          let matchesBalance = false;
+          if (hasPlus) {
+             const valWithoutPlus = cleanSearchVal.replace('+', '').trim();
+             matchesBalance = account.balance >= 0 && account.balance.toFixed(2).includes(valWithoutPlus);
+          } else if (hasMinus) {
+             matchesBalance = account.balance.toFixed(2).includes(cleanSearchVal);
+          } else {
+             // Ignore sign: Find substring in absolute value or formatted value
+             // If account is -50.00, formatted is "-50.00".
+             // If search is "50", "50" is in "-50.00".
+             matchesBalance = account.balance.toFixed(2).includes(cleanSearchVal) || account.balance.toString().includes(cleanSearchVal);
+          }
+          if (matchesBalance) return true;
+        }
+
+        return false;
+      })();
+      
       const matchesType = filterType === "all" || account.type === filterType;
       const matchesZeroBalance = !hideZeroBalance || account.balance !== 0;
       return matchesSearch && matchesType && matchesZeroBalance;

@@ -132,14 +132,11 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
 
   const filteredCreditAccounts = useMemo(() => {
     return creditAccounts.filter((account) => {
-      const matchesSearch = account.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
       const matchesId =
         selectedAccountId === "all" || account.id === selectedAccountId;
-      return matchesSearch && matchesId;
+      return matchesId;
     });
-  }, [creditAccounts, searchTerm, selectedAccountId]);
+  }, [creditAccounts, selectedAccountId]);
 
   // Calcula a data base para o mês selecionado (sempre navegação por mês)
   const selectedMonthDate = useMemo(() => {
@@ -270,6 +267,39 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
   // Memo para aplicar os filtros de status
   const billDetails = useMemo(() => {
     return allBillDetails.filter((details) => {
+      // Search Term Filter (Name OR Amount)
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesName = details.account.name.toLowerCase().includes(searchLower);
+        const searchAmount = searchTerm.replace(',', '.');
+        const isNumeric = !isNaN(parseFloat(searchAmount));
+        
+        let matchesAmount = false;
+        if (isNumeric) {
+            const hasPlus = searchTerm.includes('+');
+            const hasMinus = searchTerm.includes('-');
+            const valWithoutSign = searchAmount.replace('+', '').replace('-', '');
+            
+            // Format amounts to check against
+            const amountStr = details.currentBillAmount.toFixed(2);
+            
+            if (hasPlus) {
+                // Strictly positive match (must be positive AND number parts match)
+                // Note: currentBillAmount is usually positive (debt) or negative (credit/paid)
+                // If it is > 0 it is a bill to pay.
+                matchesAmount = details.currentBillAmount >= 0 && amountStr.includes(valWithoutSign);
+            } else if (hasMinus) {
+                 // Strictly negative (credit)
+                 matchesAmount = details.currentBillAmount < 0 && amountStr.includes(searchAmount);
+            } else {
+                 // Ignore sign
+                 matchesAmount = amountStr.includes(searchAmount) || details.currentBillAmount.toString().includes(searchAmount);
+            }
+        }
+        
+        if (!matchesName && !matchesAmount) return false;
+      }
+
       // Calcula se a fatura está fechada baseado no mês da fatura (não no mês selecionado)
       // Ex: Se estamos vendo a fatura de nov/2025 e hoje é dez/2025, precisa verificar se 08/nov já passou
       const targetMonth = details.currentInvoiceMonth || format(selectedMonthDate, 'yyyy-MM'); // Ex: "2025-11"
@@ -333,7 +363,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
       }
       return 0;
     });
-  }, [allBillDetails, filterBillStatus, filterPaymentStatus, hideZeroBalance, selectedMonthDate, sortBy, sortOrder]);
+  }, [allBillDetails, filterBillStatus, filterPaymentStatus, hideZeroBalance, selectedMonthDate, sortBy, sortOrder, searchTerm]);
 
   // Memo para os TOTAIS (baseado nos cartões filtrados)
   const totalSummary = useMemo(() => {
