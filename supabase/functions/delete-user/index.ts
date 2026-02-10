@@ -55,9 +55,11 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .single()
 
-    if (roleError || userRoles?.role !== 'admin') {
+    const roles = userRoles?.map(r => r.role) || [];
+    const isAdmin = roles.includes('admin');
+
+    if (roleError || !isAdmin) {
       return new Response(
         JSON.stringify({ error: 'Forbidden: Admin access required' }),
         { 

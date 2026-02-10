@@ -2,7 +2,8 @@ import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
-import { Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Shield, LogOut } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -15,7 +16,7 @@ export function ProtectedRoute({
   requireAdmin = false, 
   allowedRoles = ['admin', 'user', 'subscriber', 'trial'] 
 }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -75,6 +76,14 @@ export function ProtectedRoute({
                 para reativar o acesso.
               </p>
             </div>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => signOut()}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair da Conta
+            </Button>
           </CardContent>
         </Card>
       </div>

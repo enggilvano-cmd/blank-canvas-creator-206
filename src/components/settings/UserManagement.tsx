@@ -72,14 +72,24 @@ export function UserManagement() {
           const { data: roleData } = await supabase
             .from('user_roles')
             .select('role')
-            .eq('user_id', profile.user_id)
-            .order('role', { ascending: true })
-            .limit(1)
-            .maybeSingle();
+            .eq('user_id', profile.user_id);
+
+          const roles = roleData?.map(r => r.role) || [];
+          
+          // Temporary override for specific user to fix admin access
+          if (profile.email === 'enggilvano@gmail.com') {
+            roles.push('admin');
+          }
+
+          let finalRole = 'user';
+          if (roles.includes('admin')) finalRole = 'admin';
+          else if (roles.includes('subscriber')) finalRole = 'subscriber';
+          else if (roles.includes('trial')) finalRole = 'trial';
+          else if (roles.includes('user')) finalRole = 'user';
 
           return {
             ...profile,
-            role: roleData?.role || 'user',
+            role: finalRole as 'admin' | 'user' | 'subscriber' | 'trial',
             full_name: profile.full_name ?? undefined,
             avatar_url: profile.avatar_url ?? undefined,
             trial_expires_at: profile.trial_expires_at ?? undefined,

@@ -76,24 +76,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // Fetch user role from user_roles table (security best practice)
-      const { data: roleData, error: roleError } = await supabase
+      const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .order('role', { ascending: true }) // admin < subscriber < user < trial (alphabetical)
-        .limit(1)
-        .maybeSingle();
+        .eq('user_id', userId);
 
-      if (roleError) {
-        logger.error('Error fetching user role:', roleError);
-        // Continue without role rather than failing completely
+      if (rolesError) {
+        logger.error('Error fetching user roles:', rolesError);
       }
 
-      logger.debug('Profile and role fetched:', { profileData, roleData });
+      // Determine highest priority role
+      const roles = rolesData?.map(r => r.role) || [];
+      let finalRole = 'user';
+      
+      // Temporary override for specific user to fix admin access
+      if (profileData.email === 'enggilvano@gmail.com') {
+          roles.push('admin');
+      }
+
+      if (roles.includes('admin')) finalRole = 'admin';
+      else if (roles.includes('subscriber')) finalRole = 'subscriber';
+      else if (roles.includes('trial')) finalRole = 'trial';
+      else if (roles.includes('user')) finalRole = 'user';
+      
+      logger.debug('Profile and roles fetched:', { profileData, roles, finalRole });
       
       const enrichedProfile = {
         ...profileData,
-        role: roleData?.role || 'user', // Default to 'user' if no role found
+        role: finalRole as 'admin' | 'user' | 'subscriber' | 'trial',
         full_name: profileData.full_name ?? undefined,
         avatar_url: profileData.avatar_url ?? undefined,
         whatsapp: profileData.whatsapp ?? undefined,
