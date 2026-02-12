@@ -111,9 +111,8 @@ export function useNotifications() {
         const reminders = getDueDateReminders(accounts, settings, billAmounts);
         newNotifications.push(...reminders);
         
-        // Get overdue bill alerts
-        const overdueAlerts = getOverdueBillAlerts(accounts, billAmounts);
-        newNotifications.push(...overdueAlerts);
+        // Removed getOverdueBillAlerts() - it shows false positives based only on negative balance
+        // Instead, rely on getDueDateReminders() to alert before due date
 
         // --- NEW: Pending Transaction Reminders (Non-credit card bills) ---
         // Fetch pending expense transactions for the next 2 days

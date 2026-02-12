@@ -108,7 +108,8 @@ export function getDueDateReminders(
         reminders.push({
           id: `due_${account.id}_${dueDate.getTime()}`,
           title: "Vencimento de Fatura",
-          message: `A fatura do ${account.name} vence em ${daysUntilDue} dia(s). Valor: ${formatCurrency(amount * 100)}`,
+          message: `A fatura do ${account.name} vence em ${daysUntilDue} dia(s). Valor: ${formatCurrency(Math.round(amount * 100))}`,
+
           type: "reminder",
           date: today,
           read: false,
@@ -131,7 +132,7 @@ export function getOverdueBillAlerts(
   const today = new Date(todayStr);
   
   accounts
-    .filter(acc => acc.type === "credit" && acc.due_date)
+    .filter(acc => acc.type === "credit" && acc.due_date && acc.balance < 0)
     .forEach(account => {
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
@@ -150,25 +151,16 @@ export function getOverdueBillAlerts(
       // Only show if actually overdue (positive days)
       if (daysOverdue <= 0) return;
       
-      // Determine the amount
-      let amount = 0;
-      // Se billAmounts foi passado, prioriza o valor calculado (que considera pagamentos recentes)
-      // Se não houver valor (undefined), assume 0 para evitar fallback para saldo total (que inclui parcelas futuras)
-      if (billAmounts) {
-        amount = billAmounts[account.id] || 0;
-      } else {
-        // Fallback: use balance if negative (debt)
-        if (account.balance < 0) {
-          amount = Math.abs(account.balance);
-        }
-      }
+      // Use balance (which must be negative to reach here)
+      const amount = Math.abs(account.balance);
       
-      // Only alert if there's an amount to pay
+      // Alert if there's debt and the due date has passed
       if (amount > 0) {
         alerts.push({
           id: `overdue_${account.id}_${dueDate.getTime()}`,
           title: "Fatura Vencida",
-          message: `A fatura do ${account.name} está vencida há ${daysOverdue} dia(s). Valor: ${formatCurrency(amount * 100)}`,
+          message: `A fatura do ${account.name} está vencida há ${daysOverdue} dia(s). Valor: ${formatCurrency(Math.round(amount * 100))}`,
+
           type: "alert",
           date: today,
           read: false,
@@ -193,7 +185,7 @@ export function getLowBalanceAlerts(accounts: NotificationAccount[], threshold: 
       alerts.push({
         id: `low_balance_${account.id}_${dateStr}`,
         title: "Saldo Baixo",
-        message: `A conta ${account.name} está com saldo baixo: R$ ${account.balance.toFixed(2)}`,
+        message: `A conta ${account.name} está com saldo baixo: ${formatCurrency(Math.round(account.balance * 100))}`,
         type: "alert",
         date: new Date(),
         read: false,
@@ -288,7 +280,7 @@ export function getPendingTransactionReminders(
        reminders.push({
           id: `pending_tx_${transaction.id}`,
           title: "Conta a Pagar",
-          message: `O pagamento "${transaction.description}" vence ${daysUntilDue === 0 ? 'hoje' : 'amanhã'}. Valor: ${formatCurrency(transaction.amount)}`,
+          message: `O pagamento "${transaction.description}" vence ${daysUntilDue === 0 ? 'hoje' : 'amanhã'}. Valor: ${formatCurrency(Math.round(transaction.amount * 100))}`,
           type: "reminder",
           date: today,
           read: false,
