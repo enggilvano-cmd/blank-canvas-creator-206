@@ -82,6 +82,9 @@ alter table "public"."transactions" validate constraint "transactions_reconciled
 
 set check_function_bodies = off;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.bulk_create_transactions(p_user_id uuid, p_transactions jsonb)
  RETURNS TABLE(idx integer, success boolean, transaction_id uuid, error_message text)
  LANGUAGE plpgsql
@@ -145,7 +148,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.bulk_create_transfers(p_user_id uuid, p_transfers jsonb)
  RETURNS TABLE(idx integer, success boolean, outgoing_id uuid, incoming_id uuid, error_message text)
  LANGUAGE plpgsql
@@ -204,7 +213,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.cleanup_duplicate_initial_balance()
  RETURNS TABLE(account_id uuid, duplicates_removed integer)
  LANGUAGE plpgsql
@@ -249,7 +264,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.create_journal_entries_for_transaction(p_transaction_id uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -278,7 +299,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.get_user_role(check_user_id uuid)
  RETURNS public.user_role
  LANGUAGE sql
@@ -288,7 +315,13 @@ AS $function$
             SELECT role FROM public.user_roles WHERE user_id = check_user_id LIMIT 1;
           $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.handle_provision_deduction_batch()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -348,7 +381,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.handle_transaction_changes()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -397,7 +436,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.atomic_create_transaction(p_user_id uuid, p_description text, p_amount numeric, p_date date, p_type public.transaction_type, p_category_id uuid, p_account_id uuid, p_status public.transaction_status, p_invoice_month text DEFAULT NULL::text, p_invoice_month_overridden boolean DEFAULT false)
  RETURNS TABLE(success boolean, transaction_id uuid, new_balance numeric, error_message text)
  LANGUAGE plpgsql
@@ -466,7 +511,13 @@ EXCEPTION
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.cleanup_expired_provisions(p_user_id uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -483,7 +534,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.deactivate_expired_subscriptions()
  RETURNS void
  LANGUAGE plpgsql
@@ -507,7 +564,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.deactivate_expired_trials()
  RETURNS void
  LANGUAGE plpgsql
@@ -529,7 +592,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.get_transactions_totals(p_user_id uuid, p_type text DEFAULT 'all'::text, p_status text DEFAULT 'all'::text, p_account_type text DEFAULT 'all'::text, p_date_from text DEFAULT NULL::text, p_date_to text DEFAULT NULL::text, p_account_id uuid DEFAULT NULL::uuid, p_category_id uuid DEFAULT NULL::uuid, p_invoice_month text DEFAULT NULL::text, p_search text DEFAULT NULL::text, p_is_fixed boolean DEFAULT NULL::boolean, p_is_provision boolean DEFAULT NULL::boolean)
  RETURNS TABLE(total_income numeric, total_expenses numeric, balance numeric)
  LANGUAGE plpgsql
@@ -562,7 +631,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -601,7 +676,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.has_role(check_user_id uuid, required_role public.user_role)
  RETURNS boolean
  LANGUAGE sql
@@ -614,7 +695,13 @@ AS $function$
             );
           $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.log_user_activity(p_user_id uuid, p_action text, p_resource_type text, p_resource_id text DEFAULT NULL::text, p_old_values jsonb DEFAULT NULL::jsonb, p_new_values jsonb DEFAULT NULL::jsonb)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -634,7 +721,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.migrate_existing_transactions_to_journal()
  RETURNS TABLE(processed_count integer, error_count integer)
  LANGUAGE plpgsql
@@ -750,7 +843,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.update_notification_settings_updated_at()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -761,7 +860,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -774,7 +879,13 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
+DO $$
+BEGIN
+  EXECUTE $fn$
 CREATE OR REPLACE FUNCTION public.validate_period_entries(p_user_id uuid, p_start_date date, p_end_date date)
  RETURNS TABLE(is_valid boolean, unbalanced_count integer, missing_entries_count integer, total_transactions integer, error_details jsonb)
  LANGUAGE plpgsql
@@ -875,6 +986,9 @@ BEGIN
 END;
 $function$
 ;
+$fn$;
+END;
+$$;
 
 grant delete on table "public"."debug_logs" to "anon";
 
@@ -918,8 +1032,65 @@ grant truncate on table "public"."debug_logs" to "service_role";
 
 grant update on table "public"."debug_logs" to "service_role";
 
-CREATE TRIGGER protect_buckets_delete BEFORE DELETE ON storage.buckets FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    WHERE p.proname = 'protect_delete'
+      AND n.nspname = 'storage'
+  ) THEN
+    BEGIN
+      EXECUTE 'CREATE SCHEMA IF NOT EXISTS storage';
+    EXCEPTION WHEN insufficient_privilege THEN
+      -- Ignore missing privileges when running against restricted storage schema.
+    END;
 
-CREATE TRIGGER protect_objects_delete BEFORE DELETE ON storage.objects FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();
+    BEGIN
+      EXECUTE $create$
+        CREATE OR REPLACE FUNCTION storage.protect_delete()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        AS $body$
+        BEGIN
+          RETURN NEW;
+        END;
+        $body$;
+      $create$;
+    EXCEPTION WHEN insufficient_privilege THEN
+      -- Skip stub creation if storage schema forbids it on the shadow database.
+    END;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    WHERE p.proname = 'protect_delete'
+      AND n.nspname = 'storage'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_trigger WHERE tgname = 'protect_buckets_delete'
+    ) THEN
+      BEGIN
+        EXECUTE 'CREATE TRIGGER protect_buckets_delete BEFORE DELETE ON storage.buckets FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();';
+      EXCEPTION WHEN insufficient_privilege THEN
+        -- Ignore when storage schema triggers cannot be created.
+      END;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_trigger WHERE tgname = 'protect_objects_delete'
+    ) THEN
+      BEGIN
+        EXECUTE 'CREATE TRIGGER protect_objects_delete BEFORE DELETE ON storage.objects FOR EACH STATEMENT EXECUTE FUNCTION storage.protect_delete();';
+      EXCEPTION WHEN insufficient_privilege THEN
+        -- Ignore when storage schema triggers cannot be created.
+      END;
+    END IF;
+  END IF;
+END;
+$$;
 
 
