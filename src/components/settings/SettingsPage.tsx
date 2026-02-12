@@ -26,6 +26,7 @@ import { useBackupSchedule } from "@/hooks/useBackupSchedule";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { offlineSync } from "@/lib/offlineSync";
+import { usePWAUpdate } from "@/hooks/usePWAUpdate";
 
 interface SettingsPageProps {
   settings: AppSettings;
@@ -39,6 +40,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
   const [clearDataConfirmation, setClearDataConfirmation] = useState("");
   const [scheduleFrequency, setScheduleFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const { toast } = useToast();
+  const { status: pwaStatus } = usePWAUpdate();
   
   const {
     schedule,
@@ -1132,7 +1134,7 @@ ${importResults.backup_schedules.count} agendamentos${warningMsg}`,
               <div className="space-y-4">
                 <div>
                   <h4 className="text-xl font-bold">PlaniFlow</h4>
-                  <p className="text-sm text-muted-foreground">Versão 1.0.0</p>
+                  <p className="text-sm text-muted-foreground">Versão {pwaStatus.currentVersion || '1.0.0'}</p>
                 </div>
                 
                 <p className="text-sm text-muted-foreground leading-relaxed">

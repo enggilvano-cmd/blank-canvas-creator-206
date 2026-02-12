@@ -31,6 +31,19 @@ self.addEventListener('activate', function(event) {
   );
 });
 
+// ✅ Message handling for PWA updates
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[Service Worker] Received SKIP_WAITING message, activating new version immediately');
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CLIENTS_CLAIM') {
+    console.log('[Service Worker] Received CLIENTS_CLAIM message');
+    self.clients.claim();
+  }
+});
+
 // Listen for push events
 self.addEventListener('push', function(event) {
   if (event.data) {

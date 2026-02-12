@@ -18,7 +18,7 @@ export interface Notification {
   type: "reminder" | "alert" | "info";
   date: Date;
   read: boolean;
-  actionType?: "bill_payment" | "budget_exceeded" | "account_low";
+  actionType?: "bill_payment" | "budget_exceeded" | "account_low" | "invoice_receipt";
   actionData?: Record<string, unknown>;
 }
 
@@ -62,8 +62,14 @@ export function getDueDateReminders(
 ): Notification[] {
   const reminders: Notification[] = [];
   // ✅ BUG FIX #12: Use user timezone
+  // Normalizar para meia-noite local para cálculos corretos de dias
   const todayStr = getTodayInUserTimezone();
-  const today = new Date(todayStr);
+  const [tYear, tMonth, tDay] = todayStr.split('-').map(Number);
+  const today = new Date(tYear, tMonth - 1, tDay); // Meia-noite local
+  
+  // Data da notificação fixada às 09:00 da manhã para parecer "do dia"
+  const notificationDate = new Date(tYear, tMonth - 1, tDay, 9, 0, 0);
+  
   const reminderDays = settings.dueDateReminders;
   
   accounts
@@ -111,7 +117,7 @@ export function getDueDateReminders(
           message: `A fatura do ${account.name} vence em ${daysUntilDue} dia(s). Valor: ${formatCurrency(Math.round(amount * 100))}`,
 
           type: "reminder",
-          date: today,
+          date: notificationDate,
           read: false,
           actionType: "bill_payment",
           actionData: { accountId: account.id }
@@ -128,8 +134,11 @@ export function getOverdueBillAlerts(
   billAmounts?: Record<string, number>
 ): Notification[] {
   const alerts: Notification[] = [];
+  // Normalizar para meia-noite local
   const todayStr = getTodayInUserTimezone();
-  const today = new Date(todayStr);
+  const [tYear, tMonth, tDay] = todayStr.split('-').map(Number);
+  const today = new Date(tYear, tMonth - 1, tDay); // Meia-noite local for calculations
+  const notificationDate = new Date(tYear, tMonth - 1, tDay, 9, 0, 0); // 9 AM for display
   
   accounts
     .filter(acc => acc.type === "credit" && acc.due_date && acc.balance < 0)
@@ -162,7 +171,7 @@ export function getOverdueBillAlerts(
           message: `A fatura do ${account.name} está vencida há ${daysOverdue} dia(s). Valor: ${formatCurrency(Math.round(amount * 100))}`,
 
           type: "alert",
-          date: today,
+          date: notificationDate,
           read: false,
           actionType: "bill_payment",
           actionData: { accountId: account.id, overdue: true }
@@ -254,37 +263,58 @@ export interface NotificationTransaction {
   type: 'income' | 'expense';
 }
 
-// Get pending transaction reminders (bills to pay)
+// Get pending transaction reminders (bills to pay and receivables)
 export function getPendingTransactionReminders(
   transactions: NotificationTransaction[]
 ): Notification[] {
   const reminders: Notification[] = [];
+  // Normalizar para meia-noite local
   const todayStr = getTodayInUserTimezone();
-  const today = new Date(todayStr); // Data de hoje (user timezone)
+  const [tYear, tMonth, tDay] = todayStr.split('-').map(Number);
+  const today = new Date(tYear, tMonth - 1, tDay); // Meia-noite local (calc)
+  const notificationDate = new Date(tYear, tMonth - 1, tDay, 9, 0, 0); // 9 AM (display)
 
   transactions.forEach(transaction => {
-    // Garantir que é pendente e despesa
-    if (transaction.status !== 'pending' || transaction.type !== 'expense') return;
+    // Garantir que é pendente e despesa ou receita
+    if (transaction.status !== 'pending') return;
+    if (transaction.type !== 'expense' && transaction.type !== 'income') return;
 
-    // Calcular dias até vencimento
-    const dueDate = toUserTimezone(new Date(transaction.date));
+    // Fix: Treat date object as container for UTC date components which represent the Calendar Date
+    // This avoids timezone shifting (e.g. 2026-02-13 UTC -> 2026-02-12 Local)
+    const txDateOriginal = new Date(transaction.date);
+    
+    // Construct local date at midnight using UTC components (Calendar Date)
+    // Example: DB sends 2026-02-13T00:00Z. We want 2026-02-13 Local.
+    // getUTCDay() gets 13. new Date(..., 13) creates 13th Local.
+    const dueDate = new Date(
+      txDateOriginal.getUTCFullYear(),
+      txDateOriginal.getUTCMonth(),
+      txDateOriginal.getUTCDate(),
+      0, 0, 0, 0
+    );
     
     // Normalizar para remover componente de horas no cálculo de dias
-    const dueTime = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate()).getTime();
-    const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const dueTime = dueDate.getTime();
+    const todayTime = today.getTime();
 
     const daysUntilDue = Math.ceil((dueTime - todayTime) / (1000 * 60 * 60 * 24));
 
     // Regra: Notificar apenas no dia (0) ou um dia antes (1)
     if (daysUntilDue <= 1 && daysUntilDue >= 0) {
+       const isExpense = transaction.type === 'expense';
+       const title = isExpense ? "Conta a Pagar" : "Conta a Receber";
+       const messagePrefix = isExpense ? "O pagamento" : "O recebimento";
+       const dayText = daysUntilDue === 0 ? 'hoje' : 'amanhã';
+       const dueText = isExpense ? `vence ${dayText}` : `está previsto para ${dayText}`;
+
        reminders.push({
           id: `pending_tx_${transaction.id}`,
-          title: "Conta a Pagar",
-          message: `O pagamento "${transaction.description}" vence ${daysUntilDue === 0 ? 'hoje' : 'amanhã'}. Valor: ${formatCurrency(Math.round(transaction.amount * 100))}`,
+          title: title,
+          message: `${messagePrefix} "${transaction.description}" ${dueText}. Valor: ${formatCurrency(Math.round(transaction.amount * 100))}`,
           type: "reminder",
-          date: today,
+          date: notificationDate,
           read: false,
-          actionType: "bill_payment", 
+          actionType: isExpense ? "bill_payment" : "invoice_receipt", 
           actionData: { transactionId: transaction.id }
        });
     }

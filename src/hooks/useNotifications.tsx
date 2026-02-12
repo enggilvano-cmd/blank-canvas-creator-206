@@ -125,7 +125,7 @@ export function useNotifications() {
           .select('id, description, amount, date, status, type')
           .eq('user_id', user.id)
           .eq('status', 'pending')
-          .eq('type', 'expense')
+          .in('type', ['expense', 'income'])
           .gte('date', today.toISOString().split('T')[0]) 
           .lte('date', nextTwoDays.toISOString().split('T')[0]);
 
