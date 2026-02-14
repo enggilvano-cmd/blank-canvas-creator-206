@@ -106,8 +106,14 @@ class PWAUpdateManager {
   private async fetchCurrentVersion(): Promise<string> {
     try {
       // Tentar obter versão de um arquivo de versão no servidor
-      const response = await fetch('/version.json', {
+      // Adicionamos timestamp para evitar cache do navegador e headers explícitos
+      const response = await fetch(`/version.json?t=${new Date().getTime()}`, {
         cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
 
       if (response.ok) {

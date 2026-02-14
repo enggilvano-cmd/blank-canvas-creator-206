@@ -128,8 +128,18 @@ export default defineConfig(({ mode }) => ({
       manifest: false, // Usar o manifest.webmanifest do public/
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Excluir explicitamente version.json e manifest.webmanifest do precache de geração automática
+        globIgnores: ['**/node_modules/**/*', 'version.json', 'manifest.webmanifest'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
         runtimeCaching: [
+          // Rota específica para version.json - NUNCA CACHEAR
+          {
+            urlPattern: /version\.json/,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'version-check'
+            }
+          },
           {
             urlPattern: /^https:\/\/api\./,
             handler: 'NetworkFirst',
