@@ -1134,7 +1134,15 @@ ${importResults.backup_schedules.count} agendamentos${warningMsg}`,
               <div className="space-y-4">
                 <div>
                   <h4 className="text-xl font-bold">PlaniFlow</h4>
-                  <p className="text-sm text-muted-foreground">Versão {pwaStatus.currentVersion || '1.0.0'}</p>
+                  <div className="flex flex-col gap-1">
+                    {pwaStatus.currentBuildTime ? (
+                       <p className="text-sm text-muted-foreground">
+                         Versão: {pwaStatus.currentBuildTime}
+                       </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Versão {pwaStatus.currentVersion || '1.0.0'}</p>
+                    )}
+                  </div>
                 </div>
                 
                 <p className="text-sm text-muted-foreground leading-relaxed">

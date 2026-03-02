@@ -6,6 +6,7 @@ interface PWAStatus {
   isSupported: boolean;
   isRegistered: boolean;
   currentVersion: string;
+  currentBuildTime?: string | null;
   hasWaitingSW: boolean;
 }
 
@@ -48,13 +49,28 @@ export function usePWAUpdate(config?: PWAUpdateConfig): UsePWAUpdateReturn {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Atualizar status periodicamente
+  // Subscrever a mudanças do gerenciador de atualizações
   useEffect(() => {
-    const interval = setInterval(() => {
+    const handleUpdate = () => {
       setStatus(pwaUpdateManager.getStatus());
-    }, 5000); // A cada 5 segundos
+    };
 
-    return () => clearInterval(interval);
+    // Registrar listener
+    const unsubscribe = pwaUpdateManager.subscribe(handleUpdate);
+    
+    // Atualização inicial imediata para garantir sincronia
+    handleUpdate();
+    
+    // Forçar verificação ao montar para garantir dados frescos
+    pwaUpdateManager.checkForUpdates().catch(() => {});
+
+    // Manter polling como fallback para status do navegador que podem mudar sem eventos
+    const interval = setInterval(handleUpdate, 5000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const checkForUpdates = async () => {

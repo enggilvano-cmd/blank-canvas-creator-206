@@ -9,8 +9,11 @@ interface PWAUpdateConfig {
 
 class PWAUpdateManager {
   private currentVersion: string = '';
+  private currentBuildTime: string | null = null;
+  private initialBuildTime: string | null = null; // Armazena o build time inicial da sessão
   private sw: ServiceWorkerRegistration | null = null;
   private updateCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private listeners: Set<() => void> = new Set();
   private config: PWAUpdateConfig = {
     checkInterval: 60 * 60 * 1000, // 1 hora
   };
@@ -26,8 +29,15 @@ class PWAUpdateManager {
       // Obter versão atual do arquivo de versão
       await this.fetchCurrentVersion();
       
-      logger.info(`[PWA] Versão atual: ${this.currentVersion}`);
+      // Armazenar versão inicial como referência se ainda não foi feito
+      if (!this.initialBuildTime && this.currentBuildTime) {
+        this.initialBuildTime = this.currentBuildTime;
+      }
       
+      this.notifyListeners(); 
+      
+      logger.info(`[PWA] Versão inicial: ${this.currentVersion} (Build: ${this.currentBuildTime})`);
+
       // Detectar mudanças no service worker
       this.sw.addEventListener('updatefound', () => {
         this.handleUpdateFound();
@@ -78,24 +88,43 @@ class PWAUpdateManager {
    * Verifica se há atualizações disponíveis
    */
   async checkForUpdates(): Promise<boolean> {
+    // 1. Verificar version.json (BuildTime Check)
+    try {
+      await this.fetchCurrentVersion();
+    } catch (e) {
+      logger.warn('[PWA] Erro ao buscar versão do servidor', e);
+    }
+    
+    // Se tivermos um build time inicial e ele for diferente do servidor -> nova versão
+    if (this.initialBuildTime && this.currentBuildTime && this.currentBuildTime !== this.initialBuildTime) {
+      logger.info(`[PWA] Nova versão detectada via version.json (Server: ${this.currentBuildTime} vs Local: ${this.initialBuildTime})`);
+      if (this.sw) {
+         this.config.onUpdateAvailable?.(this.sw);
+      }
+      return true;
+    }
+    
+    // 2. Verificar via SW nativo
     if (!this.sw) {
-      logger.warn('[PWA] Service Worker não registrado');
+      logger.warn('[PWA] Service Worker não registrado para verificação nativa');
       return false;
     }
 
     try {
-      logger.info('[PWA] Verificando atualizações...');
+      logger.info('[PWA] Verificando atualizações no SW...');
+      
       const registration = await this.sw.update();
       
       if (registration.waiting) {
-        logger.info('[PWA] Atualização pendente encontrada');
+        logger.info('[PWA] Atualização pendente encontrada no SW');
+        this.config.onUpdateAvailable?.(registration);
         return true;
       }
 
-      logger.info('[PWA] Nenhuma atualização disponível');
+      logger.info('[PWA] Nenhuma atualização nativa do SW disponível');
       return false;
     } catch (error) {
-      logger.error('[PWA] Erro ao verificar atualizações', error);
+      logger.error('[PWA] Erro ao verificar atualizações do SW', error);
       throw error;
     }
   }
@@ -119,15 +148,20 @@ class PWAUpdateManager {
       if (response.ok) {
         const data = await response.json();
         this.currentVersion = data.version || 'unknown';
+        this.currentBuildTime = data.buildTime || null;
+        this.notifyListeners();
         return this.currentVersion;
       }
 
       // Fallback: usar timestamp do build
       this.currentVersion = new Date().getTime().toString();
+      this.currentBuildTime = null;
+      this.notifyListeners();
       return this.currentVersion;
     } catch (error) {
       logger.warn('[PWA] Não foi possível obter versão do servidor', error);
       this.currentVersion = 'unknown';
+      this.notifyListeners(); 
       return this.currentVersion;
     }
   }
@@ -329,8 +363,21 @@ class PWAUpdateManager {
       isSupported: 'serviceWorker' in navigator,
       isRegistered: !!this.sw,
       currentVersion: this.currentVersion,
+      currentBuildTime: this.currentBuildTime,
       hasWaitingSW: !!this.sw?.waiting,
     };
+  }
+
+  /**
+   * Inscreve um listener para mudanças de estado
+   */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach((listener) => listener());
   }
 }
 
