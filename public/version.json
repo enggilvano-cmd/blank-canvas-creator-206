@@ -1,6 +1,10 @@
 {
   "version": "1.0.0",
+<<<<<<< HEAD
   "buildTime": "2026-06-11T17:04:48.230Z",
+=======
+  "buildTime": "2026-03-02T01:37:46.877Z",
+>>>>>>> 4850eff (revisação 010326 2241 - versao atuazação automatica)
   "appName": "Planiflow",
   "buildNumber": "local"
 }
