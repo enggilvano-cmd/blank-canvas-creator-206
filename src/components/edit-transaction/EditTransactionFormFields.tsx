@@ -213,7 +213,7 @@ export function EditTransactionFormFields({
               {(() => {
                 const months = [];
                 const today = new Date();
-                for (let i = -12; i <= 12; i++) {
+                for (let i = -2; i <= 12; i++) {
                   const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
                   const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                   const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
