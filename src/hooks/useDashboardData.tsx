@@ -138,6 +138,43 @@ export function useDashboardData() {
       cutoffDate.setMonth(cutoffDate.getMonth() - 12);
       const dateFrom = cutoffDate.toISOString().split('T')[0];
 
+      // Helper para buscar todas as transações, contornando o limite de 1000 do PostgREST
+      const fetchAllTransactions = async () => {
+        let allTrans: any[] = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('transactions')
+            .select(`
+              *,
+              categories:category_id (id, name, type, color, icon),
+              accounts:account_id (id, name, type, balance, color),
+              to_accounts:to_account_id (id, name, type, balance, color)
+            `)
+            .eq('user_id', user.id)
+            .gte('date', dateFrom)
+            .order('date', { ascending: false })
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allTrans = [...allTrans, ...data];
+            if (data.length < pageSize) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          } else {
+            hasMore = false;
+          }
+        }
+        return { data: allTrans, error: null };
+      };
+
       const [
         accountsResult,
         transactionsResult,
@@ -149,18 +186,7 @@ export function useDashboardData() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false }),
         
-        supabase
-          .from('transactions')
-          .select(`
-            *,
-            categories:category_id (id, name, type, color, icon),
-            accounts:account_id (id, name, type, balance, color),
-            to_accounts:to_account_id (id, name, type, balance, color)
-          `)
-          .eq('user_id', user.id)
-          .gte('date', dateFrom)
-          .order('date', { ascending: false }),
-          // ✅ BUG FIX #3: Remover limite de 500 para carregar TODAS as transações dos últimos 12 meses
+        fetchAllTransactions(),
         
         supabase
           .from('categories')

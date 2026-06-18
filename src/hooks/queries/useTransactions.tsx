@@ -386,156 +386,185 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         return filtered;
       }
 
-      let query = supabase
-        .from('transactions')
-        .select(`
-          id,
-          description,
-          amount,
-          date,
-          type,
-          status,
-          category_id,
-          account_id,
-          to_account_id,
-          installments,
-          current_installment,
-          parent_transaction_id,
-          linked_transaction_id,
-          is_fixed,
-          is_provision,
-          invoice_month,
-          invoice_month_overridden,
-          created_at,
-          updated_at,
-          categories:category_id (
+      const buildQuery = () => {
+        let query = supabase
+          .from('transactions')
+          .select(`
             id,
-            name,
+            description,
+            amount,
+            date,
             type,
-            color
-          ),
-          accounts:account_id${accountType !== 'all' ? '!inner' : ''} (
-            id,
-            name,
-            type,
-            color
-          ),
-          to_accounts:to_account_id (
-            id,
-            name,
-            type,
-            color
-          ),
-          linked_transactions:linked_transaction_id (
+            status,
+            category_id,
             account_id,
-            accounts:account_id (
+            to_account_id,
+            installments,
+            current_installment,
+            parent_transaction_id,
+            linked_transaction_id,
+            is_fixed,
+            is_provision,
+            invoice_month,
+            invoice_month_overridden,
+            created_at,
+            updated_at,
+            categories:category_id (
               id,
               name,
               type,
               color
+            ),
+            accounts:account_id${accountType !== 'all' ? '!inner' : ''} (
+              id,
+              name,
+              type,
+              color
+            ),
+            to_accounts:to_account_id (
+              id,
+              name,
+              type,
+              color
+            ),
+            linked_transactions:linked_transaction_id (
+              account_id,
+              accounts:account_id (
+                id,
+                name,
+                type,
+                color
+              )
             )
-          )
-        `)
-        .eq('user_id', user.id)
-        // Excluir apenas o PAI das transações fixas (mantém as filhas)
-        .or('parent_transaction_id.not.is.null,is_fixed.neq.true,is_fixed.is.null')
-        // Excluir transações de Saldo Inicial
-        .neq('description', 'Saldo Inicial');
+          `)
+          .eq('user_id', user.id)
+          // Excluir apenas o PAI das transações fixas (mantém as filhas)
+          .or('parent_transaction_id.not.is.null,is_fixed.neq.true,is_fixed.is.null')
+          // Excluir transações de Saldo Inicial
+          .neq('description', 'Saldo Inicial');
 
-      // Apply filters
-      if (search) {
-        const cleanSearch = search.replace(/"/g, '');
-        const searchAmountStr = search.replace(',', '.');
-        const searchAmount = parseFloat(searchAmountStr);
-        
-        if (!isNaN(searchAmount)) {
-          const hasPlus = search.includes('+');
-          const hasMinus = search.includes('-');
+        // Apply filters
+        if (search) {
+          const cleanSearch = search.replace(/"/g, '');
+          const searchAmountStr = search.replace(',', '.');
+          const searchAmount = parseFloat(searchAmountStr);
           
-          if (hasPlus) {
-             const positiveAmount = Math.abs(searchAmount);
-             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${positiveAmount}`);
-          } else if (hasMinus) {
-             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${searchAmount}`);
+          if (!isNaN(searchAmount)) {
+            const hasPlus = search.includes('+');
+            const hasMinus = search.includes('-');
+            
+            if (hasPlus) {
+               const positiveAmount = Math.abs(searchAmount);
+               query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${positiveAmount}`);
+            } else if (hasMinus) {
+               query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${searchAmount}`);
+            } else {
+               const absAmount = Math.abs(searchAmount);
+               query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${absAmount},amount.eq.${-absAmount}`);
+            }
           } else {
-             const absAmount = Math.abs(searchAmount);
-             query = query.or(`description.ilike."%${cleanSearch}%",amount.eq.${absAmount},amount.eq.${-absAmount}`);
+            query = query.ilike('description', `%${cleanSearch}%`);
           }
-        } else {
-          query = query.ilike('description', `%${cleanSearch}%`);
         }
-      }
 
-      if (type !== 'all') {
-        if (type === 'transfer') {
-          // Incluir todas as transações de transferência
-          query = query.eq('type', 'transfer');
-        } else {
-          // Excluir transferências
-          query = query.eq('type', type)
-            .neq('type', 'transfer')
-            .is('linked_transaction_id', null)
-            .is('to_account_id', null);
+        if (type !== 'all') {
+          if (type === 'transfer') {
+            // Incluir todas as transações de transferência
+            query = query.eq('type', 'transfer');
+          } else {
+            // Excluir transferências
+            query = query.eq('type', type)
+              .neq('type', 'transfer')
+              .is('linked_transaction_id', null)
+              .is('to_account_id', null);
+          }
         }
-      }
 
-      if (accountId !== 'all') {
-        query = query.eq('account_id', accountId);
-      }
+        if (accountId !== 'all') {
+          query = query.eq('account_id', accountId);
+        }
 
-      if (categoryId !== 'all') {
-        query = query.eq('category_id', categoryId);
-      }
+        if (categoryId !== 'all') {
+          query = query.eq('category_id', categoryId);
+        }
 
-      if (status !== 'all') {
-        query = query.eq('status', status);
-      }
+        if (status !== 'all') {
+          query = query.eq('status', status);
+        }
 
-      if (isFixed !== 'all') {
-        query = query.eq('is_fixed', isFixed === 'true');
-      }
+        if (isFixed !== 'all') {
+          query = query.eq('is_fixed', isFixed === 'true');
+        }
 
-      if (isProvision !== 'all') {
-        query = query.eq('is_provision', isProvision === 'true');
-      }
+        if (isProvision !== 'all') {
+          query = query.eq('is_provision', isProvision === 'true');
+        }
 
-      if (invoiceMonth !== 'all') {
-        query = query.eq('invoice_month', invoiceMonth);
-      }
+        if (invoiceMonth !== 'all') {
+          query = query.eq('invoice_month', invoiceMonth);
+        }
 
-      if (dateFrom) {
-        query = query.gte('date', dateFrom);
-      }
+        if (dateFrom) {
+          query = query.gte('date', dateFrom);
+        }
 
-      if (dateTo) {
-        query = query.lte('date', dateTo);
-      }
+        if (dateTo) {
+          query = query.lte('date', dateTo);
+        }
 
-      // ✅ Server-side filter for accountType (optimized with INNER JOIN)
-      if (accountType !== 'all') {
-        query = query.eq('accounts.type', accountType);
-      }
+        // ✅ Server-side filter for accountType (optimized with INNER JOIN)
+        if (accountType !== 'all') {
+          query = query.eq('accounts.type', accountType);
+        }
 
-      // Apply sorting
-      const ascending = sortOrder === 'asc';
-      if (sortBy === 'date') {
-        query = query.order('date', { ascending }).order('created_at', { ascending });
-      } else if (sortBy === 'amount') {
-        query = query.order('amount', { ascending });
-      }
+        // Apply sorting
+        const ascending = sortOrder === 'asc';
+        if (sortBy === 'date') {
+          query = query.order('date', { ascending }).order('created_at', { ascending });
+        } else if (sortBy === 'amount') {
+          query = query.order('amount', { ascending });
+        }
 
-      // Apply pagination (apenas se pageSize não for null)
+        return query;
+      };
+
+      let finalData: any[] = [];
+
       if (pageSize !== null) {
+        // Apply pagination
+        let query = buildQuery();
         const from = page * pageSize;
         const to = from + pageSize - 1;
         query = query.range(from, to);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        finalData = data || [];
+      } else {
+        // Obter TODAS as transações quebrando em páginas de 1000 p/ contornar limite do PostgREST
+        let chunkPage = 0;
+        const chunkSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          let query = buildQuery();
+          const { data, error } = await query.range(chunkPage * chunkSize, (chunkPage + 1) * chunkSize - 1);
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            finalData = [...finalData, ...data];
+            if (data.length < chunkSize) {
+              hasMore = false;
+            } else {
+              chunkPage++;
+            }
+          } else {
+            hasMore = false;
+          }
+        }
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const results = (data || []).map((trans) => ({
+      const results = finalData.map((trans) => ({
         ...trans,
         date: createDateFromString(trans.date),
         category: Array.isArray(trans.categories) ? trans.categories[0] : trans.categories,

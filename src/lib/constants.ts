@@ -64,10 +64,10 @@ export const PAGINATION = {
   DEFAULT_PAGE_SIZE: 50,
   
   /** Máximo de itens por página */
-  MAX_PAGE_SIZE: 1000,
+  MAX_PAGE_SIZE: 5000,
   
   /** Opções de itens por página */
-  PAGE_SIZE_OPTIONS: [25, 50, 100, 200, 500, 1000] as const,
+  PAGE_SIZE_OPTIONS: [25, 50, 100, 200, 500, 1000, 5000] as const,
 } as const;
 
 // Legacy exports
