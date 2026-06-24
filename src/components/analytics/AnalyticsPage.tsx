@@ -66,6 +66,7 @@ interface Account {
   limit_amount?: number;
   due_date?: number;
   closing_date?: number;
+  ignored?: boolean;
 }
 
 interface Transaction {
@@ -333,7 +334,7 @@ export default function AnalyticsPage({
     const categoryFilteredTransactions = expenseTransactions.filter(
       (transaction) => {
         const category = getTransactionCategory(transaction);
-        return category !== "Pagamento de Fatura";
+        return category !== "Pagamento de Fatura" && category !== "Sem categoria";
       }
     );
 
@@ -389,7 +390,7 @@ export default function AnalyticsPage({
     const categoryFilteredTransactions = incomeTransactions.filter(
       (transaction) => {
         const category = getTransactionCategory(transaction);
-        return category !== "Pagamento de Fatura";
+        return category !== "Pagamento de Fatura" && category !== "Sem categoria";
       }
     );
 
@@ -2361,7 +2362,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2370,7 +2371,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       savingsBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(savingsBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(savingsBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -2402,7 +2403,7 @@ export default function AnalyticsPage({
                       <span className={`font-medium flex-shrink-0 ${
                         account.balance >= 0 ? 'text-success' : 'text-destructive'
                       }`}>
-                        {formatCurrency(account.balance)}
+                        {formatCurrency(account.balance * 100)}
                       </span>
                     </div>
                   ))}
@@ -2411,7 +2412,7 @@ export default function AnalyticsPage({
                     <span className={`font-medium flex-shrink-0 ${
                       savingsBalanceData.reduce((acc, curr) => acc + curr.balance, 0) >= 0 ? 'text-success' : 'text-destructive'
                     }`}>
-                      {formatCurrency(savingsBalanceData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(savingsBalanceData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -3383,14 +3384,14 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(acc.balance)}
+                        {formatCurrency(acc.balance * 100)}
                       </span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between gap-2 text-caption border-t pt-2 mt-1">
                     <span className="font-medium text-foreground pl-5">Total</span>
                     <span className="font-medium flex-shrink-0 text-destructive">
-                      {formatCurrency(overdraftUsedData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(overdraftUsedData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>
@@ -3420,14 +3421,14 @@ export default function AnalyticsPage({
                         </span>
                       </div>
                       <span className="font-medium flex-shrink-0 text-destructive">
-                        {formatCurrency(acc.balance)}
+                        {formatCurrency(acc.balance * 100)}
                       </span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between gap-2 text-caption border-t pt-2 mt-1">
                     <span className="font-medium text-foreground pl-5">Total</span>
                     <span className="font-medium flex-shrink-0 text-destructive">
-                      {formatCurrency(overdraftUsedData.reduce((acc, curr) => acc + curr.balance, 0))}
+                      {formatCurrency(overdraftUsedData.reduce((acc, curr) => acc + curr.balance, 0) * 100)}
                     </span>
                   </div>
                 </div>

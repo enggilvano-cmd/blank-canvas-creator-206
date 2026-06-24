@@ -110,7 +110,6 @@ export function AnalyticsFilterDialog({
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="income">Receita</SelectItem>
                   <SelectItem value="expense">Despesa</SelectItem>
-                  <SelectItem value="transfer">Transferência</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -163,7 +162,9 @@ export function AnalyticsFilterDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {categories.map((category) => (
+                  {categories
+                    .filter((category) => filterType === "all" || category.type === filterType)
+                    .map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       <div className="flex items-center gap-2">
                         <div
