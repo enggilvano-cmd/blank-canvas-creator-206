@@ -304,8 +304,9 @@ export function AccountsPage({
     .reduce((sum, acc) => {
       if (acc.type === "credit") {
         // Para cartões de crédito: limite - usado
+        // Note: balance is in Reais, limit_amount is in Cents
         const used = Math.abs(Math.min(acc.balance, 0));
-        const available = (acc.limit_amount || 0) - used;
+        const available = (acc.limit_amount || 0) - (used * 100);
         return sum + available;
       } else {
         // Para outras contas com limite (cheque especial): limite completo
@@ -568,7 +569,7 @@ export function AccountsPage({
                                   Disponível
                                 </span>
                                 <span className="text-caption font-medium text-primary">
-                                  {formatCurrency((account.limit_amount || 0) - Math.abs(Math.min(account.balance, 0)))}
+                                  {formatCurrency((account.limit_amount || 0) - (Math.abs(Math.min(account.balance, 0)) * 100))}
                                 </span>
                               </div>
                               {/* Barra de Progresso */}

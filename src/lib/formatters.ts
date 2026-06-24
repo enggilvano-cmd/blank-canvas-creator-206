@@ -73,8 +73,9 @@ export function getAvailableBalance(account: Account | undefined): number {
   if (account.type === 'credit') {
     // Cartão de crédito: saldo negativo = dívida
     // Disponível = limite - dívida
+    // Note: balance is in Reais, limit_amount is in Cents
     const debt = Math.abs(Math.min(account.balance, 0));
-    return (account.limit_amount || 0) - debt;
+    return (account.limit_amount || 0) - (debt * 100);
   }
   
   // Outras contas: saldo + limite (overdraft)

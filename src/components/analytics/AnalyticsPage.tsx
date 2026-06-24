@@ -605,7 +605,8 @@ export default function AnalyticsPage({
       .map((account) => {
         const usedCredit = account.balance < 0 ? Math.abs(account.balance) : 0;
         const surplus = account.balance > 0 ? account.balance : 0;
-        const availableCredit = (account.limit_amount || 0) - usedCredit + surplus;
+        // Note: balance is in Reais, limit_amount is in Cents
+        const availableCredit = (account.limit_amount || 0) - (usedCredit * 100) + (surplus * 100);
         
         return {
           name: account.name.split(" - ")[0] || account.name,
@@ -671,6 +672,7 @@ export default function AnalyticsPage({
         // Se o saldo é negativo, estamos usando o cheque especial
         const usedOverdraft = account.balance < 0 ? Math.abs(account.balance) : 0;
         // O disponível é o limite total menos o que já foi usado
+        // Note: balance is in Cents for checking accounts, limit_amount is in Cents
         const availableOverdraft = (account.limit_amount || 0) - usedOverdraft;
         
         return {
