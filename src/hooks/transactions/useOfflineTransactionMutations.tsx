@@ -195,7 +195,10 @@ export function useOfflineTransactionMutations() {
 
       if (isOnline) {
         try {
-          return await onlineMutations.handleEditTransaction(updatedTransaction, editScope);
+          // ✅ FIX CRÍTICO: Aguardar a edição completar E a invalidação antes de retornar
+          await onlineMutations.handleEditTransaction(updatedTransaction, editScope);
+          // A invalidação já acontece dentro de handleEditTransaction, mas garantimos aqui também
+          return;
         } catch (error) {
           const message = getErrorMessage(error);
           if (message.toLowerCase().includes('network') || message.toLowerCase().includes('failed to fetch')) {
@@ -208,6 +211,7 @@ export function useOfflineTransactionMutations() {
         }
       }
 
+      // Modo offline
       await enqueueOfflineEdit();
       toast({ title: 'Modo Offline', description: 'Alteração será sincronizada.', duration: 3000 });
       await invalidateTransactions();

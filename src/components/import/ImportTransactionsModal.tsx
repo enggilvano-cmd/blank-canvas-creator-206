@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { createDateFromString } from "@/lib/dateUtils";
 import type { ImportTransactionData } from '@/types';
 import { ImportSummaryCards } from "@/components/import/ImportSummaryCards";
+import { Progress } from "@/components/ui/progress";
 
 interface Account {
   id: string;
@@ -52,7 +53,7 @@ interface ImportedTransaction {
   contaDestino?: string;
   valor: number;
   status?: string;
-  parcelas?: string; // Mantido como string para leitura inicial
+  parcelas?: string;
   invoiceMonth?: string;
   isFixed?: boolean;
   isProvision?: boolean;
@@ -65,11 +66,11 @@ interface ImportedTransaction {
   parsedStatus?: 'completed' | 'pending';
   isDuplicate: boolean;
   existingTransactionId?: string;
-  resolution: 'skip' | 'add' | 'replace'; // Ação para duplicatas
+  resolution: 'skip' | 'add' | 'replace';
   id?: string;
   parentTransactionId?: string;
-  linkedTransactionId?: string; // Campo adicionado para vincular pares de transferência
-  linkedTransactionRef?: string; // Referência temporária do arquivo Excel (ID Vinculado)
+  linkedTransactionId?: string;
+  linkedTransactionRef?: string;
 }
 
 export function ImportTransactionsModal({ 
@@ -83,6 +84,8 @@ export function ImportTransactionsModal({
   const [importedData, setImportedData] = useState<ImportedTransaction[]>([]);
   const [excludedIndexes, setExcludedIndexes] = useState<Set<number>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStatus, setProcessingStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<'all' | 'invalid' | 'transfers' | 'valid'>('all');
   const { toast } = useToast();
   const previewSectionRef = useRef<HTMLDivElement>(null);
@@ -114,7 +117,6 @@ export function ImportTransactionsModal({
     if (!row || typeof row !== 'object') {return '';}
     if (!keys || !Array.isArray(keys)) {return '';}
     
-    // Mapa normalizado de chaves do Excel -> valor
     const keyMap = new Map<string, unknown>();
     const rowKeys = Object.keys(row);
     
@@ -124,7 +126,6 @@ export function ImportTransactionsModal({
       }
     }
     
-    // Converter para array regular para garantir iterabilidade
     const keysArray = Array.from(keys);
     
     for (const key of keysArray) {
@@ -141,20 +142,18 @@ export function ImportTransactionsModal({
     return '';
   };
 
-  // Função para normalizar strings (remover acentos, espaços extras, etc.)
   const normalizeString = (str: string): string => {
     return str
       .trim()
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos (acentos)
-      .replace(/\s+/g, ' '); // Normaliza espaços
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ');
   };
   const normalizeKey = (str: string): string => normalizeString(str).replace(/[^a-z0-9]/g, '');
 
   const validateTransactionType = (tipo: string): 'income' | 'expense' | 'transfer' | null => {
     const normalizedType = normalizeString(tipo);
-    // Suporte para PT-BR, EN-US, ES-ES (singular e plural)
     if (['receita', 'receitas', 'income', 'entrada', 'entradas', 'ingreso', 'ingresos'].includes(normalizedType)) {return 'income';}
     if (['despesa', 'despesas', 'expense', 'expenses', 'saida', 'saidas', 'gasto', 'gastos'].includes(normalizedType)) {return 'expense';}
     if (['transferencia', 'transfer', 'transferir'].includes(normalizedType)) {return 'transfer';}
@@ -162,9 +161,8 @@ export function ImportTransactionsModal({
   };
 
   const validateStatus = (status: string): 'completed' | 'pending' | null => {
-    if (!status) {return 'completed';} // padrão
+    if (!status) {return 'completed';}
     const normalizedStatus = normalizeString(status);
-    // Suporte para PT-BR, EN-US, ES-ES
     if (['concluida', 'completed', 'finalizada', 'completada'].includes(normalizedStatus)) {return 'completed';}
     if (['pendente', 'pending', 'em andamento'].includes(normalizedStatus)) {return 'pending';}
     return null;
@@ -172,7 +170,6 @@ export function ImportTransactionsModal({
 
   const findAccountByName = (accountName: string): Account | null => {
     const normalizedName = accountName.toLowerCase().trim();
-    // Busca por correspondência exata para evitar ambiguidades
     return accounts.find(acc => acc.name.toLowerCase().trim() === normalizedName) || null;
   };
 
@@ -181,7 +178,6 @@ export function ImportTransactionsModal({
       try {
         if (!value) {return undefined;}
         
-        // Se for um número (serial date do Excel)
         if (typeof value === 'number') {
           const excelEpoch = new Date(1899, 11, 30);
           const jsDate = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
@@ -193,7 +189,6 @@ export function ImportTransactionsModal({
           return undefined;
         }
         
-        // Se já for um objeto Date
         if (value instanceof Date && isValid(value)) {
           const year = value.getFullYear();
           const month = String(value.getMonth() + 1).padStart(2, '0');
@@ -203,12 +198,10 @@ export function ImportTransactionsModal({
         const str = String(value).trim();
         if (!str) {return undefined;}
         
-        // Formato já correto: YYYY-MM
         if (/^\d{4}-\d{2}$/.test(str)) {
           return str;
         }
         
-        // Formato: MM/YYYY ou MM-YYYY
         if (/^(\d{1,2})[/-](\d{4})$/.test(str)) {
           const match = str.match(/^(\d{1,2})[/-](\d{4})$/);
           if (match) {
@@ -218,7 +211,6 @@ export function ImportTransactionsModal({
           }
         }
         
-        // Formato: YYYY/MM ou YYYY.MM
         if (/^(\d{4})[/.](\d{1,2})$/.test(str)) {
           const match = str.match(/^(\d{4})[/.](\d{1,2})$/);
           if (match) {
@@ -228,14 +220,12 @@ export function ImportTransactionsModal({
           }
         }
         
-        // Formato: apenas MM (assumir ano atual)
         if (/^\d{1,2}$/.test(str)) {
           const month = str.padStart(2, '0');
           const currentYear = new Date().getFullYear();
           return `${currentYear}-${month}`;
         }
         
-        // Formato brasileiro: mês abreviado/ano abreviado (ex: dez/25, jan/26)
         const monthAbbreviations: Record<string, string> = {
           'jan': '01', 'fev': '02', 'mar': '03', 'abr': '04',
           'mai': '05', 'jun': '06', 'jul': '07', 'ago': '08',
@@ -248,18 +238,15 @@ export function ImportTransactionsModal({
           let yearStr = brazilianMonthMatch[2];
           
           if (monthAbbreviations[monthAbbr]) {
-            // Se o ano tem 2 dígitos, expandir para 4
             if (yearStr.length === 2) {
               const currentCentury = Math.floor(new Date().getFullYear() / 100) * 100;
               const yearNum = parseInt(yearStr, 10);
-              // Se o ano for menor que 50, assume século atual; senão, assume século anterior
               yearStr = String(yearNum < 50 ? currentCentury + yearNum : currentCentury - 100 + yearNum);
             }
             return `${yearStr}-${monthAbbreviations[monthAbbr]}`;
           }
         }
         
-        // Tentar parsear como data e extrair ano-mês
         try {
           const parsed = parseDate(str);
           if (parsed && isValid(parsed)) {
@@ -268,7 +255,7 @@ export function ImportTransactionsModal({
             return `${year}-${month}`;
           }
         } catch (e) {
-          // Ignorar erro de parsing
+          // Ignorar erro
         }
         
         return undefined;
@@ -325,7 +312,6 @@ export function ImportTransactionsModal({
     return null;
   };
 
-  // Adicionando logs detalhados para capturar informações de transações rejeitadas
   const validateAndCheckDuplicate = (row: Record<string, unknown>): ImportedTransaction => {
     const errors: string[] = [];
     let isValid = true;
@@ -343,14 +329,8 @@ export function ImportTransactionsModal({
 
     if (typeof rawValorOriginal === 'number') {
       valor = Math.abs(Math.round(rawValorOriginal * 100));
-      logger.debug('[ImportTx] Valor numérico:', {
-        raw: rawValorOriginal,
-        convertido: valor,
-        emReais: valor / 100
-      });
     } else {
       const rawValor = String(rawValorOriginal || '0').trim();
-      // Remove currency symbols and other non-numeric chars, keeping , . -
       const cleanValor = rawValor.replace(/[^0-9,.-]/g, '');
       
       const lastComma = cleanValor.lastIndexOf(',');
@@ -374,15 +354,6 @@ export function ImportTransactionsModal({
 
       const parsed = parseFloat(normalizedValue);
       valor = Math.abs(Math.round(parsed * 100));
-      
-      logger.debug('[ImportTx] Conversão de valor string:', {
-        raw: rawValor,
-        clean: cleanValor,
-        normalized: normalizedValue,
-        parsed: parsed,
-        valorFinal: valor,
-        emReais: valor / 100
-      });
     }
 
     if (!data) {
@@ -413,11 +384,6 @@ export function ImportTransactionsModal({
     if (isNaN(valor)) {
       errors.push('Valor inválido. Deve ser um número');
       isValid = false;
-      logger.debug('[ImportTx] Valor inválido:', {
-        raw: rawValorOriginal,
-        tipo: typeof rawValorOriginal,
-        processado: valor
-      });
     } else if (valor <= 0) {
       errors.push('Valor deve ser maior que zero');
       isValid = false;
@@ -466,10 +432,6 @@ export function ImportTransactionsModal({
     const invoiceMonth = parseInvoiceMonth(invoiceMonthRaw);
 
     if (invoiceMonthRaw && !invoiceMonth) {
-      logger.debug('[ImportTx] Falha ao parsear mês da fatura:', {
-        raw: invoiceMonthRaw,
-        tipo: typeof invoiceMonthRaw
-      });
       errors.push('Aviso: Formato de mês de fatura inválido. Use YYYY-MM ou MM/YYYY. Campo será ignorado.');
     }
 
@@ -494,44 +456,13 @@ export function ImportTransactionsModal({
         const isSameDescription = (tx.description || '').trim().toLowerCase() === String(descricao).trim().toLowerCase();
         const isSameAccount = tx.account_id === accountId;
         
-        if (isSameAccount && isSameDate && isSameDescription && !isSameAmount) {
-          logger.debug('[ImportTx] Possível duplicata com valor diferente:', {
-            transacao: descricao,
-            valorImportado: valorInCents,
-            valorExistente: Math.abs(tx.amount),
-            diferenca: Math.abs(tx.amount) - valorInCents
-          });
-        }
-        
         return isSameAccount && isSameDate && isSameAmount && isSameDescription;
       });
 
       if (existingTx) {
         isDuplicate = true;
         existingTransactionId = existingTx.id;
-        logger.debug('[ImportTx] Duplicata detectada:', {
-          descricao,
-          valor: valorInCents,
-          data: parsedDate.toISOString().split('T')[0],
-          existingId: existingTx.id
-        });
       }
-    }
-
-    if (!isValid) {
-      logger.debug('[ImportTx] Transação rejeitada:', {
-        data,
-        descricao,
-        categoria,
-        tipo,
-        conta,
-        contaDestino,
-        valor,
-        status: statusStr,
-        parcelas: String(pick(row, HEADERS.installments) || ''),
-        invoiceMonth,
-        errors
-      });
     }
 
     return {
@@ -560,7 +491,6 @@ export function ImportTransactionsModal({
     };
   };
 
-  // Adicionando melhorias para validação inicial e otimização de desempenho
   const validateHeaders = (headers: string[]): string[] => {
     const requiredHeaders = [
       normalizeKey('Data'),
@@ -597,6 +527,33 @@ export function ImportTransactionsModal({
     return rawData;
   };
 
+  // 🔥 OTIMIZAÇÃO: Processar em chunks para evitar travamento
+  const processInChunks = async (rawData: unknown[]): Promise<ImportedTransaction[]> => {
+    const CHUNK_SIZE = 100; // Processar 100 transações por vez
+    const results: ImportedTransaction[] = [];
+    const totalChunks = Math.ceil(rawData.length / CHUNK_SIZE);
+
+    for (let i = 0; i < rawData.length; i += CHUNK_SIZE) {
+      const chunk = rawData.slice(i, i + CHUNK_SIZE);
+      const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1;
+      
+      setProcessingStatus(`Processando ${i + 1}-${Math.min(i + CHUNK_SIZE, rawData.length)} de ${rawData.length} transações...`);
+      setProcessingProgress((chunkNumber / totalChunks) * 100);
+
+      // Processar chunk
+      const chunkResults = chunk.map((row: unknown) => 
+        validateAndCheckDuplicate(row as Record<string, unknown>)
+      );
+      
+      results.push(...chunkResults);
+
+      // Dar tempo para a UI atualizar (yield to main thread)
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
+    return results;
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) {return;}
@@ -612,10 +569,16 @@ export function ImportTransactionsModal({
 
     setFile(selectedFile);
     setIsProcessing(true);
+    setProcessingProgress(0);
+    setProcessingStatus('Lendo arquivo...');
 
     try {
       const rawData = await processFile(selectedFile);
-      const validatedData = rawData.map((row: unknown) => validateAndCheckDuplicate(row as Record<string, unknown>));
+      
+      logger.info(`[ImportTx] Iniciando processamento de ${rawData.length} transações`);
+      
+      // 🔥 OTIMIZAÇÃO: Processar em chunks
+      const validatedData = await processInChunks(rawData);
 
       setImportedData(validatedData);
 
@@ -626,20 +589,9 @@ export function ImportTransactionsModal({
         return acc;
       }, { new: 0, duplicates: 0, invalid: 0 });
 
-      // Log detalhado de erros para debug
       const invalidTransactions = validatedData.filter(t => !t.isValid);
       if (invalidTransactions.length > 0) {
-        console.group('❌ Transações inválidas encontradas:');
-        invalidTransactions.forEach((t, idx) => {
-          logger.debug(`[${idx + 1}/${invalidTransactions.length}] Linha ${validatedData.indexOf(t) + 2}:`, {
-            descrição: t.descricao,
-            tipo: t.tipo,
-            conta: t.conta,
-            contaDestino: t.contaDestino || 'N/A',
-            erros: t.errors
-          });
-        });
-        console.groupEnd();
+        logger.debug(`[ImportTx] ${invalidTransactions.length} transações inválidas encontradas`);
       }
 
       toast({
@@ -654,11 +606,12 @@ export function ImportTransactionsModal({
       });
     } finally {
       setIsProcessing(false);
+      setProcessingProgress(0);
+      setProcessingStatus('');
     }
   };
 
   const handleImport = () => {
-    // Itens para adicionar: novos OU duplicatas com resolution='add' OU duplicatas com resolution='replace'
     const transactionsToAdd = importedData
       .filter((t, index) => 
         !excludedIndexes.has(index) && 
@@ -666,12 +619,9 @@ export function ImportTransactionsModal({
         (t.resolution === 'add' || t.resolution === 'replace')
       )
       .map(t => {
-        // t.valor está em CENTAVOS (convertido na validação)
-        // Converter para REAIS antes de enviar para a API
         const amountInCents = Math.round(Math.abs(t.valor));
-        const amountInReais = amountInCents / 100; // Converter centavos → reais
+        const amountInReais = amountInCents / 100;
         
-        // Se é transferência mas não tem conta destino, é a transação de entrada (income)
         let finalType = t.parsedType as 'income' | 'expense' | 'transfer';
         if (finalType === 'transfer' && !t.toAccountId) {
           finalType = 'income';
@@ -679,8 +629,6 @@ export function ImportTransactionsModal({
         
         return {
           description: t.descricao.trim(),        
-          // Edge function + função SQL definem o sinal com base no tipo
-          // Portanto, SEMPRE enviamos amount positivo (em REAIS) para passar na validação Zod
           amount: amountInReais,
           category: t.categoria.trim(),
           type: finalType,
@@ -699,34 +647,14 @@ export function ImportTransactionsModal({
       });
 
     const transactionsToReplaceIds = importedData
-      .filter((t, index) => {
-        const shouldInclude = !excludedIndexes.has(index) && 
-          t.isValid && 
-          t.isDuplicate && 
-          t.resolution === 'replace' && 
-          t.existingTransactionId;
-        
-        if (shouldInclude) {
-          logger.debug('[ImportTransactions] Item marcado para substituição:', {
-            index,
-            descricao: t.descricao,
-            existingTransactionId: t.existingTransactionId,
-            resolution: t.resolution,
-            isDuplicate: t.isDuplicate
-          });
-        }
-        
-        return shouldInclude;
-      })
+      .filter((t, index) => 
+        !excludedIndexes.has(index) && 
+        t.isValid && 
+        t.isDuplicate && 
+        t.resolution === 'replace' && 
+        t.existingTransactionId
+      )
       .map(t => t.existingTransactionId!);
-
-    logger.debug('[ImportTransactions] Processando importação:', {
-      total: importedData.length,
-      transactionsToAdd: transactionsToAdd.length,
-      transactionsToReplaceIds: transactionsToReplaceIds.length,
-      transactionsToReplaceDetails: transactionsToReplaceIds,
-      excluded: excludedIndexes.size
-    });
 
     if (transactionsToAdd.length === 0 && transactionsToReplaceIds.length === 0) {
       toast({
@@ -744,7 +672,6 @@ export function ImportTransactionsModal({
       description: `${transactionsToAdd.length} transação(ões) importada(s) com sucesso`,
     });
 
-    // Reset
     setFile(null);
     setImportedData([]);
     setExcludedIndexes(new Set());
@@ -862,18 +789,17 @@ export function ImportTransactionsModal({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Modelo");
 
-    // Configurar largura das colunas
     const colWidths = [
-      { wch: 12 },  // Data
-      { wch: 30 },  // Descrição
-      { wch: 20 },  // Categoria
-      { wch: 15 },  // Tipo
-      { wch: 25 },  // Conta
-      { wch: 25 },  // Conta Destino
-      { wch: 15 },  // Valor
-      { wch: 12 },  // Status
-      { wch: 12 },  // Parcelas
-      { wch: 12 }   // Mês Fatura
+      { wch: 12 },
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 }
     ];
     ws['!cols'] = colWidths;
 
@@ -953,6 +879,16 @@ export function ImportTransactionsModal({
                     </div>
                   )}
                 </div>
+
+                {/* 🔥 NOVO: Barra de progresso durante processamento */}
+                {isProcessing && (
+                  <div className="space-y-2">
+                    <Progress value={processingProgress} className="w-full" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      {processingStatus}
+                    </p>
+                  </div>
+                )}
 
                 <Alert>
                   <AlertCircle className="h-4 w-4" />

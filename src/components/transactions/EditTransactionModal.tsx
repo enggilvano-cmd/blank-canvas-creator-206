@@ -124,19 +124,30 @@ export function EditTransactionModal({
         return;
       }
 
-      onEditTransaction({ id: transaction.id, ...updates } as TransactionUpdate, editScope);
-      
       const scopeDescription = editScope === "current" ? "Transação atual atualizada com sucesso" : 
                                editScope === "all" ? "Todas as parcelas atualizadas com sucesso" :
                                "Parcelas selecionadas atualizadas com sucesso";
       
-      toast({
-        title: "Sucesso",
-        description: scopeDescription,
-      });
-
+      // ✅ FIX: Fechar modal IMEDIATAMENTE para melhor UX
       onOpenChange(false);
       setScopeDialogOpen(false);
+      
+      // ✅ Processar edição em background (não bloqueia UI)
+      // Chama a função sem await para não bloquear o fechamento do modal
+      Promise.resolve(onEditTransaction({ id: transaction.id, ...updates } as TransactionUpdate, editScope))
+        .then(() => {
+          toast({
+            title: "Sucesso",
+            description: scopeDescription,
+          });
+        })
+        .catch(() => {
+          toast({
+            title: "Erro",
+            description: "Erro ao salvar alterações",
+            variant: "destructive",
+          });
+        });
     } finally {
       // ⚠️ CRÍTICO: Sempre resetar isSubmitting
       setIsSubmitting(false);

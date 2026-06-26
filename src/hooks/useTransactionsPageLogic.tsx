@@ -422,7 +422,10 @@ export function useTransactionsPageLogic({
     dateFrom,
     dateTo,
     search,
-    transactions.length, // Adiciona para forçar atualização após exclusões
+    // ✅ FIX OTIMIZADO: Usar hash dos valores relevantes ao invés do array inteiro
+    // Isso evita re-execuções desnecessárias quando o array muda mas os valores não
+    transactions.map(t => `${t.id}-${t.amount}-${t.updated_at}`).join(','),
+    allTransactions?.map(t => `${t.id}-${t.amount}-${t.updated_at}`).join(','),
   ]);
 
   // Export to Excel

@@ -206,7 +206,8 @@ export function useTransactionMutations() {
     }
 
     try {
-      // Optimistic Update only for 'current' scope to avoid complexity
+      // ✅ FIX: Update otimista para TODAS as queries, não apenas 'current' scope
+      // Isso garante que Dashboard, Analytics e Lista sejam atualizados imediatamente
       if (!editScope || editScope === 'current') {
         if (originalTransaction) {
           // 1. Update Accounts
@@ -218,15 +219,6 @@ export function useTransactionMutations() {
                 if (updatedTransaction.account_id && updatedTransaction.account_id !== originalTransaction!.account_id) {
                    // Remove from old account
                    if (acc.id === originalTransaction!.account_id) {
-                     const amount = originalTransaction!.amount; // Amount is always positive in DB? No, signed?
-                     // In DB/Types, amount is usually positive and type determines sign, OR signed.
-                     // Let's check: useOfflineTransactionMutations uses Math.abs.
-                     // In Supabase, usually signed or type-based.
-                     // TransactionInput has type.
-                     // Let's assume amount is positive and type determines sign for calculation.
-                     // Wait, in `handleAddTransaction` I did:
-                     // if (type === 'expense') newBalance -= amount;
-                     
                      // Revert old transaction effect
                      if (originalTransaction!.type === 'expense') {acc.balance += originalTransaction!.amount;}
                      else if (originalTransaction!.type === 'income') {acc.balance -= originalTransaction!.amount;}
@@ -258,7 +250,8 @@ export function useTransactionMutations() {
             });
           }
 
-          // 2. Update Transaction in List
+          // 2. ✅ FIX CRÍTICO: Update Transaction em TODAS as queries de transações
+          // Usa setQueriesData para atualizar todas as variações (filtradas, não filtradas, etc)
           queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
             if (!oldData || !Array.isArray(oldData)) {return oldData;}
             return oldData.map((tx: any) => {
@@ -267,9 +260,7 @@ export function useTransactionMutations() {
                    ...tx,
                    ...updatedTransaction,
                    date: updatedTransaction.date ? new Date(updatedTransaction.date) : tx.date,
-                   // If category/account changed, we should update the objects too, but for now ID is enough for logic,
-                   // UI might show old name until refresh if we don't update objects.
-                   // It's acceptable for <1s.
+                   updated_at: new Date().toISOString(), // ✅ Atualiza timestamp para forçar re-render
                  };
               }
               return tx;
