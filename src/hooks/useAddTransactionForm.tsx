@@ -3,7 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { trackUserAction, setSentryContext } from "@/lib/sentry";
 import { getTodayString, createDateFromString, calculateInvoiceMonthByDue, addMonthsToDate } from "@/lib/dateUtils";
-import { Account, TransactionInput, InstallmentTransactionInput } from "@/types";
+import type { Account, TransactionInput, InstallmentTransactionInput } from "@/types";
 import { addTransactionSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,7 +101,7 @@ export function useAddTransactionForm({
 
   // Recalcula o mês da fatura quando a data ou conta mudam (apenas se não foi alterado manualmente)
   useEffect(() => {
-    if (!formData.account_id || !formData.date) return;
+    if (!formData.account_id || !formData.date) {return;}
     
     const selectedAccount = accounts.find(acc => acc.id === formData.account_id);
     if (!selectedAccount || selectedAccount.type !== "credit" || !selectedAccount.closing_date) {
@@ -154,8 +154,8 @@ export function useAddTransactionForm({
   }, [formData.date, formData.status, manualStatusChange]);
 
   const filteredCategories = useMemo(() => {
-    if (!formData.type) return categories;
-    if (formData.type === "transfer") return [];
+    if (!formData.type) {return categories;}
+    if (formData.type === "transfer") {return [];}
     return categories.filter(
       (cat) => cat.type === formData.type || cat.type === "both"
     );
@@ -393,8 +393,19 @@ export function useAddTransactionForm({
     await onAddInstallmentTransactions(transactionsToCreate);
     
     // ⚠️ NÃO invalidar queries aqui! O update otimista já cuidou da UI.
-    // invalidateTransactions().catch(console.error);
-    onSuccess?.();
+    // ✅ BUGFIX #9: Melhor tratamento de erros assíncronos
+    try {
+      await invalidateTransactions();
+      onSuccess?.();
+    } catch (error) {
+      logger.error('Failed to invalidate transactions after success:', error);
+      toast({
+        title: 'Aviso',
+        description: 'Transação criada, mas pode ser necessário recarregar a página para ver as atualizações.',
+        variant: 'default',
+      });
+      onSuccess?.(); // Ainda chama onSuccess pois a operação principal teve sucesso
+    }
     
     toast({
       title: "Sucesso",

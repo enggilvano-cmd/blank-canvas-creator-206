@@ -310,9 +310,9 @@ export default function AnalyticsPage({
   // Helper para identificar transações de transferência (ambos os lados)
   const isTransferLike = (transaction: Transaction) => {
     // Transferência de saída (tem to_account_id)
-    if (transaction.to_account_id) return true;
+    if (transaction.to_account_id) {return true;}
     // Transferência de entrada (type='transfer' com linked_transaction_id)
-    if (transaction.type === 'transfer' && transaction.linked_transaction_id) return true;
+    if (transaction.type === 'transfer' && transaction.linked_transaction_id) {return true;}
     return false;
   };
 
@@ -491,8 +491,8 @@ export default function AnalyticsPage({
       // 2. Subtract COMPLETED transactions that happened ON or AFTER the target date
       // We are moving backwards in time, so we reverse the effect of these transactions
       const completedSinceTarget = transactionsForBalance.filter(t => {
-        if (isTransferLike(t)) return false;
-        if (t.status !== 'completed') return false;
+        if (isTransferLike(t)) {return false;}
+        if (t.status !== 'completed') {return false;}
         
         const tDate = typeof t.date === 'string' ? createDateFromString(t.date) : t.date;
         const tDateStr = format(tDate, 'yyyy-MM-dd');
@@ -502,8 +502,8 @@ export default function AnalyticsPage({
       });
       
       const netChangeSinceTarget = completedSinceTarget.reduce((acc, t) => {
-        if (t.type === 'income') return acc + Math.abs(t.amount);
-        if (t.type === 'expense') return acc - Math.abs(t.amount);
+        if (t.type === 'income') {return acc + Math.abs(t.amount);}
+        if (t.type === 'expense') {return acc - Math.abs(t.amount);}
         return acc;
       }, 0);
       
@@ -511,8 +511,8 @@ export default function AnalyticsPage({
       // These are "debts" or "receivables" that should have affected the balance by that time
       // if we are projecting a "real" balance including pending items
       const pendingBeforeTarget = transactionsForBalance.filter(t => {
-        if (isTransferLike(t)) return false;
-        if (t.status !== 'pending') return false;
+        if (isTransferLike(t)) {return false;}
+        if (t.status !== 'pending') {return false;}
         
         const tDate = typeof t.date === 'string' ? createDateFromString(t.date) : t.date;
         const tDateStr = format(tDate, 'yyyy-MM-dd');
@@ -521,8 +521,8 @@ export default function AnalyticsPage({
       });
       
       const netPendingBeforeTarget = pendingBeforeTarget.reduce((acc, t) => {
-        if (t.type === 'income') return acc + Math.abs(t.amount);
-        if (t.type === 'expense') return acc - Math.abs(t.amount);
+        if (t.type === 'income') {return acc + Math.abs(t.amount);}
+        if (t.type === 'expense') {return acc - Math.abs(t.amount);}
         return acc;
       }, 0);
       

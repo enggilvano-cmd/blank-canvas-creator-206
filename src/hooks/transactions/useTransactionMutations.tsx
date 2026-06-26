@@ -5,10 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { notifyFixedTransactionsChange } from '@/hooks/useFixedTransactions';
 import { offlineDatabase } from '@/lib/offlineDatabase';
-import { TransactionInput, TransactionUpdate, Account, Category, Transaction } from '@/types';
+import type { TransactionInput, TransactionUpdate, Account, Category, Transaction } from '@/types';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
-import { EditScope } from '@/components/TransactionScopeDialog';
+import type { EditScope } from '@/components/transactions/TransactionScopeDialog';
 import { getErrorMessage } from '@/lib/errorUtils';
 import { generateUUID } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ export function useTransactionMutations() {
 
 
   const handleAddTransaction = useCallback(async (transactionData: TransactionInput) => {
-    if (!user) return;
+    if (!user) {return;}
     
     // Snapshot for rollback
     const previousAccounts = queryClient.getQueryData<Account[]>(queryKeys.accounts);
@@ -33,7 +33,7 @@ export function useTransactionMutations() {
       // 1. Optimistic Update: Accounts Balance
       if (previousAccounts) {
         queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
-          if (!old) return [];
+          if (!old) {return [];}
           return old.map(acc => {
             if (acc.id === transactionData.account_id) {
               let newBalance = acc.balance;
@@ -59,7 +59,7 @@ export function useTransactionMutations() {
       const category = categories.find(c => c.id === transactionData.category_id);
       const account = accounts.find(a => a.id === transactionData.account_id);
 
-      const optimisticTransaction: any = {
+      const optimisticTransaction: Transaction = {
         id: tempId,
         description: transactionData.description,
         amount: transactionData.amount,
@@ -83,8 +83,8 @@ export function useTransactionMutations() {
       };
 
       // Update all transaction lists
-      queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
-        if (!oldData) return [optimisticTransaction];
+      queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
+        if (!oldData) {return [optimisticTransaction];}
         if (Array.isArray(oldData)) {
           // Prepend to list
           return [optimisticTransaction, ...oldData];
@@ -185,7 +185,7 @@ export function useTransactionMutations() {
     updatedTransaction: TransactionUpdate,
     editScope?: EditScope
   ) => {
-    if (!user) return;
+    if (!user) {return;}
 
     // Snapshot
     const previousAccounts = queryClient.getQueryData<Account[]>(queryKeys.accounts);
@@ -212,13 +212,13 @@ export function useTransactionMutations() {
           // 1. Update Accounts
           if (previousAccounts) {
             queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
-              if (!old) return [];
+              if (!old) {return [];}
               return old.map(acc => {
                 // If account changed
                 if (updatedTransaction.account_id && updatedTransaction.account_id !== originalTransaction!.account_id) {
                    // Remove from old account
                    if (acc.id === originalTransaction!.account_id) {
-                     let amount = originalTransaction!.amount; // Amount is always positive in DB? No, signed?
+                     const amount = originalTransaction!.amount; // Amount is always positive in DB? No, signed?
                      // In DB/Types, amount is usually positive and type determines sign, OR signed.
                      // Let's check: useOfflineTransactionMutations uses Math.abs.
                      // In Supabase, usually signed or type-based.
@@ -228,15 +228,15 @@ export function useTransactionMutations() {
                      // if (type === 'expense') newBalance -= amount;
                      
                      // Revert old transaction effect
-                     if (originalTransaction!.type === 'expense') acc.balance += originalTransaction!.amount;
-                     else if (originalTransaction!.type === 'income') acc.balance -= originalTransaction!.amount;
+                     if (originalTransaction!.type === 'expense') {acc.balance += originalTransaction!.amount;}
+                     else if (originalTransaction!.type === 'income') {acc.balance -= originalTransaction!.amount;}
                    }
                    // Add to new account
                    if (acc.id === updatedTransaction.account_id) {
                      const amount = updatedTransaction.amount ?? originalTransaction!.amount;
                      const type = updatedTransaction.type ?? originalTransaction!.type;
-                     if (type === 'expense') acc.balance -= amount;
-                     else if (type === 'income') acc.balance += amount;
+                     if (type === 'expense') {acc.balance -= amount;}
+                     else if (type === 'income') {acc.balance += amount;}
                    }
                 } else if (acc.id === originalTransaction!.account_id) {
                   // Same account, maybe amount/type changed
@@ -246,12 +246,12 @@ export function useTransactionMutations() {
                   const newType = updatedTransaction.type ?? oldType;
 
                   // Revert old
-                  if (oldType === 'expense') acc.balance += oldAmount;
-                  else if (oldType === 'income') acc.balance -= oldAmount;
+                  if (oldType === 'expense') {acc.balance += oldAmount;}
+                  else if (oldType === 'income') {acc.balance -= oldAmount;}
 
                   // Apply new
-                  if (newType === 'expense') acc.balance -= newAmount;
-                  else if (newType === 'income') acc.balance += newAmount;
+                  if (newType === 'expense') {acc.balance -= newAmount;}
+                  else if (newType === 'income') {acc.balance += newAmount;}
                 }
                 return acc;
               });
@@ -260,7 +260,7 @@ export function useTransactionMutations() {
 
           // 2. Update Transaction in List
           queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
-            if (!oldData || !Array.isArray(oldData)) return oldData;
+            if (!oldData || !Array.isArray(oldData)) {return oldData;}
             return oldData.map((tx: any) => {
               if (tx.id === updatedTransaction.id) {
                  return {
@@ -318,7 +318,7 @@ export function useTransactionMutations() {
         }
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
 
 
@@ -353,7 +353,7 @@ export function useTransactionMutations() {
     transactionId: string,
     editScope?: EditScope
   ) => {
-    if (!user) return;
+    if (!user) {return;}
 
     logger.info('[Delete] Iniciando exclusão de transação:', { transactionId, editScope });
 
@@ -389,12 +389,12 @@ export function useTransactionMutations() {
            // 1. Update Accounts (Revert balance)
            if (previousAccounts) {
             queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
-              if (!old) return [];
+              if (!old) {return [];}
               return old.map(acc => {
                 // Reverter saldo da conta de origem
                 if (acc.id === originalTransaction!.account_id) {
-                   if (originalTransaction!.type === 'expense') acc.balance += Math.abs(originalTransaction!.amount);
-                   else if (originalTransaction!.type === 'income') acc.balance -= Math.abs(originalTransaction!.amount);
+                   if (originalTransaction!.type === 'expense') {acc.balance += Math.abs(originalTransaction!.amount);}
+                   else if (originalTransaction!.type === 'income') {acc.balance -= Math.abs(originalTransaction!.amount);}
                 }
                 // Se for transferência, reverter saldo da conta de destino também
                 if (originalTransaction!.to_account_id && acc.id === originalTransaction!.to_account_id) {
@@ -408,7 +408,7 @@ export function useTransactionMutations() {
 
            // 2. Remove from list (incluindo transação vinculada se for transferência)
            queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: any) => {
-            if (!oldData || !Array.isArray(oldData)) return oldData;
+            if (!oldData || !Array.isArray(oldData)) {return oldData;}
             
             // Verificar se é transferência e tem linked_transaction_id
             const linkedId = originalTransaction!.linked_transaction_id;

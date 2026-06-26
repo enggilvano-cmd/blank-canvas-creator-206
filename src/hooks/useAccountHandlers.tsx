@@ -4,11 +4,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
-import { Account, ImportAccountData } from '@/types';
+import type { Account, ImportAccountData } from '@/types';
 import { logger } from '@/lib/logger';
 import { importAccountSchema } from '@/lib/validationSchemas';
 import { offlineQueue } from '@/lib/offlineQueue';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { getErrorMessage } from '@/types/errors';
 
 export function useAccountHandlers() {
@@ -18,7 +18,7 @@ export function useAccountHandlers() {
   const isOnline = useOnlineStatus();
 
   const handleEditAccount = useCallback(async (updatedAccount: Partial<Account> & { id: string }) => {
-    if (!user) return;
+    if (!user) {return;}
     try {
       const { initial_balance: _initialBalance, ...dbUpdates } = updatedAccount;
       
@@ -27,7 +27,7 @@ export function useAccountHandlers() {
         .update(dbUpdates as any)
         .eq('id', updatedAccount.id)
         .eq('user_id', user.id);
-      if (updateError) throw updateError;
+      if (updateError) {throw updateError;}
 
       const newInitialBalance = (updatedAccount as any).initial_balance;
       if (newInitialBalance !== undefined) {
@@ -38,29 +38,29 @@ export function useAccountHandlers() {
           .eq('description', 'Saldo Inicial')
           .order('created_at', { ascending: true });
 
-        if (fetchError) logger.error('Error fetching initial balance transaction', fetchError);
+        if (fetchError) {logger.error('Error fetching initial balance transaction', fetchError);}
 
         if (initialTxs && initialTxs.length > 0) {
           if (initialTxs.length > 1) {
             const duplicateIds = initialTxs.slice(1).map(tx => tx.id);
             const { error: cleanupError } = await supabase.from('transactions').delete().in('id', duplicateIds);
-            if (cleanupError) logger.error('Error cleaning up duplicate initial balance transactions', cleanupError);
+            if (cleanupError) {logger.error('Error cleaning up duplicate initial balance transactions', cleanupError);}
           }
           if (newInitialBalance === 0) {
             const { error: deleteError } = await supabase.from('transactions').delete().eq('id', initialTxs[0].id);
-            if (deleteError) logger.error('Error deleting zero initial balance transaction', deleteError);
+            if (deleteError) {logger.error('Error deleting zero initial balance transaction', deleteError);}
           } else {
             const { error: updateTxError } = await supabase.from('transactions').update({ amount: newInitialBalance, type: newInitialBalance >= 0 ? 'income' : 'expense' }).eq('id', initialTxs[0].id);
-            if (updateTxError) logger.error('Error updating initial balance transaction', updateTxError);
+            if (updateTxError) {logger.error('Error updating initial balance transaction', updateTxError);}
           }
         } else if (newInitialBalance !== 0) {
           const { error: createError } = await supabase.from('transactions').insert({ user_id: user.id, description: 'Saldo Inicial', amount: newInitialBalance, date: new Date().toISOString().split('T')[0], type: newInitialBalance >= 0 ? 'income' : 'expense', account_id: updatedAccount.id, status: 'completed', category_id: null });
-          if (createError) logger.error('Error creating initial balance transaction', createError);
+          if (createError) {logger.error('Error creating initial balance transaction', createError);}
         }
       }
 
       const { error: recalcError } = await supabase.rpc('recalculate_account_balance', { p_account_id: updatedAccount.id });
-      if (recalcError) logger.error('Error recalculating account balance', recalcError);
+      if (recalcError) {logger.error('Error recalculating account balance', recalcError);}
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -78,22 +78,22 @@ export function useAccountHandlers() {
   }, [user, invalidateTransactions, invalidateAccounts, toast]);
 
   const handleDeleteAccount = useCallback(async (accountId: string) => {
-    if (!user) return;
+    if (!user) {return;}
     try {
       const { data: transactions, error: checkError } = await supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('account_id', accountId).limit(1);
-      if (checkError) throw checkError;
+      if (checkError) {throw checkError;}
       if (transactions && transactions.length > 0) {
         toast({ title: 'Não é possível excluir', description: 'Esta conta possui transações vinculadas. Exclua as transações primeiro ou transfira-as para outra conta.', variant: 'destructive' });
         return;
       }
       const { data: transfers, error: transferCheckError } = await supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('to_account_id', accountId).limit(1);
-      if (transferCheckError) throw transferCheckError;
+      if (transferCheckError) {throw transferCheckError;}
       if (transfers && transfers.length > 0) {
         toast({ title: 'Não é possível excluir', description: 'Esta conta é destino de transferências. Exclua as transferências primeiro.', variant: 'destructive' });
         return;
       }
       const { error } = await supabase.from('accounts').delete().eq('id', accountId).eq('user_id', user.id);
-      if (error) throw error;
+      if (error) {throw error;}
       await invalidateAccounts();
       toast({ title: 'Sucesso', description: 'Conta excluída com sucesso' });
     } catch (error: unknown) {
@@ -105,7 +105,7 @@ export function useAccountHandlers() {
 
   const handleImportAccounts = useCallback(async (accountsData: ImportAccountData[], accountsToReplace: string[] = []) => {
     if (isOnline) {
-      if (!user) return;
+      if (!user) {return;}
       try {
         const validatedAccounts: ImportAccountData[] = [];
         const validationErrors: string[] = [];
@@ -124,11 +124,11 @@ export function useAccountHandlers() {
         }
         if (accountsToReplace.length > 0) {
           const { error: deleteError } = await supabase.from('accounts').delete().in('id', accountsToReplace).eq('user_id', user.id);
-          if (deleteError) throw deleteError;
+          if (deleteError) {throw deleteError;}
         }
         const accountsToAdd = validatedAccounts.map(acc => ({ name: acc.name, type: acc.type, balance: acc.balance || 0, color: acc.color || '#6b7280', limit_amount: acc.limit_amount, due_date: acc.due_date, closing_date: acc.closing_date, user_id: user.id }));
         const { data: createdAccounts, error } = await supabase.from('accounts').insert(accountsToAdd).select();
-        if (error) throw error;
+        if (error) {throw error;}
         if (createdAccounts && createdAccounts.length > 0) {
             const initialBalanceTransactions = createdAccounts.filter(acc => acc.balance !== 0).map(acc => {
                 const isIncome = acc.balance > 0;

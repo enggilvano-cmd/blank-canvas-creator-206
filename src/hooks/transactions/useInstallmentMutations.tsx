@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
-import { InstallmentTransactionInput } from '@/types';
+import type { InstallmentTransactionInput } from '@/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errorUtils';
 
@@ -13,7 +13,7 @@ export function useInstallmentMutations() {
   const { invalidateTransactions } = useQueryInvalidation();
 
   const handleAddInstallmentTransactions = useCallback(async (transactionsData: InstallmentTransactionInput[]) => {
-    if (!user) return;
+    if (!user) {return;}
     try {
       const totalInstallments = transactionsData.length;
 

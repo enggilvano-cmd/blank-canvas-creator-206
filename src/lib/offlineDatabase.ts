@@ -52,18 +52,18 @@ class OfflineDatabase {
    * Format bytes to human readable format
    */
   private formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) {return '0 Bytes';}
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100  } ${  sizes[i]}`;
   }
 
   /**
    * ✅ BUG FIX #8: Evict old data when storage is full (LRU strategy)
    */
   async evictOldData(): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
 
     logger.info('Starting LRU eviction of old data...');
 
@@ -107,7 +107,7 @@ class OfflineDatabase {
   }
 
   async init(): Promise<void> {
-    if (this.db) return;
+    if (this.db) {return;}
 
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -165,14 +165,14 @@ class OfflineDatabase {
   }
 
   async getDB(): Promise<IDBDatabase> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return this.db!;
   }
 
   // === MÉTODOS DE SINCRONIZAÇÃO INTELIGENTE ===
 
   async syncTransactions(transactions: TransactionDTO[], userId: string, dateFrom: string): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
 
     // ✅ BUG FIX #8: Check quota before saving
     const quota = await this.checkStorageQuota();
@@ -215,7 +215,7 @@ class OfflineDatabase {
     const localMap = new Map(localTxs.map(t => [t.id, t]));
     const toPut = transactions.filter(serverTx => {
         const localTx = localMap.get(serverTx.id);
-        if (!localTx) return true; // New
+        if (!localTx) {return true;} // New
         if (serverTx.updated_at && localTx.updated_at) {
             return new Date(serverTx.updated_at).getTime() > new Date(localTx.updated_at).getTime();
         }
@@ -246,7 +246,7 @@ class OfflineDatabase {
   }
 
   async syncFixedTransactions(transactions: TransactionDTO[], userId: string): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
 
     // 1. Read local transactions (readonly)
     const localTxs = await new Promise<TransactionDTO[]>((resolve, reject) => {
@@ -270,7 +270,7 @@ class OfflineDatabase {
     const localMap = new Map(localTxs.map(t => [t.id, t]));
     const toPut = transactions.filter(serverTx => {
         const localTx = localMap.get(serverTx.id);
-        if (!localTx) return true;
+        if (!localTx) {return true;}
         if (serverTx.updated_at && localTx.updated_at) {
             return new Date(serverTx.updated_at).getTime() > new Date(localTx.updated_at).getTime();
         }
@@ -298,7 +298,7 @@ class OfflineDatabase {
   }
 
   async syncAccounts(accounts: Account[], userId: string): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     // 1. Read local accounts (readonly)
     const localAccounts = await new Promise<Account[]>((resolve, reject) => {
       const tx = this.db!.transaction([STORES.ACCOUNTS], 'readonly');
@@ -318,7 +318,7 @@ class OfflineDatabase {
     const localMap = new Map(localAccounts.map(a => [a.id, a]));
     const toPut = accounts.filter(serverAcc => {
         const localAcc = localMap.get(serverAcc.id);
-        if (!localAcc) return true;
+        if (!localAcc) {return true;}
         // Accounts might not have updated_at in all cases, but let's check
         if (serverAcc.updated_at && localAcc.updated_at) {
             return new Date(serverAcc.updated_at).getTime() > new Date(localAcc.updated_at).getTime();
@@ -344,7 +344,7 @@ class OfflineDatabase {
   }
 
   async syncCategories(categories: Category[], userId: string): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     // 1. Read local categories (readonly)
     const localCategories = await new Promise<Category[]>((resolve, reject) => {
       const tx = this.db!.transaction([STORES.CATEGORIES], 'readonly');
@@ -364,7 +364,7 @@ class OfflineDatabase {
     const localMap = new Map(localCategories.map(c => [c.id, c]));
     const toPut = categories.filter(serverCat => {
         const localCat = localMap.get(serverCat.id);
-        if (!localCat) return true;
+        if (!localCat) {return true;}
         if (serverCat.updated_at && localCat.updated_at) {
             return new Date(serverCat.updated_at).getTime() > new Date(localCat.updated_at).getTime();
         }
@@ -391,7 +391,7 @@ class OfflineDatabase {
   // === MÉTODOS CRUD ===
 
   async saveTransactions(transactions: Transaction[]): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
 
     // Validate transactions
     for (const tx of transactions) {
@@ -410,7 +410,7 @@ class OfflineDatabase {
   }
 
   async getFixedTransactions(userId: string): Promise<Transaction[]> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
 
     // Fetch categories and accounts first to join
     const [categories, accounts] = await Promise.all([
@@ -460,7 +460,7 @@ class OfflineDatabase {
     sortOrder?: 'asc' | 'desc';
     useVirtualIndex?: boolean;
   } = {}): Promise<Transaction[]> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     
     const { limit, offset = 0, sortBy = 'date', sortOrder = 'desc', useVirtualIndex = true } = options;
     
@@ -567,7 +567,7 @@ class OfflineDatabase {
     type: 'add' | 'update' | 'delete';
     data: Transaction | string; // string for delete (id)
   }>): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readwrite');
@@ -618,7 +618,7 @@ class OfflineDatabase {
    * Get transactions count efficiently without loading all data
    */
   async getTransactionsCount(userId: string, monthsBack: number = 3): Promise<number> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
@@ -654,7 +654,7 @@ class OfflineDatabase {
   }
 
   async deleteTransaction(id: string): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readwrite');
       const store = tx.objectStore(STORES.TRANSACTIONS);
@@ -665,7 +665,7 @@ class OfflineDatabase {
   }
 
   async saveAccounts(accounts: Account[]): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.ACCOUNTS], 'readwrite');
       const store = tx.objectStore(STORES.ACCOUNTS);
@@ -676,7 +676,7 @@ class OfflineDatabase {
   }
 
   async getAccounts(userId: string): Promise<Account[]> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.ACCOUNTS], 'readonly');
       const store = tx.objectStore(STORES.ACCOUNTS);
@@ -688,7 +688,7 @@ class OfflineDatabase {
   }
 
   async saveCategories(categories: Category[]): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.CATEGORIES], 'readwrite');
       const store = tx.objectStore(STORES.CATEGORIES);
@@ -699,7 +699,7 @@ class OfflineDatabase {
   }
 
   async getCategories(userId: string): Promise<Category[]> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.CATEGORIES], 'readonly');
       const store = tx.objectStore(STORES.CATEGORIES);
@@ -711,7 +711,7 @@ class OfflineDatabase {
   }
 
   async getTransaction(id: string): Promise<Transaction | undefined> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve) => {
        const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
        const req = tx.objectStore(STORES.TRANSACTIONS).get(id);
@@ -725,7 +725,7 @@ class OfflineDatabase {
   }
 
   async getAccountById(id: string): Promise<Account | undefined> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve) => {
        const tx = this.db!.transaction([STORES.ACCOUNTS], 'readonly');
        const req = tx.objectStore(STORES.ACCOUNTS).get(id);
@@ -735,7 +735,7 @@ class OfflineDatabase {
   }
 
   async getCategoryById(id: string): Promise<Category | undefined> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve) => {
        const tx = this.db!.transaction([STORES.CATEGORIES], 'readonly');
        const req = tx.objectStore(STORES.CATEGORIES).get(id);
@@ -745,7 +745,7 @@ class OfflineDatabase {
   }
 
   async deleteAccount(id: string): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.ACCOUNTS], 'readwrite');
       const store = tx.objectStore(STORES.ACCOUNTS);
@@ -760,7 +760,7 @@ class OfflineDatabase {
   }
 
   async setLastSync(key: string, timestamp: number): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.METADATA], 'readwrite');
       const store = tx.objectStore(STORES.METADATA);
@@ -771,7 +771,7 @@ class OfflineDatabase {
   }
 
   async clearAll(): Promise<void> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const storeNames = [STORES.TRANSACTIONS, STORES.ACCOUNTS, STORES.CATEGORIES, STORES.METADATA, STORES.OPERATIONS_QUEUE];
       const tx = this.db!.transaction(storeNames, 'readwrite');
@@ -785,7 +785,7 @@ class OfflineDatabase {
   }
 
   async getAllTransactions(): Promise<Transaction[]> {
-    if (!this.db) await this.init();
+    if (!this.db) {await this.init();}
     return new Promise((resolve, reject) => {
       const tx = this.db!.transaction([STORES.TRANSACTIONS], 'readonly');
       const store = tx.objectStore(STORES.TRANSACTIONS);

@@ -47,7 +47,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   const handlePushToggle = async (enabled: boolean) => {
-    if (isLoading) return;
+    if (isLoading) {return;}
     setIsLoading(true);
     
     try {

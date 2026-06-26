@@ -173,7 +173,7 @@ export const safeStorage = {
    */
   getJSON<T>(key: string): T | null {
     const item = this.getItem(key);
-    if (!item) return null;
+    if (!item) {return null;}
     
     return safeJSONParse<T>(item);
   },
@@ -267,7 +267,7 @@ function clearOldCacheItemsInternal(): void {
     const itemsToRemove = Math.min(keysToRemove.length, Math.ceil(keysToRemove.length * 0.5));
     for (let i = 0; i < itemsToRemove; i++) {
       const key = keysToRemove[i];
-      if (!key) continue;
+      if (!key) {continue;}
       if (storageAvailable) {
         localStorage.removeItem(key);
       } else {
@@ -307,7 +307,7 @@ function evictLRU(): void {
     const itemsToRemove = Math.min(entries.length, Math.ceil(entries.length * 0.3));
     for (let i = 0; i < itemsToRemove; i++) {
       const [key] = entries[i];
-      if (!key) continue;
+      if (!key) {continue;}
       if (storageAvailable) {
         localStorage.removeItem(key);
       } else {

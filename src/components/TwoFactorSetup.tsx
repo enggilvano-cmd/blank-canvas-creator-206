@@ -28,7 +28,7 @@ export function TwoFactorSetup({ onComplete }: TwoFactorSetupProps) {
         friendlyName: 'Autenticador'
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       if (data) {
         setFactorId(data.id);
@@ -70,7 +70,7 @@ export function TwoFactorSetup({ onComplete }: TwoFactorSetupProps) {
         code: verifyCode
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast({
         title: 'Autenticação Configurada',

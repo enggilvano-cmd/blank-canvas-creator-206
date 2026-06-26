@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { validateBalanceForEdit } from '@/hooks/useBalanceValidation';
 import { supabase } from '@/integrations/supabase/client';
-import { Account } from '@/types';
+import type { Account } from '@/types';
 
 // Mock Supabase client
 vi.mock('@/integrations/supabase/client', () => ({

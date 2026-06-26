@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AddTransactionModal } from './AddTransactionModal';
-import { Account } from '@/types';
+import type { Account } from '@/types';
 
 const mockQueryClient = new QueryClient({
   defaultOptions: {

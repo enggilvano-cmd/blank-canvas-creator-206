@@ -32,7 +32,7 @@ export function getCategoryName(
   categories: Category[] | Map<string, Category>,
   fallback: string = '-'
 ): string {
-  if (!categoryId) return fallback;
+  if (!categoryId) {return fallback;}
   
   if (categories instanceof Map) {
     return categories.get(categoryId)?.name ?? fallback;
@@ -62,7 +62,7 @@ export function getCategoryColor(
   categories: Category[] | Map<string, Category>,
   fallback: string = '#6b7280'
 ): string {
-  if (!categoryId) return fallback;
+  if (!categoryId) {return fallback;}
   
   if (categories instanceof Map) {
     return categories.get(categoryId)?.color ?? fallback;
@@ -101,7 +101,7 @@ export function uniqueBy<T, K>(
   const seen = new Set<K>();
   return array.filter(item => {
     const key = keyFn(item);
-    if (seen.has(key)) return false;
+    if (seen.has(key)) {return false;}
     seen.add(key);
     return true;
   });
@@ -118,8 +118,8 @@ export function sortBy<T>(
     for (const keyFn of keys) {
       const aVal = keyFn(a);
       const bVal = keyFn(b);
-      if (aVal < bVal) return -1;
-      if (aVal > bVal) return 1;
+      if (aVal < bVal) {return -1;}
+      if (aVal > bVal) {return 1;}
     }
     return 0;
   });
@@ -198,7 +198,7 @@ export function deepMerge<T extends object>(
   target: T,
   ...sources: Partial<T>[]
 ): T {
-  if (!sources.length) return target;
+  if (!sources.length) {return target;}
   
   const result = { ...target };
   
@@ -239,8 +239,8 @@ export function capitalize(str: string): string {
  * Trunca string com elipsis
  */
 export function truncate(str: string, length: number): string {
-  if (str.length <= length) return str;
-  return str.slice(0, length - 3) + '...';
+  if (str.length <= length) {return str;}
+  return `${str.slice(0, length - 3)  }...`;
 }
 
 /**
@@ -426,10 +426,10 @@ export function withTimeout<T>(
  * Verifica se valor é vazio (null, undefined, string vazia, array vazio)
  */
 export function isEmpty(value: unknown): boolean {
-  if (value === null || value === undefined) return true;
-  if (typeof value === 'string') return value.trim() === '';
-  if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value).length === 0;
+  if (value === null || value === undefined) {return true;}
+  if (typeof value === 'string') {return value.trim() === '';}
+  if (Array.isArray(value)) {return value.length === 0;}
+  if (typeof value === 'object') {return Object.keys(value).length === 0;}
   return false;
 }
 

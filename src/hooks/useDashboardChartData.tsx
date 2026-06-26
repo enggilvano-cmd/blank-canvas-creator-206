@@ -23,8 +23,8 @@ export function useDashboardChartData(
       // 1. Transferências de saída (to_account_id)
       // 2. Transferências de entrada (type='transfer' + linked_transaction_id)
       // ❌ NÃO excluir transações normais
-      if ((t as any).to_account_id) return true;
-      if (t.type === 'transfer' && (t as any).linked_transaction_id) return true;
+      if ((t as any).to_account_id) {return true;}
+      if (t.type === 'transfer' && (t as any).linked_transaction_id) {return true;}
       return false;
     };
 
@@ -47,9 +47,9 @@ export function useDashboardChartData(
       // 2. Subtract COMPLETED transactions that happened ON or AFTER the target date
       // We are moving backwards in time, so we reverse the effect of these transactions
       const completedSinceTarget = transactions.filter(t => {
-        if (isTransferLike(t)) return false;
-        if (isProvision(t)) return false; // Excluir provisões estouradas
-        if (t.status !== 'completed') return false;
+        if (isTransferLike(t)) {return false;}
+        if (isProvision(t)) {return false;} // Excluir provisões estouradas
+        if (t.status !== 'completed') {return false;}
         
         const tDate = typeof t.date === 'string' ? createDateFromString(t.date) : t.date;
         const tDateStr = format(tDate, 'yyyy-MM-dd');
@@ -59,8 +59,8 @@ export function useDashboardChartData(
       });
       
       const netChangeSinceTarget = completedSinceTarget.reduce((acc, t) => {
-        if (t.type === 'income') return acc + Math.abs(t.amount);
-        if (t.type === 'expense') return acc - Math.abs(t.amount);
+        if (t.type === 'income') {return acc + Math.abs(t.amount);}
+        if (t.type === 'expense') {return acc - Math.abs(t.amount);}
         return acc;
       }, 0);
       
@@ -68,9 +68,9 @@ export function useDashboardChartData(
       // These are "debts" or "receivables" that should have affected the balance by that time
       // if we are projecting a "real" balance including pending items
       const pendingBeforeTarget = transactions.filter(t => {
-        if (isTransferLike(t)) return false;
-        if (isProvision(t)) return false; // Excluir provisões estouradas
-        if (t.status !== 'pending') return false;
+        if (isTransferLike(t)) {return false;}
+        if (isProvision(t)) {return false;} // Excluir provisões estouradas
+        if (t.status !== 'pending') {return false;}
         
         const tDate = typeof t.date === 'string' ? createDateFromString(t.date) : t.date;
         const tDateStr = format(tDate, 'yyyy-MM-dd');
@@ -79,8 +79,8 @@ export function useDashboardChartData(
       });
       
       const netPendingBeforeTarget = pendingBeforeTarget.reduce((acc, t) => {
-        if (t.type === 'income') return acc + Math.abs(t.amount);
-        if (t.type === 'expense') return acc - Math.abs(t.amount);
+        if (t.type === 'income') {return acc + Math.abs(t.amount);}
+        if (t.type === 'expense') {return acc - Math.abs(t.amount);}
         return acc;
       }, 0);
       
@@ -127,7 +127,7 @@ export function useDashboardChartData(
         startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
       }
 
-      if (dailyFilteredTrans.length === 0) return [];
+      if (dailyFilteredTrans.length === 0) {return [];}
 
       const dailyTotals = dailyFilteredTrans
         .filter(t => !isTransferLike(t)) // Excluir transferências

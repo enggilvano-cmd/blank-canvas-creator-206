@@ -64,7 +64,7 @@ export function UserManagement() {
         .select('id, user_id, email, full_name, avatar_url, is_active, trial_expires_at, subscription_expires_at, created_at, updated_at')
         .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {throw profilesError;}
 
       // For each profile, fetch the role from user_roles table
       const usersWithRoles = await Promise.all(
@@ -82,10 +82,10 @@ export function UserManagement() {
           }
 
           let finalRole = 'user';
-          if (roles.includes('admin')) finalRole = 'admin';
-          else if (roles.includes('subscriber')) finalRole = 'subscriber';
-          else if (roles.includes('trial')) finalRole = 'trial';
-          else if (roles.includes('user')) finalRole = 'user';
+          if (roles.includes('admin')) {finalRole = 'admin';}
+          else if (roles.includes('subscriber')) {finalRole = 'subscriber';}
+          else if (roles.includes('trial')) {finalRole = 'trial';}
+          else if (roles.includes('user')) {finalRole = 'user';}
 
           return {
             ...profile,
@@ -213,7 +213,7 @@ export function UserManagement() {
         .update({ is_active: isActive })
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       // Log the activity
       await supabase.rpc('log_user_activity', {
@@ -332,7 +332,7 @@ export function UserManagement() {
         .update({ subscription_expires_at: expiresAt.toISOString() })
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       await supabase.rpc('log_user_activity', {
         p_user_id: profile?.user_id || '',

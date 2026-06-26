@@ -55,7 +55,7 @@ export function UserProfile() {
   }, [profile]);
 
   const fetchRecentActivities = async () => {
-    if (!user) return;
+    if (!user) {return;}
 
     try {
       const { data, error } = await supabase
@@ -65,7 +65,7 @@ export function UserProfile() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {throw error;}
       setRecentActivities(data || []);
     } catch (error) {
       logger.error('Error fetching activities:', error);
@@ -75,7 +75,7 @@ export function UserProfile() {
   const checkMfaStatus = async () => {
     try {
       const { data, error } = await supabase.auth.mfa.listFactors();
-      if (error) throw error;
+      if (error) {throw error;}
       
       const hasMfa = data?.totp && data.totp.length > 0;
       setMfaEnabled(hasMfa);
@@ -88,7 +88,7 @@ export function UserProfile() {
     setLoading(true);
     try {
       const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
-      if (listError) throw listError;
+      if (listError) {throw listError;}
 
       const totpFactor = factors?.totp?.[0];
       if (!totpFactor) {
@@ -96,7 +96,7 @@ export function UserProfile() {
       }
 
       const { error } = await supabase.auth.mfa.unenroll({ factorId: totpFactor.id });
-      if (error) throw error;
+      if (error) {throw error;}
 
       setMfaEnabled(false);
       setShowDisableMfaDialog(false);
@@ -118,7 +118,7 @@ export function UserProfile() {
   };
 
   const updateProfile = async () => {
-    if (!profile) return;
+    if (!profile) {return;}
 
     setLoading(true);
     try {
@@ -130,7 +130,7 @@ export function UserProfile() {
           { email: formData.email },
           { emailRedirectTo: `${window.location.origin}/auth` }
         );
-        if (authError) throw authError;
+        if (authError) {throw authError;}
 
       toast({
         title: 'Verificação Necessária',
@@ -154,7 +154,7 @@ export function UserProfile() {
         .update(updates)
         .eq('user_id', profile.user_id);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       // Log the activity
       await supabase.rpc('log_user_activity', {
@@ -183,14 +183,14 @@ export function UserProfile() {
   };
 
   const changePassword = async () => {
-    if (!user?.email) return;
+    if (!user?.email) {return;}
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
         redirectTo: `${window.location.origin}/auth?mode=reset`,
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast({
         title: 'Email Enviado',

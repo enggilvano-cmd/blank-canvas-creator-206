@@ -2,10 +2,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCategories } from "@/hooks/useCategories";
-import { TransactionScopeDialog, EditScope } from "./TransactionScopeDialog";
-import { FixedTransactionScopeDialog, FixedScope } from "../fixedtransactions/FixedTransactionScopeDialog";
-import { EditTransactionModalProps } from "@/types/formProps";
-import { TransactionUpdate } from "@/types";
+import type { EditScope } from "./TransactionScopeDialog";
+import { TransactionScopeDialog } from "./TransactionScopeDialog";
+import type { FixedScope } from "../fixedtransactions/FixedTransactionScopeDialog";
+import { FixedTransactionScopeDialog } from "../fixedtransactions/FixedTransactionScopeDialog";
+import type { EditTransactionModalProps } from "@/types/formProps";
+import type { TransactionUpdate } from "@/types";
 import { useEditTransactionScope } from "@/hooks/edit-transaction/useEditTransactionScope";
 import { useEditTransactionForm } from "@/hooks/edit-transaction/useEditTransactionForm";
 import { EditTransactionFormFields } from "../edit-transaction/EditTransactionFormFields";

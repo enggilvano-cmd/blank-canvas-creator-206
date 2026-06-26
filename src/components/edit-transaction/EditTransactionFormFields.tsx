@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/forms/CurrencyInput";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Account, Category, ACCOUNT_TYPE_LABELS } from "@/types";
+import type { Account, Category} from "@/types";
+import { ACCOUNT_TYPE_LABELS } from "@/types";
 import { formatCurrency } from "@/lib/formatters";
 
 interface EditTransactionFormFieldsProps {
@@ -127,7 +128,7 @@ export function EditTransactionFormFields({
               <SelectValue placeholder="Selecione uma conta">
                 {formData.account_id && (() => {
                   const selectedAccount = accounts.find((acc) => acc.id === formData.account_id);
-                  if (!selectedAccount) return null;
+                  if (!selectedAccount) {return null;}
                   return (
                     <div className="flex flex-col gap-1 w-full py-1">
                       <div className="flex items-center gap-2">

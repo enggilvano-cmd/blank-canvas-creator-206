@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/types/errors';
-import { Account, Transaction } from '@/types';
+import type { Account, Transaction } from '@/types';
 
 // Interface para dados de criação de conta
 interface AccountCreateData {
@@ -94,7 +94,7 @@ export function useOfflineAccountMutations() {
   }) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         // 1. Insert Account
         let newAccount;
@@ -115,7 +115,7 @@ export function useOfflineAccountMutations() {
             .select()
             .single();
             
-          if (error) throw error;
+          if (error) {throw error;}
           newAccount = data;
         } catch (insertError: any) {
           // Fallback: If initial_balance column doesn't exist yet, try inserting without it
@@ -136,7 +136,7 @@ export function useOfflineAccountMutations() {
               .select()
               .single();
               
-             if (error) throw error;
+             if (error) {throw error;}
              newAccount = data;
           } else {
             throw insertError;
@@ -218,7 +218,7 @@ export function useOfflineAccountMutations() {
               
               // Update React Query Cache for transactions
               queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: Transaction[] | undefined) => {
-                  if (!oldData) return oldData;
+                  if (!oldData) {return oldData;}
                   if (Array.isArray(oldData)) {
                       return oldData.map((t) => t.id === initialTx.id ? updatedTx : t);
                   }
@@ -272,7 +272,7 @@ export function useOfflineAccountMutations() {
               await offlineDatabase.saveTransactions([newTx]);
               
               queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: Transaction[] | undefined) => {
-                  if (!oldData) return [newTx];
+                  if (!oldData) {return [newTx];}
                   if (Array.isArray(oldData)) {
                       return [newTx, ...oldData];
                   }
@@ -291,7 +291,7 @@ export function useOfflineAccountMutations() {
 
         // 3. Update React Query Cache
         queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
-          if (!old) return old;
+          if (!old) {return old;}
           return old.map(acc => acc.id === accountId ? updatedAccount : acc);
         });
       }
@@ -326,7 +326,7 @@ export function useOfflineAccountMutations() {
   }) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         // Separate balance update from other updates
         const { balance, initial_balance, ...otherUpdates } = accountData;
@@ -348,7 +348,7 @@ export function useOfflineAccountMutations() {
                 .eq('id', accountId)
                 .eq('user_id', user.id);
 
-              if (error) throw error;
+              if (error) {throw error;}
             } catch (updateError: any) {
                // Fallback: If initial_balance column doesn't exist yet, try updating without it
                if ((updateError.message?.includes('initial_balance') || updateError.code === '42703') && updatesToSave.initial_balance !== undefined) {
@@ -362,7 +362,7 @@ export function useOfflineAccountMutations() {
                       .eq('id', accountId)
                       .eq('user_id', user.id);
                       
-                    if (error) throw error;
+                    if (error) {throw error;}
                   }
                } else {
                  throw updateError;
@@ -391,7 +391,7 @@ export function useOfflineAccountMutations() {
                     .from('transactions')
                     .update(txData as any)
                     .eq('id', txs[0].id);
-                if (txError) logger.error('Failed to update initial balance transaction', txError);
+                if (txError) {logger.error('Failed to update initial balance transaction', txError);}
             } else if (newInitialBalance !== 0) {
                 const { error: txError } = await supabase.rpc('atomic_create_transaction', {
                     p_user_id: user.id,
@@ -457,7 +457,7 @@ export function useOfflineAccountMutations() {
 
       // 2. Update React Query Cache (Optimistic UI)
       queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
-        if (!old) return old;
+        if (!old) {return old;}
         return old.filter(acc => acc.id !== accountId);
       });
 
@@ -482,7 +482,7 @@ export function useOfflineAccountMutations() {
   const handleDeleteAccount = useCallback(async (accountId: string) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         const { error } = await supabase
           .from('accounts')
@@ -490,7 +490,7 @@ export function useOfflineAccountMutations() {
           .eq('id', accountId)
           .eq('user_id', user.id);
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
         toast({
@@ -524,7 +524,7 @@ export function useOfflineAccountMutations() {
   const handleImportAccounts = useCallback(async (accountsData: any[], accountsToReplace: string[] = []) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         // Deletar contas que serão substituídas
         if (accountsToReplace.length > 0) {
@@ -534,7 +534,7 @@ export function useOfflineAccountMutations() {
             .in('id', accountsToReplace)
             .eq('user_id', user.id);
 
-          if (deleteError) throw deleteError;
+          if (deleteError) {throw deleteError;}
         }
 
         // Inserir novas contas
@@ -554,7 +554,7 @@ export function useOfflineAccountMutations() {
           .insert(accountsToAdd)
           .select();
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         // Create Initial Balance Transactions for imported accounts
         if (createdAccounts && createdAccounts.length > 0) {

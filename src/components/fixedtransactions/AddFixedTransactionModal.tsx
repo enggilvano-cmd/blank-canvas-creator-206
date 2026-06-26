@@ -84,7 +84,7 @@ export function AddFixedTransactionModal({
   }, [open]);
 
   const filteredCategories = useMemo(() => {
-    if (!formData.type) return categories;
+    if (!formData.type) {return categories;}
     return categories.filter(
       (cat) => cat.type === formData.type || cat.type === "both"
     );
@@ -290,7 +290,7 @@ export function AddFixedTransactionModal({
                 <SelectValue placeholder="Selecione uma conta">
                   {formData.account_id && (() => {
                     const selectedAccount = accounts.find((acc) => acc.id === formData.account_id);
-                    if (!selectedAccount) return null;
+                    if (!selectedAccount) {return null;}
                     return (
                       <div className="flex flex-col gap-1 w-full py-1">
                         <div className="flex items-center gap-2">

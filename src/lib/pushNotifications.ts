@@ -50,7 +50,7 @@ function registerEventListener(
  */
 function cleanupResources(contextId: string): void {
   const resources = activeResources.get(contextId);
-  if (!resources) return;
+  if (!resources) {return;}
 
   // Clear all timeouts
   resources.timeouts.forEach(timeoutId => clearTimeout(timeoutId));
@@ -106,13 +106,13 @@ export async function requestPushNotificationPermission(): Promise<boolean> {
  * Helper to wait for Service Worker activation
  */
 async function waitForActivation(registration: ServiceWorkerRegistration): Promise<void> {
-  if (registration.active) return;
+  if (registration.active) {return;}
 
   const sw = registration.installing || registration.waiting;
   
   if (!sw) {
     // If no active, installing or waiting, try ready as last resort
-    if (registration.active) return;
+    if (registration.active) {return;}
     await Promise.race([
       navigator.serviceWorker.ready,
       new Promise<never>((_, reject) => {

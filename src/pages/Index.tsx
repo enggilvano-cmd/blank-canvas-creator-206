@@ -57,7 +57,7 @@ import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { MigrationWarning } from "@/components/MigrationWarning";
-import { Account, Transaction } from "@/types";
+import type { Account, Transaction } from "@/types";
 import { logger } from "@/lib/logger";
 import { normalizeFormDate } from "@/lib/timezone";
 import { useAccounts } from "@/hooks/queries/useAccounts";
@@ -68,7 +68,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
 import { useAccountHandlers } from "@/hooks/useAccountHandlers";
 import { useTransactionHandlers, useOfflineTransactionMutations, useOfflineTransferMutations, useOfflineCreditPaymentMutations, useOfflineCategoryMutations, useOfflineInstallmentMutations } from "@/hooks/useTransactionHandlers";
-import { TransactionScopeDialog, EditScope } from "@/components/transactions/TransactionScopeDialog";
+import type { EditScope } from "@/components/transactions/TransactionScopeDialog";
+import { TransactionScopeDialog } from "@/components/transactions/TransactionScopeDialog";
 import { MarkAsPaidModal } from "@/components/transactions/MarkAsPaidModal";
 import { FormErrorBoundary } from "@/components/ui/form-error-boundary";
 import { usePersistedFilters } from "@/hooks/usePersistedFilters";
@@ -339,7 +340,7 @@ const PlaniFlowApp = () => {
 
   // --- LÓGICA DE LIMPEZA DE DADOS OFFLINE-FIRST ---
   const handleClearAllData = async () => {
-    if (!user) return;
+    if (!user) {return;}
     
     if (!window.confirm("ATENÇÃO: Isso apagará TODOS os dados (transações, contas, categorias). Esta ação é irreversível.")) {
       return;
@@ -428,7 +429,7 @@ const PlaniFlowApp = () => {
     invoiceMonth?: string
   ) => {
     const transaction = markingAsPaidTransaction;
-    if (!transaction) return;
+    if (!transaction) {return;}
     await processMarkAsPaid(transaction, 'current', { date, amount, accountId, invoiceMonth });
   };
 
@@ -439,7 +440,7 @@ const PlaniFlowApp = () => {
   ) => {
     try {
       const updatedData = data || markAsPaidData;
-      if (!updatedData) return;
+      if (!updatedData) {return;}
 
       await handleEditTransaction(
         {
@@ -530,9 +531,9 @@ const PlaniFlowApp = () => {
         customStartDate,
         customEndDate
       ) => {
-        if (filterType) setTransactionsFilterType(filterType);
-        if (filterStatus) setTransactionsFilterStatus(filterStatus);
-        if (filterAccountType) setTransactionsFilterAccountType(filterAccountType);
+        if (filterType) {setTransactionsFilterType(filterType);}
+        if (filterStatus) {setTransactionsFilterStatus(filterStatus);}
+        if (filterAccountType) {setTransactionsFilterAccountType(filterAccountType);}
         
         setTransactionsPeriodFilter(dateFilter || 'all');
         

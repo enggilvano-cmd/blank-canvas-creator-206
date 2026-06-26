@@ -1,4 +1,5 @@
-import { onCLS, onFCP, onINP, onLCP, onTTFB, Metric } from 'web-vitals';
+import type { Metric } from 'web-vitals';
+import { onCLS, onFCP, onINP, onLCP, onTTFB } from 'web-vitals';
 import { captureMessage } from './sentry';
 import { logger } from './logger';
 import { safeStorage } from './safeStorage';
@@ -23,10 +24,10 @@ const VITALS_THRESHOLDS: Record<string, VitalThresholds> = {
 
 function getRating(metric: Metric): 'good' | 'needs-improvement' | 'poor' {
   const thresholds = VITALS_THRESHOLDS[metric.name];
-  if (!thresholds) return 'good';
+  if (!thresholds) {return 'good';}
 
-  if (metric.value <= thresholds.good) return 'good';
-  if (metric.value <= thresholds.needsImprovement) return 'needs-improvement';
+  if (metric.value <= thresholds.good) {return 'good';}
+  if (metric.value <= thresholds.needsImprovement) {return 'needs-improvement';}
   return 'poor';
 }
 

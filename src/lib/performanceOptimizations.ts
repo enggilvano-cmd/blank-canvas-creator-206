@@ -64,7 +64,7 @@ export function useEntityMap<T extends { id: string }>(
   entities: T[] | undefined
 ): Map<string, T> {
   return useMemo(() => {
-    if (!entities) return new Map();
+    if (!entities) {return new Map();}
     return new Map(entities.map(entity => [entity.id, entity]));
   }, [entities]);
 }
@@ -137,13 +137,13 @@ export function shallowEqual<T extends Record<string, unknown>>(
   objA: T | null | undefined,
   objB: T | null | undefined
 ): boolean {
-  if (objA === objB) return true;
-  if (!objA || !objB) return false;
+  if (objA === objB) {return true;}
+  if (!objA || !objB) {return false;}
 
   const keysA = Object.keys(objA);
   const keysB = Object.keys(objB);
 
-  if (keysA.length !== keysB.length) return false;
+  if (keysA.length !== keysB.length) {return false;}
 
   return keysA.every(key => objA[key] === objB[key]);
 }
@@ -153,7 +153,7 @@ export function shallowEqual<T extends Record<string, unknown>>(
  * Use quando structuredClone não estiver disponível
  */
 export function fastDeepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object') return obj;
+  if (obj === null || typeof obj !== 'object') {return obj;}
   
   // Use structuredClone se disponível (mais rápido)
   if (typeof structuredClone !== 'undefined') {

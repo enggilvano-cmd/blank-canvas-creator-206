@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Account } from '@/types';
+import type { Account } from '@/types';
 import { formatCurrency } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
@@ -291,7 +291,7 @@ export async function validateCreditLimitForAdd(
       .eq('type', 'expense')
       .eq('status', 'pending'); // Apenas pending para evitar duplicação
 
-    if (pendingError) throw pendingError;
+    if (pendingError) {throw pendingError;}
 
     // Calcular valores
     const limit = account.limit_amount || 0;
@@ -528,7 +528,7 @@ export async function validateCreditLimitForEdit(
       .eq('status', 'pending') // Apenas pending
       .neq('id', transactionId);
 
-    if (error) throw error;
+    if (error) {throw error;}
 
     // Calcular valores
     const limit = account.limit_amount || 0;

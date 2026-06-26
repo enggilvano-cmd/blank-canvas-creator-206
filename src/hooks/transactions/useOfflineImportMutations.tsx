@@ -4,7 +4,7 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineQueue } from '@/lib/offlineQueue';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { ImportTransactionData } from '@/types';
+import type { ImportTransactionData } from '@/types';
 import { getErrorMessage } from '@/types/errors';
 
 export function useOfflineImportMutations() {

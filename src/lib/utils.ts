@@ -11,7 +11,7 @@ export function cn(...inputs: ClassValue[]) {
  * @returns O valor em centavos como um número inteiro.
  */
 export function currencyStringToCents(value: string): number {
-  if (typeof value !== "string") return NaN;
+  if (typeof value !== "string") {return NaN;}
  
   // Limpa qualquer caractere que não seja dígito, vírgula ou ponto.
   let cleanValue = value.replace(/[^\d,.]/g, "");
@@ -25,7 +25,7 @@ export function currencyStringToCents(value: string): number {
     // Se não houver vírgula, remove os pontos de milhar, exceto o último, que pode ser decimal.
     const parts = cleanValue.split('.');
     if (parts.length > 1) {
-      cleanValue = parts.slice(0, -1).join('') + '.' + parts.slice(-1);
+      cleanValue = `${parts.slice(0, -1).join('')  }.${  parts.slice(-1)}`;
     }
   }
  
@@ -53,7 +53,7 @@ export function generateUUID(): string {
   
   // Fallback: gera UUID v4 manualmente
   // Formato: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);

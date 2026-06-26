@@ -12,7 +12,7 @@ import { ArrowRight } from "lucide-react";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { logger } from "@/lib/logger";
 import { transferSchema } from "@/lib/validationSchemas";
-import { TransferModalProps } from "@/types/formProps";
+import type { TransferModalProps } from "@/types/formProps";
 import { useBalanceValidation, validateCreditLimitForAdd } from "@/hooks/useBalanceValidation";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -164,7 +164,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                   <SelectValue placeholder="Selecione a conta de origem">
                     {formData.fromAccountId && (() => {
                       const selectedAccount = sourceAccounts.find((acc) => acc.id === formData.fromAccountId);
-                      if (!selectedAccount) return null;
+                      if (!selectedAccount) {return null;}
                       const hasLimit = selectedAccount.limit_amount && selectedAccount.limit_amount > 0;
                       return (
                         <div className="flex flex-col gap-1 w-full py-1">
@@ -231,7 +231,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                   <SelectValue placeholder="Selecione a conta de destino">
                     {formData.toAccountId && (() => {
                       const selectedAccount = destinationAccounts.find((acc) => acc.id === formData.toAccountId);
-                      if (!selectedAccount) return null;
+                      if (!selectedAccount) {return null;}
                       const hasLimit = selectedAccount.limit_amount && selectedAccount.limit_amount > 0;
                       return (
                         <div className="flex flex-col gap-1 w-full py-1">

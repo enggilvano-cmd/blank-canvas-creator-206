@@ -88,7 +88,7 @@ export class TokenBucketRateLimiter {
   }
 
   private async processQueue(): Promise<void> {
-    if (this.isProcessing) return;
+    if (this.isProcessing) {return;}
     this.isProcessing = true;
 
     while (this.queue.length > 0) {
@@ -97,7 +97,7 @@ export class TokenBucketRateLimiter {
       if (this.tokens >= 1) {
         this.tokens -= 1;
         const resolve = this.queue.shift();
-        if (resolve) resolve();
+        if (resolve) {resolve();}
 
         if (this.config.minDelay > 0 && this.queue.length > 0) {
           await new Promise(r => setTimeout(r, this.config.minDelay));

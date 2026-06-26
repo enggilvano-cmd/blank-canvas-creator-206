@@ -29,7 +29,7 @@ class Logger {
    * Log de informação geral (apenas desenvolvimento)
    */
   public info(message: string, ...args: unknown[]): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {return;}
     console.log(`ℹ️ [INFO] ${message}`, ...args);
   }
 
@@ -74,7 +74,7 @@ class Logger {
    * Log de debug (detalhes técnicos - apenas desenvolvimento)
    */
   public debug(message: string, ...args: unknown[]): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {return;}
     console.debug(`🔍 [DEBUG] ${message}`, ...args);
   }
 
@@ -82,7 +82,7 @@ class Logger {
    * Log de sucesso (operações bem-sucedidas - apenas desenvolvimento)
    */
   public success(message: string, ...args: unknown[]): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {return;}
     console.log(`✅ [SUCCESS] ${message}`, ...args);
   }
 
@@ -90,12 +90,12 @@ class Logger {
    * Log de grupo (para agrupar logs relacionados - apenas desenvolvimento)
    */
   public group(label: string): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {return;}
     console.group(label);
   }
 
   public groupEnd(): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {return;}
     console.groupEnd();
   }
 
@@ -103,12 +103,12 @@ class Logger {
    * Log de tempo (para medir performance - apenas desenvolvimento)
    */
   public time(label: string): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {return;}
     console.time(label);
   }
 
   public timeEnd(label: string): void {
-    if (!this.enabled) return;
+    if (!this.enabled) {return;}
     console.timeEnd(label);
   }
 

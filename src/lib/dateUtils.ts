@@ -1,5 +1,5 @@
 import { addMonths, format } from "date-fns";
-import { Account, AppTransaction } from "@/types";
+import type { Account, AppTransaction } from "@/types";
 import { logger } from "@/lib/logger";
 import { toUserTimezone, getTodayInUserTimezone } from "@/lib/timezone";
 

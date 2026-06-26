@@ -3,8 +3,8 @@
  * Garante type safety e consistência nas interfaces dos modais
  */
 
-import { Transaction, Account, Category, TransactionInput, InstallmentTransactionInput, TransactionUpdate } from "./index";
-import {
+import type { Transaction, Account, Category, TransactionInput, InstallmentTransactionInput, TransactionUpdate } from "./index";
+import type {
   AddAccountFormData,
   EditAccountFormData,
   AddCategoryFormData,

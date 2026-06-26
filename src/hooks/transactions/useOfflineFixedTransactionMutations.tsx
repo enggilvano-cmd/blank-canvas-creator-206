@@ -9,7 +9,7 @@ import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { getErrorMessage } from '@/types/errors';
 import { notifyFixedTransactionsChange } from '@/hooks/useFixedTransactions';
 
-import { Transaction } from '@/types';
+import type { Transaction } from '@/types';
 
 export function useOfflineFixedTransactionMutations() {
   const isOnline = useOnlineStatus();
@@ -55,7 +55,7 @@ export function useOfflineFixedTransactionMutations() {
   }) => {
     if (isOnline) {
       // Online: usar edge function
-      if (!user) return;
+      if (!user) {return;}
       try {
         const { data, error } = await supabase.functions.invoke('atomic-create-fixed', {
           body: {
@@ -63,7 +63,7 @@ export function useOfflineFixedTransactionMutations() {
           }
         });
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         await invalidateTransactions();
         notifyFixedTransactionsChange();
@@ -134,7 +134,7 @@ export function useOfflineFixedTransactionMutations() {
   ) => {
     if (isOnline) {
       // Online: usar edge function
-      if (!user) return;
+      if (!user) {return;}
       try {
         const { error } = await supabase.functions.invoke('atomic-edit-transaction', {
           body: {
@@ -144,7 +144,7 @@ export function useOfflineFixedTransactionMutations() {
           }
         });
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         await invalidateTransactions();
         
@@ -210,7 +210,7 @@ export function useOfflineFixedTransactionMutations() {
   ) => {
     if (isOnline) {
       // Online: usar edge function
-      if (!user) return;
+      if (!user) {return;}
       try {
         const { error } = await supabase.functions.invoke('atomic-delete-transaction', {
           body: {
@@ -219,7 +219,7 @@ export function useOfflineFixedTransactionMutations() {
           }
         });
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         await invalidateTransactions();
         

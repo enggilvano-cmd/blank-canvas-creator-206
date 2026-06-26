@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,7 @@ export interface AppSettings {
 
 async function getSettings(): Promise<AppSettings> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
+  if (!user) {throw new Error('User not authenticated');}
 
   const { data, error } = await supabase
     .from('user_settings')
@@ -41,7 +42,7 @@ async function getSettings(): Promise<AppSettings> {
 
 async function saveSettingsToDb(settings: AppSettings): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
+  if (!user) {throw new Error('User not authenticated');}
 
   // Use upsert to handle both insert and update cases
   const { error } = await supabase
@@ -180,7 +181,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         applyTheme(loadedSettings.theme);
       } catch (error) {
         // ✅ Verificar se ainda montado antes de aplicar tema
-        if (!isMounted) return;
+        if (!isMounted) {return;}
         
         logger.error('Error loading settings:', error);
         // Use default settings on error

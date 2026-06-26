@@ -174,7 +174,7 @@ class PWAUpdateManager {
 
     const newSW = this.sw?.installing;
 
-    if (!newSW) return;
+    if (!newSW) {return;}
 
     newSW.addEventListener('statechange', () => {
       if (newSW.state === 'installed' && navigator.serviceWorker.controller) {

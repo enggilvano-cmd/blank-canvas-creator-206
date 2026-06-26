@@ -6,7 +6,7 @@ import { offlineQueue } from '@/lib/offlineQueue';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/types/errors';
-import { Transaction, Account } from '@/types';
+import type { Transaction, Account } from '@/types';
 import { queryKeys } from '@/lib/queryClient';
 
 export function useOfflineCreditPaymentMutations() {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { Transaction } from '@/types';
+import type { Transaction } from '@/types';
 
 export function useEditTransactionScope(transaction: Transaction | null) {
   const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
@@ -14,7 +14,7 @@ export function useEditTransactionScope(transaction: Transaction | null) {
   const isFixed = Boolean(transaction?.is_fixed);
 
   const checkScopeRequired = async () => {
-    if (!transaction) return false;
+    if (!transaction) {return false;}
 
     if (isInstallment || isFixed) {
       try {
@@ -28,7 +28,7 @@ export function useEditTransactionScope(transaction: Transaction | null) {
         const currentTransactionDate = new Date(transaction.date);
 
         const pendingCount = childTransactions?.filter(t => {
-          if (t.status !== "pending") return false;
+          if (t.status !== "pending") {return false;}
           const tDate = new Date(t.date);
           // Considera pendentes da mesma data ou futuras
           return tDate >= currentTransactionDate;

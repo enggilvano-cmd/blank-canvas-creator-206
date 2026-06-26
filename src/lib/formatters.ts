@@ -1,4 +1,4 @@
-import { Account } from "@/types";
+import type { Account } from "@/types";
 
 /**
  * Mapeamento de moedas para locales padrão
@@ -72,7 +72,7 @@ export function formatCurrency(
  * @returns O saldo disponível em centavos.
  */
 export function getAvailableBalance(account: Account | undefined): number {
-  if (!account) return 0;
+  if (!account) {return 0;}
   
   if (account.type === 'credit') {
     // Cartão de crédito: saldo negativo = dívida
@@ -92,7 +92,7 @@ export function getAvailableBalance(account: Account | undefined): number {
  * @returns A dívida em centavos (positivo).
  */
 export function getCreditCardDebt(account: Account | undefined): number {
-  if (!account || account.type !== 'credit') return 0;
+  if (!account || account.type !== 'credit') {return 0;}
   // Se balance é negativo, retorna o valor absoluto (dívida)
   // Se balance é positivo, retorna 0 (tem crédito a favor)
   return Math.abs(Math.min(account.balance, 0));
@@ -104,7 +104,7 @@ export function getCreditCardDebt(account: Account | undefined): number {
  * @returns true se há crédito a favor (balance positivo).
  */
 export function hasCreditInFavor(account: Account | undefined): boolean {
-  if (!account || account.type !== 'credit') return false;
+  if (!account || account.type !== 'credit') {return false;}
   return account.balance > 0;
 }
 

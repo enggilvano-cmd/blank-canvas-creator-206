@@ -29,7 +29,7 @@ export function canShowNotifications(): boolean {
 
 // Request notification permission
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (!canShowNotifications()) return false;
+  if (!canShowNotifications()) {return false;}
   
   if (Notification.permission === "granted") {
     return true;
@@ -147,7 +147,7 @@ export function getOverdueBillAlerts(
       const currentYear = today.getFullYear();
       
       // Calculate due date for current month
-      let dueDate = new Date(currentYear, currentMonth, account.due_date!);
+      const dueDate = new Date(currentYear, currentMonth, account.due_date!);
       
       // If due date hasn't passed yet this month, check previous month
       if (dueDate >= today) {
@@ -158,7 +158,7 @@ export function getOverdueBillAlerts(
       const daysOverdue = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       
       // Only show if actually overdue (positive days)
-      if (daysOverdue <= 0) return;
+      if (daysOverdue <= 0) {return;}
       
       // Use balance (which must be negative to reach here)
       const amount = Math.abs(account.balance);
@@ -213,21 +213,21 @@ export function formatNotificationTime(date: Date): string {
   const notificationDate = toUserTimezone(date);
   const diffInMinutes = Math.floor((now.getTime() - notificationDate.getTime()) / (1000 * 60));
   
-  if (diffInMinutes < 1) return "Agora";
-  if (diffInMinutes < 60) return `${diffInMinutes}m atrás`;
+  if (diffInMinutes < 1) {return "Agora";}
+  if (diffInMinutes < 60) {return `${diffInMinutes}m atrás`;}
   
   const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours}h atrás`;
+  if (diffInHours < 24) {return `${diffInHours}h atrás`;}
   
   const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) return `${diffInDays}d atrás`;
+  if (diffInDays < 7) {return `${diffInDays}d atrás`;}
   
   return date.toLocaleDateString('pt-BR');
 }
 
 // Schedule recurring notifications (would need a background service in production)
 export function scheduleNotifications(accounts: NotificationAccount[], settings: NotificationSettings) {
-  if (!settings.billReminders) return;
+  if (!settings.billReminders) {return;}
   
   const reminders = getDueDateReminders(accounts, settings);
   
@@ -276,8 +276,8 @@ export function getPendingTransactionReminders(
 
   transactions.forEach(transaction => {
     // Garantir que é pendente e despesa ou receita
-    if (transaction.status !== 'pending') return;
-    if (transaction.type !== 'expense' && transaction.type !== 'income') return;
+    if (transaction.status !== 'pending') {return;}
+    if (transaction.type !== 'expense' && transaction.type !== 'income') {return;}
 
     // Fix: Treat date object as container for UTC date components which represent the Calendar Date
     // This avoids timezone shifting (e.g. 2026-02-13 UTC -> 2026-02-12 Local)

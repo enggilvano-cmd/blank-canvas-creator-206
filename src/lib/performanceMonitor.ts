@@ -138,7 +138,7 @@ class PerformanceMonitor {
   }
 
   private getAverageQueryTime(): number {
-    if (this.queryTimes.length === 0) return 0;
+    if (this.queryTimes.length === 0) {return 0;}
     return this.queryTimes.reduce((sum, time) => sum + time, 0) / this.queryTimes.length;
   }
 

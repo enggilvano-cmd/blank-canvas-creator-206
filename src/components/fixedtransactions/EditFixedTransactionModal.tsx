@@ -11,7 +11,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { createDateFromString } from "@/lib/dateUtils";
 import { EditTransactionFormFields } from "@/components/edit-transaction/EditTransactionFormFields";
 
-import { Transaction, Account } from "@/types";
+import type { Transaction, Account } from "@/types";
 
 interface EditFixedTransactionModalProps {
   open: boolean;
@@ -68,7 +68,7 @@ export function EditFixedTransactionModal({
   }, [open, transaction]);
 
   const filteredCategories = useMemo(() => {
-    if (!formData.type) return [];
+    if (!formData.type) {return [];}
     const filtered = categories.filter(
       (cat) => cat.type === formData.type || cat.type === "both"
     );

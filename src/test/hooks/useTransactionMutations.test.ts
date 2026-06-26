@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode } from 'react';
 import { useTransactionMutations } from '@/hooks/transactions/useTransactionMutations';
 import { supabase } from '@/integrations/supabase/client';
-import { TransactionInput } from '@/types';
+import type { TransactionInput } from '@/types';
 
 // Mock dependencies
 vi.mock('@/integrations/supabase/client', () => ({

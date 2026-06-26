@@ -171,12 +171,12 @@ export function ResponsiveTable<T extends Record<string, unknown>>({
     const width = window.innerWidth;
     
     // Filter columns based on hideOnMobile property and screen size
-    let filteredColumns = columns.filter((col, index) => {
+    const filteredColumns = columns.filter((col, index) => {
       // Always show first and last columns (info and actions)
-      if (index === 0 || index === columns.length - 1) return true;
+      if (index === 0 || index === columns.length - 1) {return true;}
       
       // Hide columns marked as hideOnMobile on small screens
-      if (col.hideOnMobile && width < 640) return false;
+      if (col.hideOnMobile && width < 640) {return false;}
       
       return true;
     });

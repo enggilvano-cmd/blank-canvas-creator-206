@@ -1,5 +1,6 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import type { ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
+import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -23,7 +24,7 @@ interface Profile {
   updated_at: string;
 }
 
-import { AuthError as SupabaseAuthError } from '@supabase/supabase-js';
+import type { AuthError as SupabaseAuthError } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -88,16 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Determine highest priority role
       const roles = rolesData?.map(r => r.role) || [];
       let finalRole = 'user';
-      
-      // Temporary override for specific user to fix admin access
-      if (profileData.email === 'enggilvano@gmail.com') {
-          roles.push('admin');
-      }
 
-      if (roles.includes('admin')) finalRole = 'admin';
-      else if (roles.includes('subscriber')) finalRole = 'subscriber';
-      else if (roles.includes('trial')) finalRole = 'trial';
-      else if (roles.includes('user')) finalRole = 'user';
+      if (roles.includes('admin')) {finalRole = 'admin';}
+      else if (roles.includes('subscriber')) {finalRole = 'subscriber';}
+      else if (roles.includes('trial')) {finalRole = 'trial';}
+      else if (roles.includes('user')) {finalRole = 'user';}
       
       logger.debug('Profile and roles fetched:', { profileData, roles, finalRole });
       
@@ -143,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const initializeUserData = async () => {
-    if (!user) return;
+    if (!user) {return;}
     
     try {
       logger.debug('Initializing user data for:', user.id);
@@ -169,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Check again before continuing
-      if (!user) return;
+      if (!user) {return;}
 
       // Initialize default settings if none exist (using upsert to avoid race conditions)
       await supabase
@@ -191,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const syncProfileEmail = async (userId: string, newEmail?: string | null) => {
     try {
-      if (!newEmail) return;
+      if (!newEmail) {return;}
       const { error } = await supabase
         .from('profiles')
         .update({ email: newEmail })
@@ -219,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logger.debug('Auth state changed:', event, session?.user?.id);
         
         // CRITICAL: Check if mounted before any state update
-        if (!isMounted) return;
+        if (!isMounted) {return;}
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -231,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const profileData = await fetchProfile(session.user.id);
               
               // CRITICAL: Check if mounted before state update
-              if (!isMounted) return;
+              if (!isMounted) {return;}
               
               if (profileData) {
                 setProfile(profileData);
@@ -246,16 +242,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
               
               // CRITICAL: Check again before continuing
-              if (!isMounted) return;
+              if (!isMounted) {return;}
               
               await syncProfileEmail(session.user.id, session.user.email);
               
-              if (!isMounted) return;
+              if (!isMounted) {return;}
               
               if (event === 'SIGNED_IN') {
                 await logActivity('signed_in', 'auth');
                 
-                if (!isMounted) return;
+                if (!isMounted) {return;}
                 
                 await initializeUserData();
               }
@@ -283,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logger.debug('Initial session check:', session?.user?.id);
       
       // CRITICAL: Check if mounted
-      if (!isMounted) return;
+      if (!isMounted) {return;}
       
       setSession(session);
       setUser(session?.user ?? null);
@@ -293,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const profileData = await fetchProfile(session.user.id);
           
           // CRITICAL: Check if mounted before state update
-          if (!isMounted) return;
+          if (!isMounted) {return;}
           
           if (profileData) {
             setProfile(profileData);
@@ -307,7 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }
           
-          if (!isMounted) return;
+          if (!isMounted) {return;}
           
           await syncProfileEmail(session.user.id, session.user.email);
         } catch (error: unknown) {
@@ -540,17 +536,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isSubscriptionActive = () => {
-    if (!profile) return false;
+    if (!profile) {return false;}
     // Role is now fetched from user_roles table (security best practice)
-    if (profile.role === 'admin' || profile.role === 'user') return profile.is_active;
+    if (profile.role === 'admin' || profile.role === 'user') {return profile.is_active;}
     if (profile.role === 'trial') {
-      if (!profile.trial_expires_at) return false;
+      if (!profile.trial_expires_at) {return false;}
       const expiresAt = new Date(profile.trial_expires_at);
       const now = new Date();
       return expiresAt > now && profile.is_active;
     }
     if (profile.role === 'subscriber') {
-      if (!profile.subscription_expires_at) return false;
+      if (!profile.subscription_expires_at) {return false;}
       const expiresAt = new Date(profile.subscription_expires_at);
       const now = new Date();
       return expiresAt > now && profile.is_active;
@@ -559,7 +555,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const getSubscriptionTimeRemaining = () => {
-    if (!profile) return null;
+    if (!profile) {return null;}
     
     let expiresAt: Date | null = null;
     
@@ -570,12 +566,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       expiresAt = new Date(profile.subscription_expires_at);
     }
     
-    if (!expiresAt) return null;
+    if (!expiresAt) {return null;}
     
     const now = new Date();
     const timeLeft = expiresAt.getTime() - now.getTime();
     
-    if (timeLeft <= 0) return 'Expirado';
+    if (timeLeft <= 0) {return 'Expirado';}
     
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
     const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));

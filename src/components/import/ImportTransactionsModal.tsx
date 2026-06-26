@@ -111,8 +111,8 @@ export function ImportTransactionsModal({
   } as const;
 
   const pick = (row: Record<string, unknown>, keys: readonly string[]) => {
-    if (!row || typeof row !== 'object') return '';
-    if (!keys || !Array.isArray(keys)) return '';
+    if (!row || typeof row !== 'object') {return '';}
+    if (!keys || !Array.isArray(keys)) {return '';}
     
     // Mapa normalizado de chaves do Excel -> valor
     const keyMap = new Map<string, unknown>();
@@ -155,18 +155,18 @@ export function ImportTransactionsModal({
   const validateTransactionType = (tipo: string): 'income' | 'expense' | 'transfer' | null => {
     const normalizedType = normalizeString(tipo);
     // Suporte para PT-BR, EN-US, ES-ES (singular e plural)
-    if (['receita', 'receitas', 'income', 'entrada', 'entradas', 'ingreso', 'ingresos'].includes(normalizedType)) return 'income';
-    if (['despesa', 'despesas', 'expense', 'expenses', 'saida', 'saidas', 'gasto', 'gastos'].includes(normalizedType)) return 'expense';
-    if (['transferencia', 'transfer', 'transferir'].includes(normalizedType)) return 'transfer';
+    if (['receita', 'receitas', 'income', 'entrada', 'entradas', 'ingreso', 'ingresos'].includes(normalizedType)) {return 'income';}
+    if (['despesa', 'despesas', 'expense', 'expenses', 'saida', 'saidas', 'gasto', 'gastos'].includes(normalizedType)) {return 'expense';}
+    if (['transferencia', 'transfer', 'transferir'].includes(normalizedType)) {return 'transfer';}
     return null;
   };
 
   const validateStatus = (status: string): 'completed' | 'pending' | null => {
-    if (!status) return 'completed'; // padrão
+    if (!status) {return 'completed';} // padrão
     const normalizedStatus = normalizeString(status);
     // Suporte para PT-BR, EN-US, ES-ES
-    if (['concluida', 'completed', 'finalizada', 'completada'].includes(normalizedStatus)) return 'completed';
-    if (['pendente', 'pending', 'em andamento'].includes(normalizedStatus)) return 'pending';
+    if (['concluida', 'completed', 'finalizada', 'completada'].includes(normalizedStatus)) {return 'completed';}
+    if (['pendente', 'pending', 'em andamento'].includes(normalizedStatus)) {return 'pending';}
     return null;
   };
 
@@ -179,7 +179,7 @@ export function ImportTransactionsModal({
   const parseInvoiceMonth = (value: unknown): string | undefined => {
     if (typeof value === 'string' || typeof value === 'number' || value instanceof Date) {
       try {
-        if (!value) return undefined;
+        if (!value) {return undefined;}
         
         // Se for um número (serial date do Excel)
         if (typeof value === 'number') {
@@ -201,7 +201,7 @@ export function ImportTransactionsModal({
         }
         
         const str = String(value).trim();
-        if (!str) return undefined;
+        if (!str) {return undefined;}
         
         // Formato já correto: YYYY-MM
         if (/^\d{4}-\d{2}$/.test(str)) {
@@ -293,7 +293,7 @@ export function ImportTransactionsModal({
 
     if (typeof dateString === 'string') {
       const dateStr = dateString.trim();
-      if (!dateStr) return null;
+      if (!dateStr) {return null;}
 
       const formats = [
         'dd/MM/yyyy',
@@ -599,7 +599,7 @@ export function ImportTransactionsModal({
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
+    if (!selectedFile) {return;}
 
     if (!selectedFile.name.match(/\.(xlsx|xls)$/)) {
       toast({
@@ -620,9 +620,9 @@ export function ImportTransactionsModal({
       setImportedData(validatedData);
 
       const summary = validatedData.reduce((acc: { new: number; duplicates: number; invalid: number }, t: ImportedTransaction) => {
-        if (!t.isValid) acc.invalid++;
-        else if (t.isDuplicate) acc.duplicates++;
-        else acc.new++;
+        if (!t.isValid) {acc.invalid++;}
+        else if (t.isDuplicate) {acc.duplicates++;}
+        else {acc.new++;}
         return acc;
       }, { new: 0, duplicates: 0, invalid: 0 });
 
@@ -909,10 +909,10 @@ export function ImportTransactionsModal({
   }, [importedData, excludedIndexes]);
 
   const filteredData = useMemo(() => {
-    if (filterType === 'all') return importedData;
-    if (filterType === 'invalid') return importedData.filter(t => !t.isValid);
-    if (filterType === 'transfers') return importedData.filter(t => t.parsedType === 'transfer' || t.tipo?.toLowerCase().includes('transfer'));
-    if (filterType === 'valid') return importedData.filter(t => t.isValid && !t.isDuplicate);
+    if (filterType === 'all') {return importedData;}
+    if (filterType === 'invalid') {return importedData.filter(t => !t.isValid);}
+    if (filterType === 'transfers') {return importedData.filter(t => t.parsedType === 'transfer' || t.tipo?.toLowerCase().includes('transfer'));}
+    if (filterType === 'valid') {return importedData.filter(t => t.isValid && !t.isDuplicate);}
     return importedData;
   }, [importedData, filterType]);
 

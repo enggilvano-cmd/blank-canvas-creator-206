@@ -8,8 +8,10 @@ import { TransactionList } from "@/components/transactions/TransactionList";
 import { TransactionStatsCards } from "@/components/transactions/TransactionStatsCards";
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
 import { ImportTransactionsModal } from "@/components/import/ImportTransactionsModal";
-import { EditScope, TransactionScopeDialog } from "./TransactionScopeDialog";
-import { FixedTransactionScopeDialog, FixedScope } from "../fixedtransactions/FixedTransactionScopeDialog";
+import type { EditScope} from "./TransactionScopeDialog";
+import { TransactionScopeDialog } from "./TransactionScopeDialog";
+import type { FixedScope } from "../fixedtransactions/FixedTransactionScopeDialog";
+import { FixedTransactionScopeDialog } from "../fixedtransactions/FixedTransactionScopeDialog";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useTransactionsPageLogic } from "@/hooks/useTransactionsPageLogic";
 import { useComponentPerformance } from "@/hooks/useComponentPerformance";
@@ -129,7 +131,7 @@ export function TransactionsPage({
 
   // Extract unique invoice months from all transactions
   const availableInvoiceMonths = useMemo(() => {
-    if (!allTransactions) return [];
+    if (!allTransactions) {return [];}
     const months = new Set<string>();
     allTransactions.forEach(t => {
       if (t.invoice_month) {

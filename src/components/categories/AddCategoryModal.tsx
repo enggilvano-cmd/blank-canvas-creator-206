@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Category, PREDEFINED_COLORS } from "@/types";
+import type { Category} from "@/types";
+import { PREDEFINED_COLORS } from "@/types";
 import { ColorPicker } from "@/components/forms/ColorPicker";
-import { AddCategoryModalProps } from "@/types/formProps";
+import type { AddCategoryModalProps } from "@/types/formProps";
 
 export function AddCategoryModal({ open, onOpenChange, onAddCategory }: AddCategoryModalProps) {
   const [formData, setFormData] = useState({

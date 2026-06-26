@@ -39,9 +39,9 @@ export const isTransferOutgoing = (transaction: Transaction): boolean => {
  *  - receita espelho com linked_transaction_id
  */
 export const isTransferLike = (transaction: Transaction): boolean => {
-  if (transaction.type === 'transfer') return true;
-  if (isTransferOutgoing(transaction)) return true;
-  if (isTransferMirror(transaction)) return true;
+  if (transaction.type === 'transfer') {return true;}
+  if (isTransferOutgoing(transaction)) {return true;}
+  if (isTransferMirror(transaction)) {return true;}
   return false;
 };
 

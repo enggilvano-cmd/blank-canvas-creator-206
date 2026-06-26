@@ -28,7 +28,7 @@ export function FixedTransactionsHeader({
 
   const handleExportToExcel = async () => {
     try {
-      if (!user) return;
+      if (!user) {return;}
 
       // Para cada parent, contar quantas children pending existem
       const exportDataPromises = transactions.map(async (transaction) => {

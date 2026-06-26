@@ -81,14 +81,14 @@ export function ImportAccountsModal({
         normalizedType.includes('conta corr') ||
         normalizedType.includes('checking') ||
         normalizedType === 'checking' ||
-        normalizedType === 'cc') return 'checking';
+        normalizedType === 'cc') {return 'checking';}
     
     // Poupança / Savings
     if (normalizedType.includes('poupanca') || 
         normalizedType.includes('poupança') ||
         normalizedType.includes('saving') ||
         normalizedType === 'savings' ||
-        normalizedType === 'pp') return 'savings';
+        normalizedType === 'pp') {return 'savings';}
     
     // Cartão de Crédito / Credit Card
     if (normalizedType.includes('cartao') || 
@@ -97,11 +97,11 @@ export function ImportAccountsModal({
         normalizedType.includes('card') ||
         normalizedType === 'credit' ||
         normalizedType === 'cc' ||
-        normalizedType === 'cred') return 'credit';
+        normalizedType === 'cred') {return 'credit';}
     
     // Investimento / Investment
     if (normalizedType.includes('invest') ||
-        normalizedType === 'inv') return 'investment';
+        normalizedType === 'inv') {return 'investment';}
 
     // Vale Refeição/Alimentação / Meal Voucher
     if (normalizedType.includes('vale') ||
@@ -110,7 +110,7 @@ export function ImportAccountsModal({
         normalizedType.includes('meal') ||
         normalizedType.includes('voucher') ||
         normalizedType === 'vr' ||
-        normalizedType === 'va') return 'meal_voucher';
+        normalizedType === 'va') {return 'meal_voucher';}
     
     return null;
   };
@@ -119,7 +119,7 @@ export function ImportAccountsModal({
   };
 
   const parseNumber = (value: unknown): number => {
-    if (typeof value === 'number') return Math.round(value * 100);
+    if (typeof value === 'number') {return Math.round(value * 100);}
     if (typeof value === 'string') {
       // Parse com suporte ao formato brasileiro (ponto = milhar, vírgula = decimal)
       // Remove pontos (separador de milhar) e substitui vírgula por ponto (decimal)
@@ -238,7 +238,7 @@ export function ImportAccountsModal({
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
+    if (!selectedFile) {return;}
 
     if (!selectedFile.name.match(/\.(xlsx|xls)$/)) {
       toast({
@@ -275,9 +275,9 @@ export function ImportAccountsModal({
       setImportedData(validatedData);
 
       const summary = validatedData.reduce((acc, t) => {
-        if (!t.isValid) acc.invalid++;
-        else if (t.isDuplicate) acc.duplicates++;
-        else acc.new++;
+        if (!t.isValid) {acc.invalid++;}
+        else if (t.isDuplicate) {acc.duplicates++;}
+        else {acc.new++;}
         return acc;
       }, { new: 0, duplicates: 0, invalid: 0 });
 

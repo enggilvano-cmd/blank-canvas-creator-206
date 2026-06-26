@@ -16,7 +16,7 @@ import {
 import { Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-import { Account, Category } from "@/types";
+import type { Account, Category } from "@/types";
 
 interface FixedTransactionFilterDialogProps {
   open: boolean;

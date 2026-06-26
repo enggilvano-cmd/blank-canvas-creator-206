@@ -23,7 +23,7 @@ import { CurrencyInput } from "@/components/forms/CurrencyInput";
 import { useAccounts } from "@/hooks/queries/useAccounts";
 import { creditPaymentSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
-import { CreditPaymentModalProps } from "@/types/formProps";
+import type { CreditPaymentModalProps } from "@/types/formProps";
 import { useBalanceValidation } from "@/hooks/useBalanceValidation";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -109,7 +109,7 @@ export function CreditPaymentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!creditAccount) return;
+    if (!creditAccount) {return;}
     
     // Validação com Zod
     try {
@@ -264,7 +264,7 @@ export function CreditPaymentModal({
                 <SelectValue placeholder="Selecione a conta">
                   {formData.bankAccountId && (() => {
                     const selectedAccount = bankAccounts.find((acc) => acc.id === formData.bankAccountId);
-                    if (!selectedAccount) return null;
+                    if (!selectedAccount) {return null;}
                     const hasLimit = selectedAccount.limit_amount && selectedAccount.limit_amount > 0;
                     return (
                       <div className="flex flex-col gap-1 w-full py-1">

@@ -1,4 +1,4 @@
-import { Account } from "@/types";
+import type { Account } from "@/types";
 import { formatCurrency, getAvailableBalance, getCreditCardDebt, hasCreditInFavor } from "@/lib/formatters";
 
 interface AccountBalanceDetailsProps {

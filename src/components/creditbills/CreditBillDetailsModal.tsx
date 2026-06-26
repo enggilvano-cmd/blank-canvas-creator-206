@@ -1,4 +1,4 @@
-import { Account, Transaction, CreditBill } from '@/types'
+import type { Account, Transaction, CreditBill } from '@/types'
 import { formatCurrency } from '@/lib/formatters'
 import { format, isPast } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +13,7 @@ interface CreditBillDetailsModalProps {
 }
 
 export function CreditBillDetailsModal({ bill, onClose }: CreditBillDetailsModalProps) {
-  if (!bill) return null
+  if (!bill) {return null}
 
   const paidAmount = bill.paid_amount
   const remainingAmount = bill.total_amount - paidAmount

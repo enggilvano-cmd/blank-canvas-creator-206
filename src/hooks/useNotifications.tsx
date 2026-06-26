@@ -42,7 +42,7 @@ export function useNotifications() {
 
   // Load notification settings
   useEffect(() => {
-    if (!user) return;
+    if (!user) {return;}
 
     const loadSettings = async () => {
       const { data } = await supabase
@@ -61,7 +61,7 @@ export function useNotifications() {
 
   // Check for notifications
   const checkNotifications = useCallback(async () => {
-    if (!user || !settings.billReminders) return;
+    if (!user || !settings.billReminders) {return;}
 
     try {
       // Fetch accounts with specific columns only
@@ -70,7 +70,7 @@ export function useNotifications() {
         .select('id, name, type, balance, due_date, closing_date, limit_amount')
         .eq('user_id', user.id);
 
-      if (!accounts) return;
+      if (!accounts) {return;}
 
       // Calculate bill amounts for credit cards
       const billAmounts: Record<string, number> = {};
@@ -267,7 +267,7 @@ export function useNotifications() {
   }, [settings.billReminders]);
 
   const enablePushNotifications = useCallback(async () => {
-    if (!user) return { success: false, error: 'Usuário não autenticado' };
+    if (!user) {return { success: false, error: 'Usuário não autenticado' };}
 
     try {
       const subscription = await subscribeToPushNotifications(user.id);
@@ -290,7 +290,7 @@ export function useNotifications() {
   }, [user]);
 
   const disablePushNotifications = useCallback(async () => {
-    if (!user) return false;
+    if (!user) {return false;}
 
     try {
       const success = await unsubscribeFromPushNotifications(user.id);

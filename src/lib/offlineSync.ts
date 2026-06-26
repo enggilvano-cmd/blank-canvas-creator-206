@@ -1,4 +1,5 @@
-import { offlineQueue, QueuedOperation } from './offlineQueue';
+import type { QueuedOperation } from './offlineQueue';
+import { offlineQueue } from './offlineQueue';
 import { offlineDatabase } from './offlineDatabase';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logger';
@@ -266,8 +267,8 @@ class OfflineSyncManager {
           }
         }
         
-        if (successCount > 0) toast.success(`${successCount} operações sincronizadas.`);
-        if (failCount > 0) logger.warn(`${failCount} operações falharam no sync.`);
+        if (successCount > 0) {toast.success(`${successCount} operações sincronizadas.`);}
+        if (failCount > 0) {logger.warn(`${failCount} operações falharam no sync.`);}
         
         // Log rate limiter statistics
         const stats = offlineSyncRateLimiter.getStats();
@@ -325,11 +326,11 @@ class OfflineSyncManager {
   }
 
   async syncDataFromServer(): Promise<void> {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine) {return;}
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {return;}
 
       // ✅ BUG FIX #12: Use UTC for consistent server sync
       const dateFrom = getMonthsAgoUTC(SYNC_MONTHS);
@@ -356,7 +357,7 @@ class OfflineSyncManager {
           `Transactions page ${page} query timed out after ${QUERY_TIMEOUT / 1000}s`
         );
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         if (pageData && pageData.length > 0) {
           allTransactions = [...allTransactions, ...(pageData as TransactionDTO[])];
@@ -503,7 +504,7 @@ class OfflineSyncManager {
    */
   private async detectConflicts(operation: QueuedOperation, payload: Record<string, unknown>): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {return;}
 
     try {
       switch (operation.type) {
@@ -536,7 +537,7 @@ class OfflineSyncManager {
               }
             }
 
-            if (error) throw error;
+            if (error) {throw error;}
 
             // For edits, check if server record is significantly different
             if (operation.type === 'edit' && existingRecord && payload.original_values) {
@@ -617,7 +618,7 @@ class OfflineSyncManager {
         throw new Error('User not authenticated for sync');
     }
 
-    let payload = { ...operation.data };
+    const payload = { ...operation.data };
     
     // Helper para identificar ID temporário
     const isTempId = (id: unknown): id is string => typeof id === 'string' && id.startsWith(TEMP_ID_PREFIX);
@@ -628,18 +629,18 @@ class OfflineSyncManager {
 
     // === DEPENDENCY RESOLUTION ===
     // Resolve IDs using the map (replace temp IDs with real IDs from previous operations in this batch)
-    if (payload.id && tempIdMap.has(payload.id)) payload.id = tempIdMap.get(payload.id);
-    if (payload.account_id && tempIdMap.has(payload.account_id)) payload.account_id = tempIdMap.get(payload.account_id);
-    if (payload.category_id && tempIdMap.has(payload.category_id)) payload.category_id = tempIdMap.get(payload.category_id);
-    if (payload.to_account_id && tempIdMap.has(payload.to_account_id)) payload.to_account_id = tempIdMap.get(payload.to_account_id);
-    if (payload.transaction_id && tempIdMap.has(payload.transaction_id)) payload.transaction_id = tempIdMap.get(payload.transaction_id);
-    if (payload.parent_transaction_id && tempIdMap.has(payload.parent_transaction_id)) payload.parent_transaction_id = tempIdMap.get(payload.parent_transaction_id);
-    if (payload.p_transaction_id && tempIdMap.has(payload.p_transaction_id)) payload.p_transaction_id = tempIdMap.get(payload.p_transaction_id);
+    if (payload.id && tempIdMap.has(payload.id)) {payload.id = tempIdMap.get(payload.id);}
+    if (payload.account_id && tempIdMap.has(payload.account_id)) {payload.account_id = tempIdMap.get(payload.account_id);}
+    if (payload.category_id && tempIdMap.has(payload.category_id)) {payload.category_id = tempIdMap.get(payload.category_id);}
+    if (payload.to_account_id && tempIdMap.has(payload.to_account_id)) {payload.to_account_id = tempIdMap.get(payload.to_account_id);}
+    if (payload.transaction_id && tempIdMap.has(payload.transaction_id)) {payload.transaction_id = tempIdMap.get(payload.transaction_id);}
+    if (payload.parent_transaction_id && tempIdMap.has(payload.parent_transaction_id)) {payload.parent_transaction_id = tempIdMap.get(payload.parent_transaction_id);}
+    if (payload.p_transaction_id && tempIdMap.has(payload.p_transaction_id)) {payload.p_transaction_id = tempIdMap.get(payload.p_transaction_id);}
     
     // Also check inside 'updates' object for edits
     if (payload.updates) {
-      if (payload.updates.account_id && tempIdMap.has(payload.updates.account_id)) payload.updates.account_id = tempIdMap.get(payload.updates.account_id);
-      if (payload.updates.category_id && tempIdMap.has(payload.updates.category_id)) payload.updates.category_id = tempIdMap.get(payload.updates.category_id);
+      if (payload.updates.account_id && tempIdMap.has(payload.updates.account_id)) {payload.updates.account_id = tempIdMap.get(payload.updates.account_id);}
+      if (payload.updates.category_id && tempIdMap.has(payload.updates.category_id)) {payload.updates.category_id = tempIdMap.get(payload.updates.category_id);}
     }
 
     // Capture the temp ID before deleting it (for mapping later)
@@ -713,8 +714,8 @@ class OfflineSyncManager {
         break;
 
       case 'transfer':
-        if (payload.origin_transaction_id && isTempId(payload.origin_transaction_id)) delete payload.origin_transaction_id;
-        if (payload.destination_transaction_id && isTempId(payload.destination_transaction_id)) delete payload.destination_transaction_id;
+        if (payload.origin_transaction_id && isTempId(payload.origin_transaction_id)) {delete payload.origin_transaction_id;}
+        if (payload.destination_transaction_id && isTempId(payload.destination_transaction_id)) {delete payload.destination_transaction_id;}
         await withTimeout(
           supabase.functions.invoke('atomic-transfer', { body: { transfer: payload } }),
           OPERATION_TIMEOUT,
@@ -728,7 +729,7 @@ class OfflineSyncManager {
           OPERATION_TIMEOUT,
           'Add account query timed out after 30s'
         );
-        if (error) throw error;
+        if (error) {throw error;}
         
         if (originalTempId && data?.id) {
             tempIdMap.set(originalTempId, data.id);
@@ -737,7 +738,7 @@ class OfflineSyncManager {
       }
       
       case 'edit_account':
-        if (isTempId(payload.account_id)) return;
+        if (isTempId(payload.account_id)) {return;}
         await withTimeout(
           supabase.from('accounts').update(payload.updates).eq('id', payload.account_id),
           OPERATION_TIMEOUT,
@@ -746,7 +747,7 @@ class OfflineSyncManager {
         break;
 
       case 'delete_account':
-        if (isTempId(payload.account_id)) return;
+        if (isTempId(payload.account_id)) {return;}
         await withTimeout(
           supabase.from('accounts').delete().eq('id', payload.account_id),
           OPERATION_TIMEOUT,
@@ -760,7 +761,7 @@ class OfflineSyncManager {
           OPERATION_TIMEOUT,
           'Add category query timed out after 30s'
         );
-        if (error) throw error;
+        if (error) {throw error;}
         
         if (originalTempId && data?.id) {
             tempIdMap.set(originalTempId, data.id);
@@ -769,7 +770,7 @@ class OfflineSyncManager {
       }
 
       case 'edit_category':
-        if (isTempId(payload.category_id)) return;
+        if (isTempId(payload.category_id)) {return;}
         await withTimeout(
           supabase.from('categories').update(payload.updates).eq('id', payload.category_id),
           OPERATION_TIMEOUT,
@@ -778,7 +779,7 @@ class OfflineSyncManager {
         break;
       
       case 'delete_category':
-        if (isTempId(payload.category_id)) return;
+        if (isTempId(payload.category_id)) {return;}
         await withTimeout(
           supabase.from('categories').delete().eq('id', payload.category_id),
           OPERATION_TIMEOUT,
@@ -800,7 +801,7 @@ class OfflineSyncManager {
          break;
          
       case 'add_fixed_transaction':
-         if (isTempId(payload.id)) delete payload.id;
+         if (isTempId(payload.id)) {delete payload.id;}
          await withTimeout(
            supabase.functions.invoke('atomic-create-fixed', { body: payload }),
            OPERATION_TIMEOUT,
@@ -820,7 +821,7 @@ class OfflineSyncManager {
 
         for (let i = 0; i < transactions.length; i++) {
           // Skip if already created
-          if (i < createdIds.length) continue;
+          if (i < createdIds.length) {continue;}
 
           const transaction = transactions[i];
           
@@ -847,7 +848,7 @@ class OfflineSyncManager {
             `Add installment ${i} RPC timed out after 30s`
           );
 
-          if (error) throw error;
+          if (error) {throw error;}
 
           const record = rpcData && Array.isArray(rpcData) ? rpcData[0] as { transaction_id?: string; success?: boolean; error_message?: string } : null;
 
@@ -961,15 +962,15 @@ class OfflineSyncManager {
               `Import transaction invocation timed out after 30s`
             );
 
-            if (error) throw error;
+            if (error) {throw error;}
             
             const responseData = rpcData as { transaction?: { id: string } };
             const transactionId = responseData?.transaction?.id;
 
             if (transactionId && (transaction.installments || transaction.current_installment || transaction.invoice_month)) {
                const updates: Record<string, unknown> = {};
-               if (transaction.installments) updates.installments = transaction.installments;
-               if (transaction.current_installment) updates.current_installment = transaction.current_installment;
+               if (transaction.installments) {updates.installments = transaction.installments;}
+               if (transaction.current_installment) {updates.current_installment = transaction.current_installment;}
                if (transaction.invoice_month) {
                  updates.invoice_month = transaction.invoice_month;
                  updates.invoice_month_overridden = true;
@@ -1021,7 +1022,7 @@ class OfflineSyncManager {
               `Import category "${category.name}" timed out after 30s`
             );
 
-            if (error) throw error;
+            if (error) {throw error;}
             successCount++;
           } catch (err) {
             logger.warn(`Failed to import category "${category.name}":`, err);
@@ -1061,8 +1062,8 @@ class OfflineSyncManager {
               `Import account "${account.name}" timed out after 30s`
             );
 
-            if (error) throw error;
-            if (data) createdAccounts.push(data as unknown as Account);
+            if (error) {throw error;}
+            if (data) {createdAccounts.push(data as unknown as Account);}
             successCount++;
           } catch (err) {
             logger.warn(`Failed to import account "${account.name}":`, err);

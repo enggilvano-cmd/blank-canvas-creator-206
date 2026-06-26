@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Account, Transaction, Category } from '@/types';
+import type { Account, Transaction, Category } from '@/types';
 import { logger } from '@/lib/logger';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { offlineDatabase } from '@/lib/offlineDatabase';
@@ -33,7 +33,7 @@ export function useDashboardData() {
 
   // ✅ Helper function to execute cleanup
   const performCleanup = async (currentMonth: string) => {
-    if (!user) return;
+    if (!user) {return;}
 
     try {
       // ✅ CRITICAL FIX: Pass client date to ensure timezone-consistent month boundary detection
@@ -72,7 +72,7 @@ export function useDashboardData() {
   // 1. Initial load - cleanup any pending provisions from last month (if needed)
   // 2. Month change detection - cleanup when calendar date rolls over
   useEffect(() => {
-    if (!user || !isOnline) return;
+    if (!user || !isOnline) {return;}
 
     const currentMonth = format(new Date(), 'yyyy-MM');
     
@@ -159,7 +159,7 @@ export function useDashboardData() {
             .order('date', { ascending: false })
             .range(page * pageSize, (page + 1) * pageSize - 1);
 
-          if (error) throw error;
+          if (error) {throw error;}
 
           if (data && data.length > 0) {
             allTrans = [...allTrans, ...data];
@@ -196,9 +196,9 @@ export function useDashboardData() {
       ]);
 
       // Check for errors
-      if (accountsResult.error) throw accountsResult.error;
-      if (transactionsResult.error) throw transactionsResult.error;
-      if (categoriesResult.error) throw categoriesResult.error;
+      if (accountsResult.error) {throw accountsResult.error;}
+      if (transactionsResult.error) {throw transactionsResult.error;}
+      if (categoriesResult.error) {throw categoriesResult.error;}
 
       // Transform data
       const accounts = ((accountsResult.data || []) as any[]).map((acc) => ({

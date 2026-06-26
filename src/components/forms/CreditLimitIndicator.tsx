@@ -38,7 +38,7 @@ export function CreditLimitIndicator({
           .eq('type', 'expense')
           .eq('status', 'pending');
 
-        if (error) throw error;
+        if (error) {throw error;}
         
         const total = data?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
         setPendingExpenses(total);
@@ -87,8 +87,8 @@ export function CreditLimitIndicator({
 
   // Determinar cor baseado no percentual projetado
   const getColor = (percentage: number) => {
-    if (percentage >= 90) return "text-destructive";
-    if (percentage >= 60) return "text-warning";
+    if (percentage >= 90) {return "text-destructive";}
+    if (percentage >= 60) {return "text-warning";}
     return "text-success";
   };
 

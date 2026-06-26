@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
 import { useAccounts } from '../queries/useAccounts';
-import { Account, Transaction } from '@/types';
+import type { Account, Transaction } from '@/types';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/lib/errorUtils';
@@ -28,7 +28,7 @@ export function useCreditPaymentMutations() {
     paymentDate: string;
     invoiceMonth?: string;
   }): Promise<{ creditAccount: Account; bankAccount: Account }> => {
-    if (!user) throw new Error('Usuário não autenticado');
+    if (!user) {throw new Error('Usuário não autenticado');}
 
     try {
       const creditAccount = accounts.find((acc) => acc.id === creditCardAccountId);
@@ -94,7 +94,7 @@ export function useCreditPaymentMutations() {
       );
 
       const errors = results.filter(r => r.error);
-      if (errors.length > 0) throw errors[0].error;
+      if (errors.length > 0) {throw errors[0].error;}
 
       logger.info('🔄 Refazendo fetch após estorno...');
       // ✅ Invalidação imediata dispara refetch automático sem delay

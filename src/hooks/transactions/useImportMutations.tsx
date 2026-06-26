@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
-import { ImportTransactionData } from '@/types';
+import type { ImportTransactionData } from '@/types';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/errorUtils';
 
@@ -20,17 +20,17 @@ function detectTransferPairs(transactions: ImportTransactionData[]) {
   const usedIndexes = new Set<number>();
 
   transactions.forEach((expenseData, expenseIndex) => {
-    if (usedIndexes.has(expenseIndex)) return;
+    if (usedIndexes.has(expenseIndex)) {return;}
 
     const isTransferOutgoing = Boolean(expenseData.to_account_id) && 
                               (expenseData.type === 'transfer' || expenseData.type === 'expense');
     
-    if (!isTransferOutgoing) return;
+    if (!isTransferOutgoing) {return;}
 
     // Procurar por INCOME correspondente
     const incomeIndex = transactions.findIndex((incomeData, index) => {
-      if (usedIndexes.has(index) || index === expenseIndex) return false;
-      if (incomeData.type !== 'income') return false;
+      if (usedIndexes.has(index) || index === expenseIndex) {return false;}
+      if (incomeData.type !== 'income') {return false;}
 
       return (
         incomeData.account_id === expenseData.to_account_id &&
@@ -105,7 +105,7 @@ export function useImportMutations() {
     transactionsData: ImportTransactionData[],
     transactionsToReplace: string[] = []
   ) => {
-    if (!user) return;
+    if (!user) {return;}
     
     const startTime = Date.now();
     
@@ -239,7 +239,7 @@ export function useImportMutations() {
               }
             });
             
-            if (result.error) throw result.error;
+            if (result.error) {throw result.error;}
             return result;
           },
           2, // Lotes de 2 transferências
@@ -369,7 +369,7 @@ export function useImportMutations() {
               }
             });
 
-            if (result.error) throw result.error;
+            if (result.error) {throw result.error;}
 
             // Atualizar metadados extras se necessário
             const responseData = result.data as { transaction?: { id: string } };

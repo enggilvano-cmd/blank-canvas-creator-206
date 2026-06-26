@@ -41,7 +41,7 @@ export function ProvisionDiscountVerification() {
   });
 
   useEffect(() => {
-    if (!allTransactions || !provisionsOnly) return;
+    if (!allTransactions || !provisionsOnly) {return;}
 
     // Agrupar por categoria e mês
     const groupMap = new Map<
@@ -76,7 +76,7 @@ export function ProvisionDiscountVerification() {
 
     // Processar transações reais (não provisões)
     allTransactions.data?.forEach((tx) => {
-      if (tx.is_provision || tx.is_fixed) return;
+      if (tx.is_provision || tx.is_fixed) {return;}
 
       const month = tx.date.substring(0, 7); // YYYY-MM
       const key = `${tx.category_id}-${month}`;

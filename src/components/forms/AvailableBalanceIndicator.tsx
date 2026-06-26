@@ -1,4 +1,4 @@
-import { Account } from "@/types";
+import type { Account } from "@/types";
 import { formatCurrency } from "@/lib/formatters";
 import { AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ export function AvailableBalanceIndicator({
     transactionType,
   });
 
-  if (!account) return null;
+  if (!account) {return null;}
 
   const { currentBalance, available, balanceAfter, limit } = validation.details;
   const { status, message } = validation;

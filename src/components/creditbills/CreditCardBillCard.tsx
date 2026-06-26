@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Account, Transaction } from "@/types";
+import type { Account, Transaction } from "@/types";
 import { CreditCard, RotateCcw, FileText, Calendar, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isPast } from 'date-fns';
@@ -199,7 +199,7 @@ export function CreditCardBillCard({
           <div className="flex items-center gap-2 p-2 bg-muted rounded-md text-xs">
             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <span className="text-muted-foreground">
-              Fatura ref. {format(new Date(currentInvoiceMonth + '-01T00:00:00'), 'MMM/yyyy', { locale: ptBR })}
+              Fatura ref. {format(new Date(`${currentInvoiceMonth  }-01T00:00:00`), 'MMM/yyyy', { locale: ptBR })}
             </span>
           </div>
         )}

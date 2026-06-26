@@ -31,7 +31,7 @@ export const useBackupSchedule = () => {
     queryKey: ['backup-schedule'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
+      if (!user) {throw new Error('Não autenticado');}
 
       const { data, error } = await supabase
         .from('backup_schedules')
@@ -39,7 +39,7 @@ export const useBackupSchedule = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data as BackupSchedule | null;
     },
   });
@@ -49,7 +49,7 @@ export const useBackupSchedule = () => {
     queryKey: ['backup-history'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
+      if (!user) {throw new Error('Não autenticado');}
 
       const { data, error } = await supabase
         .from('backup_history')
@@ -58,7 +58,7 @@ export const useBackupSchedule = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data as BackupHistory[];
     },
   });
@@ -67,7 +67,7 @@ export const useBackupSchedule = () => {
   const saveScheduleMutation = useMutation({
     mutationFn: async ({ frequency, is_active }: { frequency: 'daily' | 'weekly' | 'monthly'; is_active: boolean }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
+      if (!user) {throw new Error('Não autenticado');}
 
       // Calcular próximo backup
       const next = new Date();
@@ -90,12 +90,12 @@ export const useBackupSchedule = () => {
           .from('backup_schedules')
           .update(scheduleData)
           .eq('id', schedule.id);
-        if (error) throw error;
+        if (error) {throw error;}
       } else {
         const { error } = await supabase
           .from('backup_schedules')
           .insert(scheduleData);
-        if (error) throw error;
+        if (error) {throw error;}
       }
     },
     onSuccess: () => {
@@ -117,14 +117,14 @@ export const useBackupSchedule = () => {
   // Deletar agendamento
   const deleteScheduleMutation = useMutation({
     mutationFn: async () => {
-      if (!schedule) return;
+      if (!schedule) {return;}
 
       const { error } = await supabase
         .from('backup_schedules')
         .delete()
         .eq('id', schedule.id);
 
-      if (error) throw error;
+      if (error) {throw error;}
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backup-schedule'] });
@@ -149,7 +149,7 @@ export const useBackupSchedule = () => {
         .from('backups')
         .download(filePath);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');

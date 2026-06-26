@@ -206,9 +206,9 @@ export function VirtualizedTable<T extends Record<string, unknown>>({
   // Desktop table layout with virtualization
   const getVisibleColumns = () => {
     const width = window.innerWidth;
-    let filteredColumns = columns.filter((col, index) => {
-      if (index === 0 || index === columns.length - 1) return true;
-      if (col.hideOnMobile && width < 640) return false;
+    const filteredColumns = columns.filter((col, index) => {
+      if (index === 0 || index === columns.length - 1) {return true;}
+      if (col.hideOnMobile && width < 640) {return false;}
       return true;
     });
     return filteredColumns.slice(0, tableConfig.maxColumns);

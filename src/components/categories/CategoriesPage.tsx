@@ -123,7 +123,7 @@ export function CategoriesPage({
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
-          if (error) throw error;
+          if (error) {throw error;}
           return data || [];
         },
         'Error loading categories',
@@ -161,7 +161,7 @@ export function CategoriesPage({
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {throw error;}
         return data;
       },
       'Error adding category'
@@ -197,7 +197,7 @@ export function CategoriesPage({
           .eq('id', updatedCategory.id)
           .eq('user_id', userId);
 
-        if (error) throw error;
+        if (error) {throw error;}
         return true;
       },
       'Error updating category'
@@ -238,7 +238,7 @@ export function CategoriesPage({
           .eq('user_id', userId)
           .limit(1);
         
-        if (transError) throw transError;
+        if (transError) {throw transError;}
 
         if (transactions && transactions.length > 0) {
           toast({
@@ -255,7 +255,7 @@ export function CategoriesPage({
           .eq('id', categoryId)
           .eq('user_id', userId);
 
-        if (error) throw error;
+        if (error) {throw error;}
         return true;
       },
       'Error deleting category'
@@ -297,7 +297,7 @@ export function CategoriesPage({
             .in('id', categoriesToReplaceIds)
             .eq('user_id', userId);
 
-          if (deleteError) throw deleteError;
+          if (deleteError) {throw deleteError;}
         }
 
         // Insert new categories
@@ -310,7 +310,7 @@ export function CategoriesPage({
             })))
             .select();
 
-          if (error) throw error;
+          if (error) {throw error;}
           return { data, categoriesToReplaceIds };
         }
 

@@ -34,32 +34,32 @@ export function ProvisionedTransactionsByCategory({
   const categoryTotals = useMemo(() => {
     // Buscar valores iniciais provisionados nas transações fixas
     const fixedProvisions = fixedTransactions.filter(t => {
-      if (!t.is_provision) return false;
-      if (t.type !== type) return false;
+      if (!t.is_provision) {return false;}
+      if (t.type !== type) {return false;}
       // ✅ CRÍTICO: Excluir provisões sem categoria (não podem ser rastreadas)
-      if (!t.category_id) return false;
+      if (!t.category_id) {return false;}
       return true;
     });
 
     // Buscar despesas/receitas reais (NO PERÍODO filtrado)
     const realExpenses = transactions.filter(t => {
       // Filtrar por tipo
-      if (t.type !== type) return false;
+      if (t.type !== type) {return false;}
       
       // Apenas despesas/receitas reais (não provisões)
-      if (t.is_provision) return false;
+      if (t.is_provision) {return false;}
 
       // ✅ CRÍTICO: Incluir TODAS as transações (pendentes e completadas)
       // Pois uma despesa/receita pendente também consome da provisão
       // if (t.status !== 'completed') return false;
 
       // Excluir transações fixas/recorrentes
-      if (t.is_fixed) return false;
+      if (t.is_fixed) {return false;}
 
       // Filtrar por data
       const transactionDate = typeof t.date === 'string' ? t.date : t.date.toISOString().split('T')[0];
-      if (dateFrom && transactionDate < dateFrom) return false;
-      if (dateTo && transactionDate > dateTo) return false;
+      if (dateFrom && transactionDate < dateFrom) {return false;}
+      if (dateTo && transactionDate > dateTo) {return false;}
 
       // ✅ CRÍTICO: NÃO excluir por to_account_id
       // Transações internas de transferência também consomem provisões
@@ -75,7 +75,7 @@ export function ProvisionedTransactionsByCategory({
     // ✅ Apenas provisões com categoria_id válida são incluídas
     fixedProvisions.forEach(t => {
       const category = categories.find(c => c.id === t.category_id);
-      if (!category) return;
+      if (!category) {return;}
 
       const initialAmount = Math.abs(t.amount);
       categoryMap.set(t.category_id, {

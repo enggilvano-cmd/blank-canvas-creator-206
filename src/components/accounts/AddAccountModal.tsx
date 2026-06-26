@@ -1,4 +1,5 @@
-import { useState, FormEvent } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PREDEFINED_COLORS, ACCOUNT_TYPE_LABELS } from "@/types";
 import { ColorPicker } from "@/components/forms/ColorPicker";
 import { CurrencyInput } from "@/components/forms/CurrencyInput";
-import { AddAccountModalProps } from "@/types/formProps";
+import type { AddAccountModalProps } from "@/types/formProps";
 import { useOfflineAccountMutations } from "@/hooks/useTransactionHandlers";
 
 export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {

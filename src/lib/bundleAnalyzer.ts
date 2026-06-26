@@ -32,7 +32,7 @@ class BundleAnalyzer {
    * Initialize bundle analysis
    */
   init(): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     // Monitor Performance API
     if (typeof window !== 'undefined' && window.performance && 
@@ -187,7 +187,7 @@ class BundleAnalyzer {
   } {
     const score = this.metrics.performanceScore;
     let bundleHealth: 'excellent' | 'good' | 'needs-improvement';
-    let recommendations: string[] = [];
+    const recommendations: string[] = [];
 
     if (score >= 80) {
       bundleHealth = 'excellent';

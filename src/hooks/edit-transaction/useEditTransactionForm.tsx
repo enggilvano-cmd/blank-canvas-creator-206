@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Transaction, Account } from '@/types';
+import type { Transaction, Account } from '@/types';
 import { createDateFromString } from '@/lib/dateUtils';
 import { logger } from '@/lib/logger';
 import { editTransactionSchema } from '@/lib/validationSchemas';
@@ -66,7 +66,7 @@ export function useEditTransactionForm(
   }, [open, transaction, accounts]);
 
   const validateForm = async (): Promise<boolean> => {
-    if (!transaction) return false;
+    if (!transaction) {return false;}
 
     // Se for transferência, não validar descrição, tipo e categoria
     if (isTransfer) {

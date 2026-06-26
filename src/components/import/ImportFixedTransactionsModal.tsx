@@ -21,7 +21,7 @@ import { Upload, FileSpreadsheet, AlertCircle, Download, MoreVertical, PlusCircl
 import { supabase } from "@/integrations/supabase/client";
 import { ImportSummaryCards } from "@/components/import/ImportSummaryCards";
 
-import { Category } from "@/types";
+import type { Category } from "@/types";
 
 interface Account {
   id: string;
@@ -92,8 +92,8 @@ export function ImportFixedTransactionsModal({
   // Validar tipo de transação
   const validateTransactionType = (tipo: string): 'income' | 'expense' | null => {
     const normalizedType = normalizeString(tipo);
-    if (['receita', 'receitas', 'income', 'entrada', 'entradas'].includes(normalizedType)) return 'income';
-    if (['despesa', 'despesas', 'expense', 'expenses', 'saida', 'saidas'].includes(normalizedType)) return 'expense';
+    if (['receita', 'receitas', 'income', 'entrada', 'entradas'].includes(normalizedType)) {return 'income';}
+    if (['despesa', 'despesas', 'expense', 'expenses', 'saida', 'saidas'].includes(normalizedType)) {return 'expense';}
     return null;
   };
 
@@ -132,7 +132,7 @@ export function ImportFixedTransactionsModal({
   const loadExistingTransactions = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {return;}
 
       const { data, error } = await supabase
         .from("transactions")
@@ -141,7 +141,7 @@ export function ImportFixedTransactionsModal({
         .eq("is_fixed", true)
         .is("parent_transaction_id", null);
 
-      if (error) throw error;
+      if (error) {throw error;}
       setExistingTransactions((data || []) as any);
     } catch (error) {
       logger.error("Error loading existing fixed transactions:", error);
@@ -349,9 +349,9 @@ export function ImportFixedTransactionsModal({
         setImportedData(validatedData);
 
         const summary = validatedData.reduce((acc, t) => {
-          if (!t.isValid) acc.invalid++;
-          else if (t.isDuplicate) acc.duplicates++;
-          else acc.new++;
+          if (!t.isValid) {acc.invalid++;}
+          else if (t.isDuplicate) {acc.duplicates++;}
+          else {acc.new++;}
           return acc;
         }, { new: 0, duplicates: 0, invalid: 0 });
 
@@ -474,7 +474,7 @@ export function ImportFixedTransactionsModal({
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!user) {throw new Error("Usuário não autenticado");}
 
       // Carregar categorias existentes
       const { data: existingCategories } = await supabase
@@ -521,7 +521,7 @@ export function ImportFixedTransactionsModal({
           .in("id", transactionsToReplaceIds)
           .eq("user_id", user.id);
 
-        if (deleteError) throw deleteError;
+        if (deleteError) {throw deleteError;}
       }
 
       // Criar transações fixas com delay para evitar rate limiting

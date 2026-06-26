@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Account, Category } from "@/types";
+import type { Account, Category } from "@/types";
 import { ACCOUNT_TYPE_LABELS } from "@/types";
 import { formatCurrency } from "@/lib/formatters";
 
@@ -66,20 +66,20 @@ export function AccountCategoryFields({
               <SelectValue placeholder="Selecione uma conta">
                 {accountId && (() => {
                   const selectedAccount = accounts.find((acc) => acc.id === accountId);
-                  if (!selectedAccount) return null;
+                  if (!selectedAccount) {return null;}
                   return (
-                    <div className="flex flex-col gap-1 w-full py-1">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{
-                            backgroundColor: selectedAccount.color || "#6b7280",
-                          }}
-                        />
-                        <span className="text-body font-medium">{selectedAccount.name}</span>
-                      </div>
-                      <div className="text-caption text-muted-foreground pl-5">
-                        {formatCurrency(Math.round(selectedAccount.balance * 100))}
+                      <div className="flex flex-col gap-1 w-full py-1">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor: selectedAccount.color || "#6b7280",
+                            }}
+                          />
+                          <span className="text-body font-medium">{selectedAccount.name}</span>
+                        </div>
+                        <div className="text-caption text-muted-foreground pl-5">
+                          {formatCurrency(Math.round((selectedAccount.balance ?? 0) * 100))}
                         {(selectedAccount.limit_amount && selectedAccount.limit_amount > 0) ? (
                           <span className="text-primary font-semibold"> + {formatCurrency(selectedAccount.limit_amount)} limite</span>
                         ) : null}
@@ -102,7 +102,7 @@ export function AccountCategoryFields({
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="font-medium truncate text-body">{account.name}</span>
                       <span className="text-caption text-muted-foreground">
-                        {formatCurrency(Math.round(account.balance * 100))}
+                        {formatCurrency(Math.round((account.balance ?? 0) * 100))}
                         {(account.limit_amount && account.limit_amount > 0) ? (
                           <span className="text-primary ml-1">
                             {' '}+ {formatCurrency(account.limit_amount)} limite

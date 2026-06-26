@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CreditCard, EyeOff, Eye } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
-import { Account } from '@/types';
+import type { Account } from '@/types';
 import { memo, useMemo, useState, useEffect } from 'react';
 import { getAccountIcon, getAccountTypeLabel, getAccountTypeBadgeColor } from '@/lib/accountUtils';
 
@@ -16,14 +16,14 @@ interface AccountsSummaryProps {
   onAddAccount?: () => void;
 }
 
-export const AccountsSummary = memo(function AccountsSummary({
+export const AccountsSummary = memo(({
   accounts,
   accountTypes,
   title = 'Suas Contas',
   emptyMessage = 'Nenhuma conta cadastrada',
   onNavigateToAccounts,
   onAddAccount,
-}: AccountsSummaryProps) {
+}: AccountsSummaryProps) => {
   const { formatCurrency } = useSettings();
   
   // Persistir estado no localStorage usando o title como chave

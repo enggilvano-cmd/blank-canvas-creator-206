@@ -69,7 +69,7 @@ export default function SystemSettings() {
           description: "Número de dias do período de trial",
         }, { onConflict: 'setting_key' });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       toast({
         title: "Configuração salva",

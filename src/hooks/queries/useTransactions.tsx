@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
-import { Transaction, TransactionDTO } from '@/types';
+import type { Transaction} from '@/types';
+import { TransactionDTO } from '@/types';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
 import { createDateFromString } from '@/lib/dateUtils';
@@ -122,10 +123,10 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
     return transactions.filter(t => {
       // Excluir apenas o PAI das transações fixas (mantém as filhas)
-      if (t.is_fixed && !t.parent_transaction_id) return false;
+      if (t.is_fixed && !t.parent_transaction_id) {return false;}
 
       // Excluir transações de Saldo Inicial
-      if (t.description === 'Saldo Inicial') return false;
+      if (t.description === 'Saldo Inicial') {return false;}
 
       // Search
       if (search) {
@@ -149,56 +150,56 @@ export function useTransactions(params: UseTransactionsParams = {}) {
             matchesAmount = t.amount.toFixed(2).includes(cleanSearchVal) || t.amount.toString().includes(cleanSearchVal);
         }
         
-        if (!matchesDescription && !matchesAmount) return false;
+        if (!matchesDescription && !matchesAmount) {return false;}
       }
 
       // Type
       if (type !== 'all') {
         if (type === 'transfer') {
           // Incluir todas as transações de transferência
-          if (t.type !== 'transfer') return false;
+          if (t.type !== 'transfer') {return false;}
         } else {
           // Excluir transferências
-          if (t.type !== type || t.type === 'transfer') return false;
+          if (t.type !== type || t.type === 'transfer') {return false;}
           
           // Excluir transações vinculadas (parte de transferência/pagamento)
-          if (t.linked_transaction_id) return false;
-          if (t.to_account_id) return false;
+          if (t.linked_transaction_id) {return false;}
+          if (t.to_account_id) {return false;}
         }
       }
 
       // Account
-      if (accountId !== 'all' && t.account_id !== accountId) return false;
+      if (accountId !== 'all' && t.account_id !== accountId) {return false;}
 
       // Category
-      if (categoryId !== 'all' && t.category_id !== categoryId) return false;
+      if (categoryId !== 'all' && t.category_id !== categoryId) {return false;}
 
       // Status
-      if (status !== 'all' && t.status !== status) return false;
+      if (status !== 'all' && t.status !== status) {return false;}
 
       // Is Fixed
       if (isFixed !== 'all') {
         const isFixedBool = isFixed === 'true';
-        if (!!t.is_fixed !== isFixedBool) return false;
+        if (!!t.is_fixed !== isFixedBool) {return false;}
       }
 
       // Is Provision
       if (isProvision !== 'all') {
         const isProvisionBool = isProvision === 'true';
-        if (!!t.is_provision !== isProvisionBool) return false;
+        if (!!t.is_provision !== isProvisionBool) {return false;}
       }
 
       // Invoice Month
-      if (invoiceMonth !== 'all' && t.invoice_month !== invoiceMonth) return false;
+      if (invoiceMonth !== 'all' && t.invoice_month !== invoiceMonth) {return false;}
 
       // Date Range
-      if (dateFrom && t.date < dateFrom) return false;
-      if (dateTo && t.date > dateTo) return false;
+      if (dateFrom && t.date < dateFrom) {return false;}
+      if (dateTo && t.date > dateTo) {return false;}
 
       // Account Type
       if (accountType !== 'all') {
         const acc = accountMap.get(t.account_id);
-        if (!acc || acc.type !== accountType) return false;
+        if (!acc || acc.type !== accountType) {return false;}
       }
 
       return true;
@@ -215,7 +216,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
   const countQuery = useQuery({
     queryKey: [...queryKeys.transactions(), 'count', search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, isOnline],
     queryFn: async () => {
-      if (!user) return 0;
+      if (!user) {return 0;}
 
       if (!isOnline) {
         // ⚠️ PERFORMANCE CONCERN: Offline Memory Usage
@@ -322,7 +323,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
       const { count, error } = await query;
 
-      if (error) throw error;
+      if (error) {throw error;}
       return count || 0;
     },
     enabled: !!user,
@@ -340,7 +341,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
   const query = useQuery({
     queryKey: [...queryKeys.transactions(), page, pageSize, search, type, accountId, categoryId, status, accountType, isFixed, isProvision, invoiceMonth, dateFrom, dateTo, sortBy, sortOrder, isOnline],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user) {return [];}
 
       if (!isOnline) {
         // Use optimized offline database with performance tracking
@@ -538,7 +539,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         query = query.range(from, to);
 
         const { data, error } = await query;
-        if (error) throw error;
+        if (error) {throw error;}
         finalData = data || [];
       } else {
         // Obter TODAS as transações quebrando em páginas de 1000 p/ contornar limite do PostgREST
@@ -547,9 +548,9 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         let hasMore = true;
 
         while (hasMore) {
-          let query = buildQuery();
+          const query = buildQuery();
           const { data, error } = await query.range(chunkPage * chunkSize, (chunkPage + 1) * chunkSize - 1);
-          if (error) throw error;
+          if (error) {throw error;}
 
           if (data && data.length > 0) {
             finalData = [...finalData, ...data];
@@ -585,7 +586,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   const addMutation = useMutation({
     mutationFn: async (transactionData: AddTransactionParams) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       // ✅ Validate with Zod before sending to edge function
       const validated = addTransactionSchema.parse({
@@ -614,7 +615,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         },
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data;
     },
     onMutate: async (transactionData) => {
@@ -686,7 +687,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   const editMutation = useMutation({
     mutationFn: async ({ id, updates, scope = 'current' }: EditTransactionParams) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       // ✅ Validate updates with Zod (partial schema)
       const partialSchema = editTransactionSchema.partial().required({ id: true });
@@ -704,7 +705,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         },
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data;
     },
     onSuccess: () => {
@@ -715,7 +716,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   const deleteMutation = useMutation({
     mutationFn: async ({ id, scope = 'current' }: DeleteTransactionParams) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       // ✅ Validate transaction ID
       const validated = z.object({
@@ -727,7 +728,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         body: { transaction_id: validated.id, scope: validated.scope || 'current' },
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data;
     },
     onSuccess: () => {
@@ -738,7 +739,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
 
   const importMutation = useMutation({
     mutationFn: async (transactionsData: Array<Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       const transactionsToInsert = await Promise.all(
         transactionsData.map(async (data) => {
@@ -772,7 +773,7 @@ export function useTransactions(params: UseTransactionsParams = {}) {
         .insert(transactionsToInsert)
         .select();
 
-      if (error) throw error;
+      if (error) {throw error;}
       return newTransactions;
     },
     onSuccess: () => {

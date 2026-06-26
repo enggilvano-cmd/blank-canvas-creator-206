@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
-import { Transaction } from '@/types';
+import type { Transaction } from '@/types';
 import { createDateFromString } from '@/lib/dateUtils';
 
 interface RecentTransactionsProps {

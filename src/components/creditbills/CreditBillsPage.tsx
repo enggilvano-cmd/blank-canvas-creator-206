@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useTransactions } from "@/hooks/queries/useTransactions";
 import { useAccounts } from "@/hooks/queries/useAccounts";
-import { AppTransaction, Account } from "@/types";
+import type { AppTransaction, Account } from "@/types";
 import { calculateBillDetails, calculateInvoiceMonthByDue } from "@/lib/dateUtils";
 import { CreditCardBillCard } from "@/components/creditbills/CreditCardBillCard";
 import { CreditBillDetailsModal } from "@/components/creditbills/CreditBillDetailsModal";
@@ -232,7 +232,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
           ...t,
           date:
             typeof t.date === "string"
-              ? new Date(t.date + "T00:00:00")
+              ? new Date(`${t.date  }T00:00:00`)
               : t.date,
         })) as AppTransaction[];
 
@@ -273,7 +273,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
         const searchLower = term.toLowerCase();
 
         // 1. Text Search (Name)
-        if (details.account.name.toLowerCase().includes(searchLower)) return true;
+        if (details.account.name.toLowerCase().includes(searchLower)) {return true;}
 
         // 2. Numeric Search (Values)
         // Determine sign intent
@@ -282,39 +282,39 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
         
         // Extract the numerical part string for parsing
         let termValStr = term;
-        if (hasPlus) termValStr = term.replace('+', '').trim();
-        if (hasMinus) termValStr = term.replace('-', '').trim();
+        if (hasPlus) {termValStr = term.replace('+', '').trim();}
+        if (hasMinus) {termValStr = term.replace('-', '').trim();}
         
         // Generate numeric candidates
         const candidates: number[] = [];
         // BR Format (strip dots, comma->dot)
         const valBR = parseFloat(termValStr.replace(/\./g, '').replace(',', '.'));
-        if (!isNaN(valBR)) candidates.push(valBR);
+        if (!isNaN(valBR)) {candidates.push(valBR);}
         // US Format (keep dots)
         const valUS = parseFloat(termValStr.replace(/,/g, ''));
-        if (!isNaN(valUS)) candidates.push(valUS);
+        if (!isNaN(valUS)) {candidates.push(valUS);}
 
-        if (candidates.length === 0) return false;
+        if (candidates.length === 0) {return false;}
 
         const epsilon = 0.005;
         const matchesVal = (val: number) => {
              // Sign check
-             if (hasPlus && val < 0) return false;
-             if (hasMinus && val >= 0) return false;
+             if (hasPlus && val < 0) {return false;}
+             if (hasMinus && val >= 0) {return false;}
              
              const absVal = Math.abs(val);
              
              // 1. Check against US Format ("1764.92")
              const usStr = absVal.toFixed(2);
-             if (usStr.includes(termValStr)) return true;
-             if (usStr.includes(termValStr.replace(',', '.'))) return true;
+             if (usStr.includes(termValStr)) {return true;}
+             if (usStr.includes(termValStr.replace(',', '.'))) {return true;}
 
              // 2. Check against BR Format Clean ("1764,92")
              const brStrFull = absVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-             if (brStrFull.includes(termValStr)) return true;
+             if (brStrFull.includes(termValStr)) {return true;}
              
              const brStrClean = brStrFull.replace(/\./g, '');
-             if (brStrClean.includes(termValStr)) return true;
+             if (brStrClean.includes(termValStr)) {return true;}
              
              // 3. Exact Numeric Match
              return candidates.some(cand => Math.abs(absVal - Math.abs(cand)) < epsilon);
@@ -330,11 +330,11 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
         const available = details.availableLimit / 100;
         const usedLimit = details.totalBalance;
 
-        if (matchesVal(currentBill)) return true;
-        if (matchesVal(nextBill)) return true;
-        if (matchesVal(limitVal)) return true;
-        if (matchesVal(available)) return true;
-        if (matchesVal(usedLimit)) return true;
+        if (matchesVal(currentBill)) {return true;}
+        if (matchesVal(nextBill)) {return true;}
+        if (matchesVal(limitVal)) {return true;}
+        if (matchesVal(available)) {return true;}
+        if (matchesVal(usedLimit)) {return true;}
 
         return false;
       }
@@ -351,8 +351,8 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
       const isClosed = isPast(closingDate);
 
       // Filtro de status da fatura (aberta/fechada)
-      if (filterBillStatus === "open" && isClosed) return false;
-      if (filterBillStatus === "closed" && !isClosed) return false;
+      if (filterBillStatus === "open" && isClosed) {return false;}
+      if (filterBillStatus === "closed" && !isClosed) {return false;}
 
       // ✅ P0-3 FIX: Calcula se está paga sem margem arbitrária
       const paidAmount = details.paymentTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
@@ -374,14 +374,14 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
       });
 
       // Filtro de status de pagamento
-      if (filterPaymentStatus === "paid" && !isPaid) return false;
-      if (filterPaymentStatus === "pending" && isPaid) return false;
+      if (filterPaymentStatus === "paid" && !isPaid) {return false;}
+      if (filterPaymentStatus === "pending" && isPaid) {return false;}
 
       // Filtro de saldo zerado
       // ✅ FIX: Ocultar se o valor atual for zero ou negativo (paga ou com crédito)
       // Removemos a verificação do nextBillAmount para permitir ocultar cartões pagos no mês atual
       // mesmo que tenham faturas futuras. Se o usuário quiser ver o próximo mês, ele deve navegar.
-      if (hideZeroBalance && details.currentBillAmount <= 0.01) return false;
+      if (hideZeroBalance && details.currentBillAmount <= 0.01) {return false;}
 
       return true;
     }).sort((a, b) => {
@@ -626,7 +626,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
               (t) => t.account_id === details.account.id
             ).map(t => ({
               ...t,
-              date: typeof t.date === 'string' ? new Date(t.date + 'T00:00:00') : t.date
+              date: typeof t.date === 'string' ? new Date(`${t.date  }T00:00:00`) : t.date
             })) as AppTransaction[];
 
             // Calcula a dívida total real (soma das faturas atual e próxima)
@@ -653,10 +653,10 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                   const currentMonth = details.currentInvoiceMonth || '';
                   const filtered = accountTransactions.filter((t) => {
                     // APENAS transações concluídas devem aparecer nos detalhes
-                    if (t.status !== 'completed') return false;
+                    if (t.status !== 'completed') {return false;}
                     
                     const tDate = typeof t.date === 'string' ? new Date(t.date) : t.date;
-                    if (!tDate || isNaN(tDate.getTime())) return false;
+                    if (!tDate || isNaN(tDate.getTime())) {return false;}
                     const eff = (t.invoice_month_overridden && t.invoice_month)
                       ? t.invoice_month
                       : (details.account.closing_date
@@ -673,7 +673,7 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
                     account: details.account,
                     transactions: filtered.map(t => ({
                       ...t,
-                      date: typeof t.date === 'string' ? new Date(t.date + 'T00:00:00') : t.date
+                      date: typeof t.date === 'string' ? new Date(`${t.date  }T00:00:00`) : t.date
                     })) as AppTransaction[],
                     billDetails: details,
                   });

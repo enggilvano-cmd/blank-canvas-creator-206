@@ -71,7 +71,7 @@ ChartContainer.displayName = "Chart"
  * Aceita: hex, rgb, hsl, named colors, CSS variables
  */
 const sanitizeColorValue = (value: string): string => {
-  if (!value || typeof value !== 'string') return '';
+  if (!value || typeof value !== 'string') {return '';}
   
   // Remove whitespace
   const trimmed = value.trim();

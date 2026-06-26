@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Input } from "@/components/ui/input";
 
 const BRL_FORMATTER = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 });
@@ -62,7 +63,7 @@ export function CurrencyInput({ value, onValueChange, allowNegative = false, ...
   }, [onValueChange, allowNegative]);
 
   const toggleSign = useCallback(() => {
-    if (!allowNegative) return;
+    if (!allowNegative) {return;}
     
     if (value === 0) {
       const newNegativeZero = !negativeZero;

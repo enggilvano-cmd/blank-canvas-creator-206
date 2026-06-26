@@ -36,7 +36,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useAccountHandlers } from "@/hooks/useAccountHandlers";
 import { getAccountIcon, getAccountTypeLabel, getAccountTypeBadge, getAccountTypeBadgeColor } from "@/lib/accountUtils";
 
-import { Account, ImportAccountData } from '@/types';
+import type { Account, ImportAccountData } from '@/types';
 
 interface AccountsFilters {
   searchTerm: string;
@@ -137,18 +137,18 @@ export function AccountsPage({
     .filter((account) => {
       // \u2705 Use debounced search term for better performance
       const matchesSearch = (() => {
-        if (!debouncedSearchTerm) return true;
+        if (!debouncedSearchTerm) {return true;}
         const searchLower = debouncedSearchTerm.toLowerCase();
         
         // Search by name
-        if (account.name.toLowerCase().includes(searchLower)) return true;
+        if (account.name.toLowerCase().includes(searchLower)) {return true;}
         
         // Search by balance
         // Handle pt-BR format: Remove thousands separator (.) and replace decimal separator (,) with (.)
         // This allows searching "1.000,00" or simple "1000,00"
         
         // Special case: just a comma matches all numbers
-        if (debouncedSearchTerm.trim() === ',' || debouncedSearchTerm.trim() === '.') return true;
+        if (debouncedSearchTerm.trim() === ',' || debouncedSearchTerm.trim() === '.') {return true;}
         
         const term = debouncedSearchTerm.trim();
         
@@ -158,20 +158,20 @@ export function AccountsPage({
         
         // Extract the numerical part string for parsing
         let termValStr = term;
-        if (hasPlus) termValStr = term.replace('+', '').trim();
-        if (hasMinus) termValStr = term.replace('-', '').trim();
+        if (hasPlus) {termValStr = term.replace('+', '').trim();}
+        if (hasMinus) {termValStr = term.replace('-', '').trim();}
         
         // Generate numeric candidates to handle different formats (BR: 1.000,00 vs US: 1000.00 vs Simple: 6242.00)
         const candidates: number[] = [];
         
         // 1. BR Format (strip dots, comma->dot): 1.000,00 -> 1000 | 6242,00 -> 6242
         const valBR = parseFloat(termValStr.replace(/\./g, '').replace(',', '.'));
-        if (!isNaN(valBR)) candidates.push(valBR);
+        if (!isNaN(valBR)) {candidates.push(valBR);}
         
         // 2. Direct/US Format (keep dots, maybe strip commas if thousands): 6242.00 -> 6242
         // Note: parseFloat stops at comma. "1,000.00" -> 1. So remove commas.
         const valUS = parseFloat(termValStr.replace(/,/g, ''));
-        if (!isNaN(valUS)) candidates.push(valUS);
+        if (!isNaN(valUS)) {candidates.push(valUS);}
 
         if (candidates.length === 0) {
             // If no valid number can be parsed, fall back to simple text search on name/etc
@@ -197,23 +197,23 @@ export function AccountsPage({
         const epsilon = 0.005;
         const matchesVal = (val: number) => {
              // Sign check
-             if (hasPlus && val < 0) return false;
-             if (hasMinus && val >= 0) return false;
+             if (hasPlus && val < 0) {return false;}
+             if (hasMinus && val >= 0) {return false;}
              
              const absVal = Math.abs(val);
              
              // 1. Check against US Format ("1764.92")
              const usStr = absVal.toFixed(2);
-             if (usStr.includes(termValStr)) return true;
-             if (usStr.includes(termValStr.replace(',', '.'))) return true;
+             if (usStr.includes(termValStr)) {return true;}
+             if (usStr.includes(termValStr.replace(',', '.'))) {return true;}
 
              // 2. Check against BR Format Clean ("1764,92" - no thousands dots)
              // This ensures "1764," matches "1764,92"
              const brStrFull = absVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-             if (brStrFull.includes(termValStr)) return true; // Match "1.764,92" with "1.764"
+             if (brStrFull.includes(termValStr)) {return true;} // Match "1.764,92" with "1.764"
              
              const brStrClean = brStrFull.replace(/\./g, '');
-             if (brStrClean.includes(termValStr)) return true; // Match "1764,92" with "1764,"
+             if (brStrClean.includes(termValStr)) {return true;} // Match "1764,92" with "1764,"
              
              // 3. Exact Numeric Match (approximate for float)
              return candidates.some(cand => Math.abs(absVal - Math.abs(cand)) < epsilon);
@@ -232,7 +232,7 @@ export function AccountsPage({
                                matchesVal(limitToCheck) || 
                                (account.type === 'credit' && matchesVal(availableToCheck));
         
-        if (matchesBalance) return true;
+        if (matchesBalance) {return true;}
         
         return false;
       })();

@@ -26,7 +26,7 @@ export function InstallPWA() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {return;}
 
     deferredPrompt.prompt();
 
@@ -38,7 +38,7 @@ export function InstallPWA() {
     }
   };
 
-  if (isInstalled || !deferredPrompt) return null;
+  if (isInstalled || !deferredPrompt) {return null;}
 
   return (
     <Button 

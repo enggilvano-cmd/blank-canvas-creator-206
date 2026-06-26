@@ -15,7 +15,7 @@ interface CreditBillFilterChipsProps {
 }
 
 export function CreditBillFilterChips({ chips, onClearAll }: CreditBillFilterChipsProps) {
-  if (chips.length === 0) return null;
+  if (chips.length === 0) {return null;}
 
   return (
     <div className="flex flex-wrap items-center gap-2">

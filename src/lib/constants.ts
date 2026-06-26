@@ -1,273 +1,351 @@
 /**
- * 📏 CONSTANTES DO SISTEMA
+ * Constantes globais da aplicação
  * 
- * Centraliza todos os "magic numbers" e strings hardcoded
- * para facilitar manutenção e configuração.
+ * ✅ BUGFIX #19: Substituir magic numbers por constantes nomeadas
+ * para melhorar legibilidade e manutenibilidade do código
  */
 
 // ==========================================
-// FINANCIAL LIMITS & DEFAULTS
+// CONVERSÃO DE MOEDA
 // ==========================================
 
-export const FINANCIAL = {
-  /** Valor máximo para transação (centavos) */
-  MAX_TRANSACTION_AMOUNT: 1_000_000_000, // 1 bilhão de centavos = 10 milhões
+/**
+ * Número de centavos em 1 real
+ * Usado para conversões entre centavos (integer) e reais (decimal)
+ */
+export const CENTS_PER_REAL = 100;
+
+/**
+ * Converte valor em reais para centavos
+ * @param reais - Valor em reais (decimal)
+ * @returns Valor em centavos (integer)
+ * @example REAIS_TO_CENTS(10.50) // 1050
+ */
+export const REAIS_TO_CENTS = (reais: number): number => Math.round(reais * CENTS_PER_REAL);
+
+/**
+ * Converte valor em centavos para reais
+ * @param cents - Valor em centavos (integer)
+ * @returns Valor em reais (decimal)
+ * @example CENTS_TO_REAIS(1050) // 10.50
+ */
+export const CENTS_TO_REAIS = (cents: number): number => cents / CENTS_PER_REAL;
+
+// ==========================================
+// TEMPO E DURAÇÃO
+// ==========================================
+
+/** Milissegundos em 1 segundo */
+export const MILLISECONDS_PER_SECOND = 1000;
+
+/** Segundos em 1 minuto */
+export const SECONDS_PER_MINUTE = 60;
+
+/** Minutos em 1 hora */
+export const MINUTES_PER_HOUR = 60;
+
+/** Horas em 1 dia */
+export const HOURS_PER_DAY = 24;
+
+/** Dias em 1 semana */
+export const DAYS_PER_WEEK = 7;
+
+/** Meses em 1 ano */
+export const MONTHS_PER_YEAR = 12;
+
+// Conversões compostas
+export const MILLISECONDS_PER_MINUTE = SECONDS_PER_MINUTE * MILLISECONDS_PER_SECOND;
+export const MILLISECONDS_PER_HOUR = MINUTES_PER_HOUR * MILLISECONDS_PER_MINUTE;
+export const MILLISECONDS_PER_DAY = HOURS_PER_DAY * MILLISECONDS_PER_HOUR;
+
+// ==========================================
+// TIMEOUTS E DELAYS
+// ==========================================
+
+/**
+ * Timeouts para operações de sincronização
+ */
+export const SYNC_TIMEOUTS = {
+  /** Sincronização rápida (30 segundos) */
+  QUICK: 30 * MILLISECONDS_PER_SECOND,
   
-  /** Valor mínimo para transação (centavos) */
-  MIN_TRANSACTION_AMOUNT: 1, // 1 centavo
+  /** Sincronização completa (2 minutos) */
+  FULL: 2 * MILLISECONDS_PER_MINUTE,
   
-  /** Dia padrão de vencimento de cartão de crédito */
-  DEFAULT_CREDIT_DUE_DATE: 10,
+  /** Importação de dados (5 minutos) */
+  IMPORT: 5 * MILLISECONDS_PER_MINUTE,
   
-  /** Dia padrão de fechamento de cartão de crédito */
-  DEFAULT_CREDIT_CLOSING_DATE: 1,
+  /** Exportação de dados (3 minutos) */
+  EXPORT: 3 * MILLISECONDS_PER_MINUTE,
   
-  /** Moeda padrão */
-  DEFAULT_CURRENCY: 'BRL',
+  /** Query individual (10 segundos) */
+  QUERY: 10 * MILLISECONDS_PER_SECOND,
   
-  /** Símbolo da moeda */
-  CURRENCY_SYMBOL: 'R$',
+  /** Lock de operação (1 minuto) */
+  OPERATION_LOCK: 1 * MILLISECONDS_PER_MINUTE,
+} as const;
+
+/**
+ * Delays para debounce e throttle
+ */
+export const DELAYS = {
+  /** Debounce para input de busca (300ms) */
+  SEARCH_INPUT: 300,
   
-  /** Número de casas decimais para moeda */
-  CURRENCY_DECIMALS: 2,
+  /** Debounce para auto-save (1 segundo) */
+  AUTO_SAVE: 1 * MILLISECONDS_PER_SECOND,
+  
+  /** Throttle para scroll events (100ms) */
+  SCROLL: 100,
+  
+  /** Throttle para resize events (200ms) */
+  RESIZE: 200,
 } as const;
 
 // ==========================================
-// DATE FORMATS
+// CACHE E STORAGE
 // ==========================================
 
-export const DATE_FORMAT = {
-  /** Formato para banco de dados (ISO) */
-  DB: 'yyyy-MM-dd',
+/**
+ * Tempos de cache (stale time) para React Query
+ */
+export const CACHE_TIMES = {
+  /** Dados de curta duração (30 segundos) */
+  SHORT: 30 * MILLISECONDS_PER_SECOND,
   
-  /** Formato para exibição ao usuário */
-  DISPLAY: 'dd/MM/yyyy',
+  /** Dados de média duração (2 minutos) */
+  MEDIUM: 2 * MILLISECONDS_PER_MINUTE,
   
-  /** Formato para mês de fatura */
-  INVOICE: 'yyyy-MM',
+  /** Dados de longa duração (5 minutos) */
+  LONG: 5 * MILLISECONDS_PER_MINUTE,
   
-  /** Formato completo com hora */
-  DATETIME: 'dd/MM/yyyy HH:mm:ss',
+  /** Dados estáticos (1 hora) */
+  STATIC: 1 * MILLISECONDS_PER_HOUR,
 } as const;
 
-// Legacy exports (backward compatibility)
-export const DATE_FORMAT_DB = DATE_FORMAT.DB;
-export const DATE_FORMAT_DISPLAY = DATE_FORMAT.DISPLAY;
-export const DATE_FORMAT_INVOICE = DATE_FORMAT.INVOICE;
-
-// ==========================================
-// PAGINATION
-// ==========================================
-
-export const PAGINATION = {
-  /** Itens por página (padrão) */
-  DEFAULT_PAGE_SIZE: 50,
-  
-  /** Máximo de itens por página */
-  MAX_PAGE_SIZE: 5000,
-  
-  /** Opções de itens por página */
-  PAGE_SIZE_OPTIONS: [25, 50, 100, 200, 500, 1000, 5000] as const,
-} as const;
-
-// Legacy exports
-export const DEFAULT_PAGE_SIZE = PAGINATION.DEFAULT_PAGE_SIZE;
-export const MAX_PAGE_SIZE = PAGINATION.MAX_PAGE_SIZE;
-
-// ==========================================
-// VALIDATION LIMITS
-// ==========================================
-
-export const VALIDATION = {
-  /** Tamanho máximo de descrição */
-  MAX_DESCRIPTION_LENGTH: 200,
-  
-  /** Tamanho máximo de nome de categoria */
-  MAX_CATEGORY_NAME_LENGTH: 100,
-  
-  /** Tamanho máximo de nome de conta */
-  MAX_ACCOUNT_NAME_LENGTH: 100,
-  
-  /** Tamanho mínimo de senha */
-  MIN_PASSWORD_LENGTH: 6,
-  
-  /** Número máximo de parcelas */
-  MAX_INSTALLMENTS: 999,
-  
-  /** Regex para UUID */
-  UUID_REGEX: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-  
-  /** Regex para email */
-  EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-} as const;
-
-// Legacy exports
-export const MAX_DESCRIPTION_LENGTH = VALIDATION.MAX_DESCRIPTION_LENGTH;
-export const MAX_CATEGORY_NAME_LENGTH = VALIDATION.MAX_CATEGORY_NAME_LENGTH;
-export const MAX_ACCOUNT_NAME_LENGTH = VALIDATION.MAX_ACCOUNT_NAME_LENGTH;
-export const UUID_REGEX = VALIDATION.UUID_REGEX;
-export const DEFAULT_CREDIT_DUE_DATE = FINANCIAL.DEFAULT_CREDIT_DUE_DATE;
-export const DEFAULT_CREDIT_CLOSING_DATE = FINANCIAL.DEFAULT_CREDIT_CLOSING_DATE;
-export const MAX_TRANSACTION_AMOUNT = FINANCIAL.MAX_TRANSACTION_AMOUNT;
-export const MIN_TRANSACTION_AMOUNT = FINANCIAL.MIN_TRANSACTION_AMOUNT;
-
-// ==========================================
-// PERFORMANCE & CACHE
-// ==========================================
-
-export const PERFORMANCE = {
-  /** Delay padrão para debounce (ms) */
-  DEBOUNCE_DELAY: 300,
-  
-  /** Delay padrão para throttle (ms) */
-  THROTTLE_DELAY: 200,
-  
-  /** Threshold para lista grande */
-  LARGE_LIST_THRESHOLD: 500,
-  
-  /** Threshold para lista média */
-  MEDIUM_LIST_THRESHOLD: 50,
-} as const;
-
-export const CACHE = {
-  /** Tempo de cache para dados voláteis (ms) */
-  STALE_TIME_HIGH: 1 * 60 * 1000, // 1 minuto
-  
-  /** Tempo de cache para dados normais (ms) */
-  STALE_TIME_MEDIUM: 5 * 60 * 1000, // 5 minutos
-  
-  /** Tempo de cache para dados estáticos (ms) */
-  STALE_TIME_LOW: 15 * 60 * 1000, // 15 minutos
-  
-  /** Tempo até garbage collection (ms) */
-  GC_TIME: 10 * 60 * 1000, // 10 minutos
-} as const;
-
-// ==========================================
-// STORAGE
-// ==========================================
-
-export const STORAGE = {
-  /** Versão do IndexedDB */
-  DB_VERSION: 3,
-  
-  /** Nome do banco de dados offline */
-  DB_NAME: 'planiflow-offline',
-  
-  /** Limite de localStorage (bytes) */
-  LOCAL_STORAGE_LIMIT: 4 * 1024 * 1024, // 4MB
-  
-  /** Percentual máximo de uso */
+/**
+ * Limites de armazenamento
+ */
+export const STORAGE_LIMITS = {
+  /** Uso máximo de storage (80%) */
   MAX_USAGE_PERCENT: 80,
   
-  /** Retenção de transações (meses) */
-  RETENTION_MONTHS: 12,
+  /** Idade máxima de dados offline (6 meses em dias) */
+  MAX_OFFLINE_DATA_AGE_DAYS: 180,
+  
+  /** Número máximo de transações em cache */
+  MAX_CACHED_TRANSACTIONS: 10000,
 } as const;
 
 // ==========================================
-// RETRY & RATE LIMITING
+// CIRCUIT BREAKER
 // ==========================================
 
-export const RETRY = {
+/**
+ * Configurações do Circuit Breaker
+ */
+export const CIRCUIT_BREAKER = {
+  /** Número de falhas antes de abrir o circuito */
+  FAILURE_THRESHOLD: 5,
+  
+  /** Tempo que o circuito fica aberto (30 segundos) */
+  OPEN_DURATION: 30 * MILLISECONDS_PER_SECOND,
+  
+  /** Tempo de reset após sucesso (5 minutos) */
+  RESET_TIMEOUT: 5 * MILLISECONDS_PER_MINUTE,
+} as const;
+
+// ==========================================
+// PAGINAÇÃO E LIMITES
+// ==========================================
+
+/**
+ * Limites de paginação e listagem
+ */
+export const PAGINATION = {
+  /** Itens por página padrão */
+  DEFAULT_PAGE_SIZE: 50,
+  
+  /** Itens por página para mobile */
+  MOBILE_PAGE_SIZE: 20,
+  
+  /** Máximo de itens por página */
+  MAX_PAGE_SIZE: 100,
+  
+  /** Número de páginas para pré-carregar */
+  PREFETCH_PAGES: 1,
+} as const;
+
+// ==========================================
+// VALIDAÇÃO
+// ==========================================
+
+/**
+ * Limites de validação
+ */
+export const VALIDATION_LIMITS = {
+  /** Número mínimo de parcelas */
+  MIN_INSTALLMENTS: 2,
+  
+  /** Número máximo de parcelas */
+  MAX_INSTALLMENTS: 360,
+  
+  /** Comprimento mínimo de descrição */
+  MIN_DESCRIPTION_LENGTH: 1,
+  
+  /** Comprimento máximo de descrição */
+  MAX_DESCRIPTION_LENGTH: 255,
+  
+  /** Valor mínimo de transação (em centavos) */
+  MIN_TRANSACTION_AMOUNT: 1,
+  
+  /** Valor máximo de transação (em centavos) - 1 bilhão */
+  MAX_TRANSACTION_AMOUNT: 100000000000,
+} as const;
+
+// ==========================================
+// FORMATAÇÃO
+// ==========================================
+
+/**
+ * Formatos de data
+ */
+export const DATE_FORMATS = {
+  /** Formato ISO (YYYY-MM-DD) */
+  ISO: 'yyyy-MM-dd',
+  
+  /** Formato brasileiro (DD/MM/YYYY) */
+  BR: 'dd/MM/yyyy',
+  
+  /** Formato com hora (DD/MM/YYYY HH:mm) */
+  BR_WITH_TIME: 'dd/MM/yyyy HH:mm',
+  
+  /** Formato de mês/ano (MM/YYYY) */
+  MONTH_YEAR: 'MM/yyyy',
+  
+  /** Formato de mês por extenso (MMMM de YYYY) */
+  MONTH_YEAR_LONG: "MMMM 'de' yyyy",
+} as const;
+
+/**
+ * Precisão de números
+ */
+export const PRECISION = {
+  /** Casas decimais para moeda */
+  CURRENCY: 2,
+  
+  /** Casas decimais para porcentagem */
+  PERCENTAGE: 2,
+  
+  /** Casas decimais para taxas */
+  RATE: 4,
+} as const;
+
+// ==========================================
+// HTTP E REDE
+// ==========================================
+
+/**
+ * Códigos de status HTTP
+ */
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  TOO_MANY_REQUESTS: 429,
+  INTERNAL_SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
+} as const;
+
+/**
+ * Configurações de retry
+ */
+export const RETRY_CONFIG = {
   /** Número máximo de tentativas */
   MAX_ATTEMPTS: 3,
   
-  /** Delay inicial entre retries (ms) */
-  INITIAL_DELAY: 1000,
+  /** Delay inicial entre tentativas (1 segundo) */
+  INITIAL_DELAY: 1 * MILLISECONDS_PER_SECOND,
   
-  /** Multiplicador para backoff exponencial */
+  /** Multiplicador de backoff exponencial */
   BACKOFF_MULTIPLIER: 2,
   
-  /** Delay máximo (ms) */
-  MAX_DELAY: 30000,
-} as const;
-
-export const RATE_LIMIT = {
-  /** Tokens máximos para sync */
-  MAX_TOKENS: 20,
-  
-  /** Taxa de refill (ops/segundo) */
-  REFILL_RATE: 5,
-  
-  /** Delay mínimo (ms) */
-  MIN_DELAY: 100,
-  
-  /** Tamanho máximo do batch */
-  MAX_BATCH_SIZE: 1000,
+  /** Delay máximo entre tentativas (30 segundos) */
+  MAX_DELAY: 30 * MILLISECONDS_PER_SECOND,
 } as const;
 
 // ==========================================
-// TIMEOUTS
+// UI E UX
 // ==========================================
 
-export const TIMEOUT = {
-  /** Timeout para API (ms) */
-  API_REQUEST: 30000,
+/**
+ * Breakpoints responsivos (em pixels)
+ */
+export const BREAKPOINTS = {
+  /** Mobile pequeno */
+  XS: 320,
   
-  /** Timeout para sync offline (ms) */
-  OFFLINE_SYNC: 60000,
+  /** Mobile */
+  SM: 640,
   
-  /** Timeout para operações de DB (ms) */
-  DATABASE_OPERATION: 10000,
+  /** Tablet */
+  MD: 768,
   
-  /** Duração de toast de sucesso (ms) */
-  TOAST_SUCCESS: 3000,
+  /** Desktop pequeno */
+  LG: 1024,
   
-  /** Duração de toast de erro (ms) */
-  TOAST_ERROR: 5000,
+  /** Desktop */
+  XL: 1280,
+  
+  /** Desktop grande */
+  XXL: 1536,
 } as const;
 
-// ==========================================
-// UI CONSTANTS
-// ==========================================
-
-export const UI = {
-  /** Largura da sidebar (px) */
-  SIDEBAR_WIDTH: 280,
+/**
+ * Durações de animação (em milissegundos)
+ */
+export const ANIMATION_DURATION = {
+  /** Animação rápida */
+  FAST: 150,
   
-  /** Largura da sidebar colapsada (px) */
-  SIDEBAR_WIDTH_COLLAPSED: 80,
+  /** Animação normal */
+  NORMAL: 300,
   
-  /** Breakpoints responsivos (px) */
-  BREAKPOINT: {
-    mobile: 768,
-    tablet: 1024,
-    desktop: 1280,
-  },
-  
-  /** Z-indexes */
-  Z_INDEX: {
-    modal: 1000,
-    tooltip: 2000,
-    toast: 3000,
-  },
+  /** Animação lenta */
+  SLOW: 500,
 } as const;
 
-// ==========================================
-// FEATURE FLAGS
-// ==========================================
-
-export const FEATURES = {
-  /** Habilitar PWA */
-  ENABLE_PWA: true,
+/**
+ * Z-index layers
+ */
+export const Z_INDEX = {
+  /** Conteúdo base */
+  BASE: 0,
   
-  /** Habilitar modo offline */
-  ENABLE_OFFLINE: true,
+  /** Dropdown */
+  DROPDOWN: 1000,
   
-  /** Habilitar notificações push */
-  ENABLE_PUSH_NOTIFICATIONS: true,
+  /** Sticky header */
+  STICKY: 1020,
   
-  /** Modo debug */
-  DEBUG_MODE: import.meta.env.DEV,
+  /** Modal backdrop */
+  MODAL_BACKDROP: 1040,
+  
+  /** Modal */
+  MODAL: 1050,
+  
+  /** Popover */
+  POPOVER: 1060,
+  
+  /** Tooltip */
+  TOOLTIP: 1070,
+  
+  /** Toast/Notification */
+  TOAST: 1080,
 } as const;
-
-// ==========================================
-// TYPE HELPERS
-// ==========================================
-
-/** Type helper para extrair valores de const objects */
-export type ValueOf<T> = T[keyof T];
-
-/** Type para opções de paginação */
-export type PageSizeOption = typeof PAGINATION.PAGE_SIZE_OPTIONS[number];
-

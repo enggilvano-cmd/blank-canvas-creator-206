@@ -23,14 +23,14 @@ interface FixedTransactionListProps {
   onGenerateNext12Months: (transactionId: string) => void;
 }
 
-export const FixedTransactionList = memo(function FixedTransactionList({
+export const FixedTransactionList = memo(({
   transactions,
   accounts,
   categories,
   onEdit,
   onDelete,
   onGenerateNext12Months,
-}: FixedTransactionListProps) {
+}: FixedTransactionListProps) => {
   // ✅ O(1) lookup instead of O(n) find - Performance optimization
   const accountsMap = useEntityMap(accounts);
   const categoriesMap = useEntityMap(categories);
@@ -44,7 +44,7 @@ export const FixedTransactionList = memo(function FixedTransactionList({
 
   const getCategoryName = useMemo(
     () => (categoryId: string | null) => {
-      if (!categoryId) return "-";
+      if (!categoryId) {return "-";}
       return categoriesMap.get(categoryId)?.name || "-";
     },
     [categoriesMap]

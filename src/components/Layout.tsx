@@ -41,7 +41,7 @@ interface LayoutProps {
 }
 
 const getFirstName = (fullName?: string | null) => {
-  if (!fullName) return null;
+  if (!fullName) {return null;}
   return fullName.split(' ')[0];
 };
 

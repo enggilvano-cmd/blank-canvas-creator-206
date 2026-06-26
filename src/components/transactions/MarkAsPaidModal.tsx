@@ -20,7 +20,7 @@ import { CurrencyInput } from "@/components/forms/CurrencyInput";
 import { calculateInvoiceMonthByDue } from "@/lib/dateUtils";
 
 import { ACCOUNT_TYPE_LABELS } from '@/types';
-import { MarkAsPaidModalProps } from '@/types/formProps';
+import type { MarkAsPaidModalProps } from '@/types/formProps';
 
 export function MarkAsPaidModal({
   open,
@@ -40,8 +40,8 @@ export function MarkAsPaidModal({
 
   // Calcular invoice_month automaticamente para cartões de crédito
   const invoiceMonth = useMemo(() => {
-    if (!selectedAccount || selectedAccount.type !== 'credit') return undefined;
-    if (!selectedAccount.closing_date) return undefined;
+    if (!selectedAccount || selectedAccount.type !== 'credit') {return undefined;}
+    if (!selectedAccount.closing_date) {return undefined;}
     
     return calculateInvoiceMonthByDue(
       date,
@@ -76,7 +76,7 @@ export function MarkAsPaidModal({
     setAmount(value);
   };
 
-  if (!transaction) return null;
+  if (!transaction) {return null;}
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

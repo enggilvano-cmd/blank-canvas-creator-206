@@ -59,7 +59,7 @@ export function DatabasePerformanceTest() {
         },
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       setResult(data);
       toast({
@@ -185,7 +185,7 @@ export function DatabasePerformanceTest() {
         .delete()
         .like('description', 'TEST:%');
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       setResult(null);
       setAnalysisResult(null);

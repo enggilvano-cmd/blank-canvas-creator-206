@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Transaction } from '@/types';
+import type { Transaction } from '@/types';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
 import { createDateFromString } from '@/lib/dateUtils';
@@ -69,7 +69,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
   const query = useInfiniteQuery({
     queryKey: [...queryKeys.transactions(filters), 'infinite'],
     queryFn: async ({ pageParam = 0 }) => {
-      if (!user) return { transactions: [], nextCursor: undefined };
+      if (!user) {return { transactions: [], nextCursor: undefined };}
 
       const from = pageParam * pageSize;
       const to = from + pageSize - 1;
@@ -225,8 +225,8 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
     // Advanced caching for infinite scroll
     staleTime: (() => {
       // Dynamic stale time based on filters
-      if (search) return 10000; // 10s for search (user might scroll and modify)
-      if (type !== 'all' || accountId !== 'all') return 30000; // 30s for filtered
+      if (search) {return 10000;} // 10s for search (user might scroll and modify)
+      if (type !== 'all' || accountId !== 'all') {return 30000;} // 30s for filtered
       return 120000; // 2min for unfiltered data
     })(),
     gcTime: 600000, // 10 minutes - keep pages longer for infinite scroll
@@ -246,7 +246,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
   const countQuery = useInfiniteQuery({
     queryKey: [...queryKeys.transactions(filters), 'count'],
     queryFn: async () => {
-      if (!user) return { count: 0 };
+      if (!user) {return { count: 0 };}
 
       let query = supabase
         .from('transactions')
@@ -291,7 +291,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
 
       const { count, error } = await query;
 
-      if (error) throw error;
+      if (error) {throw error;}
       return { count: count || 0 };
     },
     getNextPageParam: () => undefined,
@@ -317,7 +317,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       status: 'pending' | 'completed';
       invoiceMonth?: string;
     }) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       // ✅ Validate with Zod
       const validated = addTransactionSchema.parse({
@@ -346,7 +346,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
         },
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data;
     },
     onSuccess: async () => {
@@ -364,7 +364,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
       updates: Partial<Transaction>;
       scope?: 'current' | 'all';
     }) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       // ✅ Validate updates
       const partialSchema = editTransactionSchema.partial().required({ id: true });
@@ -382,7 +382,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
         },
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data;
     },
     onSuccess: async () => {
@@ -393,7 +393,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
 
   const deleteMutation = useMutation({
     mutationFn: async ({ id, scope = 'current' }: { id: string; scope?: 'current' | 'all' }) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       // ✅ Validate transaction ID
       const validated = z.object({
@@ -405,7 +405,7 @@ export function useInfiniteTransactions(params: UseInfiniteTransactionsParams = 
         body: { transaction_id: validated.id, scope: validated.scope || 'current' },
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
       return data;
     },
     onSuccess: async () => {

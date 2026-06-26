@@ -9,7 +9,7 @@ import { useAuth } from './useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryClient';
 import { getErrorMessage } from '@/types/errors';
-import { Category } from '@/types';
+import type { Category } from '@/types';
 
 export function useOfflineCategoryMutations() {
   const isOnline = useOnlineStatus();
@@ -69,7 +69,7 @@ export function useOfflineCategoryMutations() {
   }) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         const { error } = await supabase
           .from('categories')
@@ -80,7 +80,7 @@ export function useOfflineCategoryMutations() {
             user_id: user.id,
           });
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         queryClient.invalidateQueries({ queryKey: queryKeys.categories });
         toast({
@@ -132,7 +132,7 @@ export function useOfflineCategoryMutations() {
 
         // 3. Update React Query Cache
         queryClient.setQueryData<Category[]>(queryKeys.categories, (old) => {
-          if (!old) return old;
+          if (!old) {return old;}
           return old.map(cat => cat.id === categoryId ? updatedCategory : cat);
         });
       }
@@ -162,7 +162,7 @@ export function useOfflineCategoryMutations() {
   }) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         const { error } = await supabase
           .from('categories')
@@ -170,7 +170,7 @@ export function useOfflineCategoryMutations() {
           .eq('id', categoryId)
           .eq('user_id', user.id);
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         queryClient.invalidateQueries({ queryKey: queryKeys.categories });
         toast({
@@ -213,7 +213,7 @@ export function useOfflineCategoryMutations() {
 
       // 2. Update React Query Cache (Optimistic UI)
       queryClient.setQueryData<Category[]>(queryKeys.categories, (old) => {
-        if (!old) return old;
+        if (!old) {return old;}
         return old.filter(cat => cat.id !== categoryId);
       });
 
@@ -238,7 +238,7 @@ export function useOfflineCategoryMutations() {
   const handleDeleteCategory = useCallback(async (categoryId: string) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         const { error } = await supabase
           .from('categories')
@@ -246,7 +246,7 @@ export function useOfflineCategoryMutations() {
           .eq('id', categoryId)
           .eq('user_id', user.id);
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         queryClient.invalidateQueries({ queryKey: queryKeys.categories });
         toast({
@@ -280,7 +280,7 @@ export function useOfflineCategoryMutations() {
   const handleImportCategories = useCallback(async (categoriesData: any[], categoriesToReplace: string[] = []) => {
     if (isOnline) {
       // Online: usar lógica normal
-      if (!user) return;
+      if (!user) {return;}
       try {
         // Deletar categorias que serão substituídas
         if (categoriesToReplace.length > 0) {
@@ -290,7 +290,7 @@ export function useOfflineCategoryMutations() {
             .in('id', categoriesToReplace)
             .eq('user_id', user.id);
 
-          if (deleteError) throw deleteError;
+          if (deleteError) {throw deleteError;}
         }
 
         // Inserir novas categorias
@@ -305,7 +305,7 @@ export function useOfflineCategoryMutations() {
           .from('categories')
           .insert(categoriesToAdd);
 
-        if (error) throw error;
+        if (error) {throw error;}
 
         queryClient.invalidateQueries({ queryKey: queryKeys.categories });
         toast({

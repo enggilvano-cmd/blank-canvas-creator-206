@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, Clock, Wallet } from 'lucide-react';
 import type { NavigationParams, AccountFilterType, TransactionFilterType, StatusFilterType, DateFilterType } from '@/types';
+import { logger } from '@/lib/logger';
 
 interface BalanceCardsProps {
   formatCurrency: (value: number) => string;
@@ -47,7 +48,7 @@ export function BalanceCards({
   onNavigateToTransactions,
   isFetching = false, // ✅ NOVO: Default false para não quebrar código existente
 }: BalanceCardsProps) {
-  console.log('🎨 BalanceCards renderizado com valores:', {
+  logger.debug('BalanceCards rendered with values:', {
     totalBalance,
     periodIncome,
     periodExpenses,

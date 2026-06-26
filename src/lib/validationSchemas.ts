@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { MAX_DESCRIPTION_LENGTH, MAX_TRANSACTION_AMOUNT } from "./constants";
+import { VALIDATION_LIMITS } from "./constants";
+
+const { MAX_DESCRIPTION_LENGTH, MAX_TRANSACTION_AMOUNT } = VALIDATION_LIMITS;
 
 // ============= Account Schemas =============
 
@@ -27,7 +29,7 @@ export const addAccountSchema = z.object({
     .string()
     .optional()
     .refine((val) => {
-      if (!val) return true;
+      if (!val) {return true;}
       const num = parseInt(val);
       return !isNaN(num) && num >= 1 && num <= 31;
     }, { message: "A data de vencimento deve estar entre 1 e 31" }),
@@ -36,7 +38,7 @@ export const addAccountSchema = z.object({
     .string()
     .optional()
     .refine((val) => {
-      if (!val) return true;
+      if (!val) {return true;}
       const num = parseInt(val);
       return !isNaN(num) && num >= 1 && num <= 31;
     }, { message: "A data de fechamento deve estar entre 1 e 31" }),
@@ -80,7 +82,7 @@ export const editAccountSchema = z.object({
     .string()
     .optional()
     .refine((val) => {
-      if (!val) return true;
+      if (!val) {return true;}
       const num = parseInt(val);
       return !isNaN(num) && num >= 1 && num <= 31;
     }, { message: "A data de vencimento deve estar entre 1 e 31" }),
@@ -89,7 +91,7 @@ export const editAccountSchema = z.object({
     .string()
     .optional()
     .refine((val) => {
-      if (!val) return true;
+      if (!val) {return true;}
       const num = parseInt(val);
       return !isNaN(num) && num >= 1 && num <= 31;
     }, { message: "A data de fechamento deve estar entre 1 e 31" }),
@@ -170,7 +172,7 @@ const addTransactionBaseSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data inválida. Use o formato AAAA-MM-DD" })
     .refine((dateStr) => {
-      const date = new Date(dateStr + "T00:00:00");
+      const date = new Date(`${dateStr  }T00:00:00`);
       return !isNaN(date.getTime());
     }, { message: "Data inválida" }),
   
@@ -207,8 +209,8 @@ const addTransactionBaseSchema = z.object({
     .string()
     .optional()
     .refine((val) => {
-      if (!val) return true;
-      if (val === "custom") return true; // "custom" é válido aqui
+      if (!val) {return true;}
+      if (val === "custom") {return true;} // "custom" é válido aqui
       const num = parseInt(val);
       return !isNaN(num) && num >= 2 && num <= 360;
     }, { message: "O número de parcelas deve estar entre 2 e 360" }),
@@ -217,7 +219,7 @@ const addTransactionBaseSchema = z.object({
     .string()
     .optional()
     .refine((val) => {
-      if (!val) return true;
+      if (!val) {return true;}
       const num = parseInt(val);
       return !isNaN(num) && num >= 2 && num <= 360;
     }, { message: "O número de parcelas deve estar entre 2 e 360" }),
@@ -271,7 +273,7 @@ export const transferSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data inválida. Use o formato AAAA-MM-DD" })
     .refine((dateStr) => {
-      const date = new Date(dateStr + "T00:00:00");
+      const date = new Date(`${dateStr  }T00:00:00`);
       return !isNaN(date.getTime());
     }, { message: "Data inválida" }),
   
@@ -315,7 +317,7 @@ export const creditPaymentSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Data inválida. Use o formato AAAA-MM-DD" })
     .refine((dateStr) => {
-      const date = new Date(dateStr + "T00:00:00");
+      const date = new Date(`${dateStr  }T00:00:00`);
       return !isNaN(date.getTime());
     }, { message: "Data inválida" }),
 }).refine((data) => data.creditCardAccountId !== data.debitAccountId, {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { safeStorage } from '@/lib/safeStorage';
 import { logger } from '@/lib/logger';
-import { ZodSchema } from 'zod';
+import type { ZodSchema } from 'zod';
 
 /**
  * Hook genérico para persistir filtros no localStorage com validação

@@ -89,7 +89,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
   const handleExportData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       // Export ALL user data - COMPLETO COM TODAS AS TABELAS
       logger.info('Iniciando exportação completa de backup...');
@@ -147,11 +147,11 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
       ]);
 
       // Check for errors in queries
-      if (accounts.error) throw accounts.error;
-      if (transactions.error) throw transactions.error;
-      if (categories.error) throw categories.error;
-      if (settings.error && settings.error.code !== 'PGRST116') throw settings.error;
-      if (profile.error && profile.error.code !== 'PGRST116') throw profile.error;
+      if (accounts.error) {throw accounts.error;}
+      if (transactions.error) {throw transactions.error;}
+      if (categories.error) {throw categories.error;}
+      if (settings.error && settings.error.code !== 'PGRST116') {throw settings.error;}
+      if (profile.error && profile.error.code !== 'PGRST116') {throw profile.error;}
       // notification_settings, push_subscriptions e backup_schedules podem não existir (são opcionais)
 
       const data = {
@@ -250,7 +250,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
 
   const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     // Validate file type
     if (!file.name.endsWith('.json')) {
@@ -355,7 +355,7 @@ export function SettingsPage({ settings, onUpdateSettings, onClearAllData }: Set
         };
 
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        if (!user) {throw new Error('User not authenticated');}
 
         // Log detalhado dos dados normalizados para debug
         logger.debug('Dados normalizados detalhados:', {

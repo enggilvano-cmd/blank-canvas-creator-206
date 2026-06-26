@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import type { Transaction, Account, Category } from "@/types";
-import { EditScope } from "@/components/TransactionScopeDialog";
+import type { EditScope } from "@/components/TransactionScopeDialog";
 
 interface UseTransactionsPageLogicProps {
   transactions: Transaction[];
@@ -289,7 +289,7 @@ export function useTransactionsPageLogic({
     const fetchAggregatedTotals = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {return;}
 
         const params: Record<string, unknown> = {
           p_user_id: user.id,
@@ -346,14 +346,14 @@ export function useTransactionsPageLogic({
           // if (t.type === 'income' && (t as any).linked_transaction_id) return true; // Receita espelho
           
           // 2. Saldo Inicial
-          if (t.description === 'Saldo Inicial') return true;
+          if (t.description === 'Saldo Inicial') {return true;}
 
           // 3. Pai de transações fixas (templates)
           // Se é fixa e não tem parent_id, é o template (pai). Se tem parent_id, é a instância (filha).
           // O RPC exclui: (t.parent_transaction_id IS NOT NULL OR t.is_fixed IS NOT TRUE OR t.is_fixed IS NULL)
           // Ou seja, mantem se: tem pai OU não é fixa.
           // Logo, EXCLUI se: não tem pai E é fixa.
-          if (t.is_fixed && !t.parent_transaction_id) return true;
+          if (t.is_fixed && !t.parent_transaction_id) {return true;}
 
           return false;
         };
@@ -361,10 +361,10 @@ export function useTransactionsPageLogic({
         // Aplicar filtros localmente para garantir que o fallback respeite os filtros selecionados
         let filtered = sourceTransactions.filter(t => !shouldExclude(t));
 
-        if (filterType !== 'all') filtered = filtered.filter(t => t.type === filterType);
-        if (filterStatus !== 'all') filtered = filtered.filter(t => t.status === filterStatus);
-        if (filterAccount !== 'all') filtered = filtered.filter(t => t.account_id === filterAccount);
-        if (filterCategory !== 'all') filtered = filtered.filter(t => t.category_id === filterCategory);
+        if (filterType !== 'all') {filtered = filtered.filter(t => t.type === filterType);}
+        if (filterStatus !== 'all') {filtered = filtered.filter(t => t.status === filterStatus);}
+        if (filterAccount !== 'all') {filtered = filtered.filter(t => t.account_id === filterAccount);}
+        if (filterCategory !== 'all') {filtered = filtered.filter(t => t.category_id === filterCategory);}
         if (filterAccountType !== 'all') {
           filtered = filtered.filter(t => {
             const account = accounts.find(a => a.id === t.account_id);
@@ -372,18 +372,18 @@ export function useTransactionsPageLogic({
           });
         }
         // Conversão segura para string para comparação com filtros
-        if (filterIsFixed !== 'all') filtered = filtered.filter(t => String(!!t.is_fixed) === filterIsFixed);
-        if (filterIsProvision !== 'all') filtered = filtered.filter(t => String(!!t.is_provision) === filterIsProvision);
-        if (filterInvoiceMonth !== 'all') filtered = filtered.filter(t => t.invoice_month === filterInvoiceMonth);
+        if (filterIsFixed !== 'all') {filtered = filtered.filter(t => String(!!t.is_fixed) === filterIsFixed);}
+        if (filterIsProvision !== 'all') {filtered = filtered.filter(t => String(!!t.is_provision) === filterIsProvision);}
+        if (filterInvoiceMonth !== 'all') {filtered = filtered.filter(t => t.invoice_month === filterInvoiceMonth);}
         
         if (dateFrom) {
           // Ajuste de fuso horário pode ser necessário dependendo de como dateFrom vem
           // Mas assumindo YYYY-MM-DD string simples:
-          const from = new Date(dateFrom + 'T00:00:00');
+          const from = new Date(`${dateFrom  }T00:00:00`);
           filtered = filtered.filter(t => new Date(t.date) >= from);
         }
         if (dateTo) {
-          const to = new Date(dateTo + 'T23:59:59');
+          const to = new Date(`${dateTo  }T23:59:59`);
           filtered = filtered.filter(t => new Date(t.date) <= to);
         }
         
@@ -471,7 +471,7 @@ export function useTransactionsPageLogic({
           const currentTransactionDate = new Date(transaction.date);
           
           const pendingCount = childTransactions?.filter(t => {
-            if (t.status !== "pending") return false;
+            if (t.status !== "pending") {return false;}
             const tDate = new Date(t.date);
             // Considera pendentes da mesma data ou futuras
             return tDate >= currentTransactionDate;

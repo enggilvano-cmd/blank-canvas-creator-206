@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAccounts } from '@/hooks/queries/useAccounts';
 import { renderHook, act, waitFor } from '@testing-library/react';

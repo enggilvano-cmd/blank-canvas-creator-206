@@ -10,7 +10,7 @@ export function useComponentPerformance(componentName: string, enabled = true) {
   const renderCountRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!enabled || !import.meta.env.PROD) return;
+    if (!enabled || !import.meta.env.PROD) {return;}
 
     mountTimeRef.current = performance.now();
     renderCountRef.current++;
@@ -34,7 +34,7 @@ export function useComponentPerformance(componentName: string, enabled = true) {
 
   // Incrementa contador a cada render
   useEffect(() => {
-    if (!enabled || !import.meta.env.PROD) return;
+    if (!enabled || !import.meta.env.PROD) {return;}
     renderCountRef.current++;
   });
 }

@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
-import { TransactionFilterChips, FilterChip } from "./TransactionFilterChips";
+import type { FilterChip } from "./TransactionFilterChips";
+import { TransactionFilterChips } from "./TransactionFilterChips";
 import { TransactionFilterDialog } from "./TransactionFilterDialog";
 import type { Account, Category } from "@/types";
 

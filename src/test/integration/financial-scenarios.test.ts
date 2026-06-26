@@ -16,8 +16,8 @@ vi.mock('@/integrations/supabase/client', () => {
           select: vi.fn(() => ({
             single: vi.fn(() => {
               const newItem = { ...data, id: `${table}-id-${Math.random()}` };
-              if (table === 'accounts') mockAccounts.push(newItem);
-              if (table === 'transactions') mockTransactions.push(newItem);
+              if (table === 'accounts') {mockAccounts.push(newItem);}
+              if (table === 'transactions') {mockTransactions.push(newItem);}
               return { data: newItem, error: null };
             }),
           })),
@@ -53,8 +53,8 @@ vi.mock('@/integrations/supabase/client', () => {
                  }
                  account.balance -= transaction.amount;
               } else {
-                 if (transaction.type === 'income') account.balance += transaction.amount;
-                 else account.balance -= transaction.amount;
+                 if (transaction.type === 'income') {account.balance += transaction.amount;}
+                 else {account.balance -= transaction.amount;}
               }
             }
             return { data: { transaction: { ...transaction, id: 'tx-id' } }, error: null };
@@ -64,7 +64,7 @@ vi.mock('@/integrations/supabase/client', () => {
              const from = mockAccounts.find(a => a.id === transfer.from_account_id);
              const to = mockAccounts.find(a => a.id === transfer.to_account_id);
              if (from && to) {
-               if (transfer.amount > from.balance) return { error: { message: 'Insufficient funds' } };
+               if (transfer.amount > from.balance) {return { error: { message: 'Insufficient funds' } };}
                from.balance -= transfer.amount;
                to.balance += transfer.amount;
              }
@@ -84,7 +84,7 @@ vi.mock('@/integrations/supabase/client', () => {
              // Revert logic simplified
              // Assuming we are reverting the last transaction for the test case
              const account = mockAccounts.find(a => a.name === 'Test Checking');
-             if (account) account.balance += 25000; // Hardcoded for the specific test case
+             if (account) {account.balance += 25000;} // Hardcoded for the specific test case
              return { data: {}, error: null };
           }
           return { data: {}, error: null };
@@ -116,7 +116,7 @@ describe('Financial Scenarios Integration Tests', () => {
 
     // Setup test user and accounts
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('No authenticated user for tests');
+    if (!user) {throw new Error('No authenticated user for tests');}
     testUserId = user.id;
 
     // Create test accounts

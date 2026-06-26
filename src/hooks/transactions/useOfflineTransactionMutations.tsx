@@ -8,8 +8,8 @@ import { offlineQueue } from '@/lib/offlineQueue';
 import { offlineDatabase } from '@/lib/offlineDatabase';
 import { useToast } from '@/hooks/use-toast';
 import { queryKeys } from '@/lib/queryClient';
-import { TransactionInput, TransactionUpdate, Category, Account, Transaction } from '@/types';
-import { EditScope } from '@/components/TransactionScopeDialog';
+import type { TransactionInput, TransactionUpdate, Category, Account, Transaction } from '@/types';
+import type { EditScope } from '@/components/TransactionScopeDialog';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/hooks/useAuth';
 import { getErrorMessage } from '@/types/errors';
@@ -93,7 +93,7 @@ export function useOfflineTransactionMutations() {
         };
 
         queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: Transaction[] | undefined) => {
-          if (!oldData) return [optimisticTransaction];
+          if (!oldData) {return [optimisticTransaction];}
           if (Array.isArray(oldData)) {
             return [optimisticTransaction, ...oldData];
           }
@@ -160,15 +160,15 @@ export function useOfflineTransactionMutations() {
       const enqueueOfflineEdit = async () => {
         try {
           const updates: Partial<TransactionUpdate> = {};
-          if (updatedTransaction.description !== undefined) updates.description = updatedTransaction.description;
-          if (updatedTransaction.amount !== undefined) updates.amount = updatedTransaction.amount;
+          if (updatedTransaction.description !== undefined) {updates.description = updatedTransaction.description;}
+          if (updatedTransaction.amount !== undefined) {updates.amount = updatedTransaction.amount;}
           if (updatedTransaction.date !== undefined) {
             updates.date = typeof updatedTransaction.date === 'string' ? updatedTransaction.date : updatedTransaction.date.toISOString().split('T')[0];
           }
-          if (updatedTransaction.type !== undefined) updates.type = updatedTransaction.type;
-          if (updatedTransaction.category_id !== undefined) updates.category_id = updatedTransaction.category_id;
-          if (updatedTransaction.account_id !== undefined) updates.account_id = updatedTransaction.account_id;
-          if (updatedTransaction.status !== undefined) updates.status = updatedTransaction.status;
+          if (updatedTransaction.type !== undefined) {updates.type = updatedTransaction.type;}
+          if (updatedTransaction.category_id !== undefined) {updates.category_id = updatedTransaction.category_id;}
+          if (updatedTransaction.account_id !== undefined) {updates.account_id = updatedTransaction.account_id;}
+          if (updatedTransaction.status !== undefined) {updates.status = updatedTransaction.status;}
 
           await offlineQueue.enqueue({
             type: 'edit',
@@ -181,7 +181,7 @@ export function useOfflineTransactionMutations() {
 
           // Optimistic UI update for regular transaction
           queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
-            if (!oldData || !Array.isArray(oldData)) return oldData;
+            if (!oldData || !Array.isArray(oldData)) {return oldData;}
             return oldData.map((t: Transaction) => 
               t.id === updatedTransaction.id ? { ...t, ...updates } : t
             );
@@ -266,7 +266,7 @@ export function useOfflineTransactionMutations() {
             await refundProvisionOffline(tx.category_id, tx.amount, tx.date);
           }
           queryClient.setQueriesData({ queryKey: queryKeys.transactionsBase }, (oldData: unknown) => {
-            if (!oldData || !Array.isArray(oldData)) return oldData;
+            if (!oldData || !Array.isArray(oldData)) {return oldData;}
             return oldData.filter((t: Transaction) => t.id !== transactionId);
           });
           return isFixedTransaction;
@@ -286,7 +286,7 @@ export function useOfflineTransactionMutations() {
             logger.warn('Network error on single delete, falling back to offline.', error);
             const isFixed = await processOfflineDelete();
             toast({ title: 'Modo Offline', description: 'Exclusão será sincronizada.', duration: 3000 });
-            if (isFixed) notifyFixedTransactionsChange();
+            if (isFixed) {notifyFixedTransactionsChange();}
             return;
           }
           throw error;
@@ -296,7 +296,7 @@ export function useOfflineTransactionMutations() {
       const isFixed = await processOfflineDelete();
       toast({ title: 'Modo Offline', description: 'Exclusão será sincronizada.', duration: 3000 });
       await invalidateTransactions();
-      if (isFixed) notifyFixedTransactionsChange();
+      if (isFixed) {notifyFixedTransactionsChange();}
     },
     [isOnline, onlineMutations, onlineTransferMutations, toast, user, invalidateTransactions, refundProvisionOffline, queryClient]
   );

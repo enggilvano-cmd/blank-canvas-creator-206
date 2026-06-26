@@ -2,7 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryInvalidation } from '@/hooks/useQueryInvalidation';
-import { Account } from '@/types';
+import type { Account } from '@/types';
 import { logger } from '@/lib/logger';
 import { queryKeys } from '@/lib/queryClient';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -17,7 +17,7 @@ export function useAccounts() {
   const query = useQuery({
     queryKey: queryKeys.accounts,
     queryFn: async () => {
-      if (!user) return [];
+      if (!user) {return [];}
       
       // Estratégia Offline-First
       if (!isOnline) {
@@ -33,7 +33,7 @@ export function useAccounts() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       const accounts = (data || []).map((acc) => ({
         ...acc,
@@ -61,7 +61,7 @@ export function useAccounts() {
 
   const updateMutation = useMutation({
     mutationFn: async (updatedAccount: Partial<Account> & { id: string }) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       const { error } = await supabase
         .from('accounts')
@@ -69,7 +69,7 @@ export function useAccounts() {
         .eq('id', updatedAccount.id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {throw error;}
       return updatedAccount;
     },
     onMutate: async (updatedAccount) => {
@@ -78,7 +78,7 @@ export function useAccounts() {
 
       if (previousAccounts) {
         queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
-          if (!old) return [];
+          if (!old) {return [];}
           return old.map(acc => acc.id === updatedAccount.id ? { ...acc, ...updatedAccount } : acc);
         });
       }
@@ -101,7 +101,7 @@ export function useAccounts() {
 
   const deleteMutation = useMutation({
     mutationFn: async (accountId: string) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       const { error } = await supabase
         .from('accounts')
@@ -109,7 +109,7 @@ export function useAccounts() {
         .eq('id', accountId)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {throw error;}
       return accountId;
     },
     onMutate: async (accountId) => {
@@ -118,7 +118,7 @@ export function useAccounts() {
 
       if (previousAccounts) {
         queryClient.setQueryData<Account[]>(queryKeys.accounts, (old) => {
-          if (!old) return [];
+          if (!old) {return [];}
           return old.filter(acc => acc.id !== accountId);
         });
       }
@@ -138,7 +138,7 @@ export function useAccounts() {
 
   const importMutation = useMutation({
     mutationFn: async (accountsData: Array<Omit<Account, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {throw new Error('User not authenticated');}
 
       const accountsToAdd = accountsData.map(acc => ({
         name: acc.name,
@@ -155,7 +155,7 @@ export function useAccounts() {
         .from('accounts')
         .insert(accountsToAdd as any);
 
-      if (error) throw error;
+      if (error) {throw error;}
       return accountsToAdd;
     },
     onSuccess: () => {

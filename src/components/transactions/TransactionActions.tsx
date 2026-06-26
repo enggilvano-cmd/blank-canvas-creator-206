@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Edit, Trash2, MoreVertical, CheckCircle } from "lucide-react";
-import { EditScope } from "../TransactionScopeDialog";
+import type { EditScope } from "../TransactionScopeDialog";
 import type { Transaction } from "@/types";
 
 interface TransactionActionsProps {

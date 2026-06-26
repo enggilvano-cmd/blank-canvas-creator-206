@@ -29,7 +29,7 @@ export function TwoFactorVerify({ onVerified, onCancel }: TwoFactorVerifyProps) 
     setLoading(true);
     try {
       const factors = await supabase.auth.mfa.listFactors();
-      if (factors.error) throw factors.error;
+      if (factors.error) {throw factors.error;}
 
       const totpFactor = factors.data?.totp?.[0];
       if (!totpFactor) {
@@ -37,7 +37,7 @@ export function TwoFactorVerify({ onVerified, onCancel }: TwoFactorVerifyProps) 
       }
 
       const challenge = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
-      if (challenge.error) throw challenge.error;
+      if (challenge.error) {throw challenge.error;}
 
       const verify = await supabase.auth.mfa.verify({
         factorId: totpFactor.id,
@@ -45,7 +45,7 @@ export function TwoFactorVerify({ onVerified, onCancel }: TwoFactorVerifyProps) 
         code: code
       });
 
-      if (verify.error) throw verify.error;
+      if (verify.error) {throw verify.error;}
 
       toast({
         title: 'Verificação Bem-sucedida',

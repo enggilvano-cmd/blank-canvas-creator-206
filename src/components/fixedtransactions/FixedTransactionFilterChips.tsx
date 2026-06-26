@@ -14,7 +14,7 @@ interface FixedTransactionFilterChipsProps {
 }
 
 export function FixedTransactionFilterChips({ chips, onClearAll }: FixedTransactionFilterChipsProps) {
-  if (chips.length === 0) return null;
+  if (chips.length === 0) {return null;}
 
   return (
     <div className="flex flex-wrap items-center gap-2">

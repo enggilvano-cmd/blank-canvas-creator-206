@@ -5,7 +5,8 @@
  * Use estes wrappers para componentes que recebem props complexas.
  */
 
-import { memo, ComponentType } from 'react';
+import type { ComponentType } from 'react';
+import { memo } from 'react';
 import { shallowEqual } from './performanceOptimizations';
 
 /**
@@ -88,7 +89,7 @@ export function comparePropsIgnoringCallbacks<P extends Record<string, unknown>>
   const prevKeys = Object.keys(prevProps);
   const nextKeys = Object.keys(nextProps);
 
-  if (prevKeys.length !== nextKeys.length) return false;
+  if (prevKeys.length !== nextKeys.length) {return false;}
 
   return prevKeys.every(key => {
     const prevValue = prevProps[key];

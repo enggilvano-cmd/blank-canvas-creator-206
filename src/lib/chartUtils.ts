@@ -1,4 +1,4 @@
-import { ChartDimensions } from "@/hooks/useChartResponsive";
+import type { ChartDimensions } from "@/hooks/useChartResponsive";
 import type { ChartDataItem } from "@/types/export";
 
 export function formatCurrencyForAxis(value: number, isMobile: boolean): string {

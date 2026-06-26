@@ -6,6 +6,12 @@ import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { formatInUserTimezone } from '@/lib/timezone';
 
+// ✅ BUGFIX #6: Constantes para conversão de moeda
+// Padronização: Banco armazena em REAIS, UI trabalha em CENTAVOS
+const CENTS_PER_REAL = 100;
+const REAIS_TO_CENTS = (reais: number) => Math.round(reais * CENTS_PER_REAL);
+const CENTS_TO_REAIS = (cents: number) => cents / CENTS_PER_REAL;
+
 export function useDashboardCalculations(
   accounts: Account[],
   dateRange: { dateFrom?: string; dateTo?: string }, // ✅ RECEBE dateRange ao invés de calcular
@@ -53,19 +59,19 @@ export function useDashboardCalculations(
     // Filtros da RPC (replicar a lógica)
     const filteredTransactions = allTransactions.filter(t => {
       // Excluir transações de Saldo Inicial
-      if (t.description === 'Saldo Inicial') return false;
+      if (t.description === 'Saldo Inicial') {return false;}
       
       // Excluir transferências (RPC exclui type='transfer' sempre)
-      if (t.type === 'transfer') return false;
-      if (t.to_account_id) return false;
-      if (t.type === 'income' && t.linked_transaction_id) return false;
+      if (t.type === 'transfer') {return false;}
+      if (t.to_account_id) {return false;}
+      if (t.type === 'income' && t.linked_transaction_id) {return false;}
 
       // EXCLUIR apenas o PAI de transações fixas (templates)
       // Se for fixa (is_fixed=true) e NÃO tiver parent_transaction_id, é um template
-      if (t.is_fixed && !t.parent_transaction_id) return false;
+      if (t.is_fixed && !t.parent_transaction_id) {return false;}
 
       // Filtrar por período
-      if (!isInPeriod(t.date)) return false;
+      if (!isInPeriod(t.date)) {return false;}
       
       return true;
     });
@@ -175,28 +181,39 @@ export function useDashboardCalculations(
     const fetchTotals = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {return;}
 
         // Tentar buscar via RPC primeiro (mais rápido e leve)
-        const { data, error } = await supabase.rpc('get_dashboard_metrics', {
+        const { data, error } = await supabase.rpc('get_dashboard_metrics' as any, {
           p_user_id: user.id,
           p_date_from: dateRange.dateFrom || null,
           p_date_to: dateRange.dateTo || null
         });
 
-        if (error) throw error;
+        if (error) {throw error;}
 
-        if (data && data.length > 0) {
-          console.log('✅ Dashboard totals (from RPC):', data[0]);
+        if (data && Array.isArray(data) && data.length > 0) {
+          const metrics = data[0] as {
+            period_income: number;
+            period_expenses: number;
+            balance: number;
+            credit_card_expenses: number;
+            pending_expenses: number;
+            pending_income: number;
+            pending_expenses_count: number;
+            pending_income_count: number;
+          };
+          
+          logger.debug('Dashboard totals (from RPC):', metrics);
           setAggregatedTotals({
-            periodIncome: Number(data[0].period_income) * 100, // Converter para centavos
-            periodExpenses: Number(data[0].period_expenses) * 100,
-            balance: Number(data[0].balance) * 100,
-            creditCardExpenses: Number(data[0].credit_card_expenses) * 100,
-            pendingExpenses: Number(data[0].pending_expenses) * 100,
-            pendingIncome: Number(data[0].pending_income) * 100,
-            pendingExpensesCount: Number(data[0].pending_expenses_count),
-            pendingIncomeCount: Number(data[0].pending_income_count),
+            periodIncome: Number(metrics.period_income) * 100, // Converter para centavos
+            periodExpenses: Number(metrics.period_expenses) * 100,
+            balance: Number(metrics.balance) * 100,
+            creditCardExpenses: Number(metrics.credit_card_expenses) * 100,
+            pendingExpenses: Number(metrics.pending_expenses) * 100,
+            pendingIncome: Number(metrics.pending_income) * 100,
+            pendingExpensesCount: Number(metrics.pending_expenses_count),
+            pendingIncomeCount: Number(metrics.pending_income_count),
           });
         }
       } catch (error) {

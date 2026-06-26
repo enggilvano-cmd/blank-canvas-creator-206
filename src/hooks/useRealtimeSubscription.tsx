@@ -10,7 +10,7 @@ export function useRealtimeSubscription() {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {return;}
 
     logger.info('Setting up realtime subscriptions for user:', user.id);
     

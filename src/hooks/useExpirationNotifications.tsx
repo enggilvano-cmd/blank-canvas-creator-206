@@ -11,7 +11,7 @@ export function useExpirationNotifications() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile) {return;}
 
     let expiresAt: Date | null = null;
 
@@ -21,7 +21,7 @@ export function useExpirationNotifications() {
       expiresAt = parseISO(profile.subscription_expires_at);
     }
 
-    if (!expiresAt) return;
+    if (!expiresAt) {return;}
 
     const today = new Date();
     const daysRemaining = differenceInDays(expiresAt, today);

@@ -5,7 +5,7 @@ import { offlineQueue } from '@/lib/offlineQueue';
 import { offlineSync } from '@/lib/offlineSync';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import { InstallmentTransactionInput } from '@/types';
+import type { InstallmentTransactionInput } from '@/types';
 import { getErrorMessage } from '@/types/errors';
 
 export function useOfflineInstallmentMutations() {

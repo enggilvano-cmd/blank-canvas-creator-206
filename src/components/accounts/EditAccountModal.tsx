@@ -1,4 +1,5 @@
-import { useState, useEffect, FormEvent } from "react";
+import type { FormEvent } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +14,10 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
-import { Account, PREDEFINED_COLORS, ACCOUNT_TYPE_LABELS } from "@/types";
+import type { Account} from "@/types";
+import { PREDEFINED_COLORS, ACCOUNT_TYPE_LABELS } from "@/types";
 import { ColorPicker } from "@/components/forms/ColorPicker";
-import { EditAccountModalProps } from "@/types/formProps";
+import type { EditAccountModalProps } from "@/types/formProps";
 import { supabase as _supabase } from "@/integrations/supabase/client";
 
 export function EditAccountModal({
@@ -39,7 +41,7 @@ export function EditAccountModal({
 
   useEffect(() => {
     // Resetar e carregar o saldo inicial sempre que a conta ou o modal abre
-    if (!account || !open) return;
+    if (!account || !open) {return;}
 
     // Converter balance de reais (DECIMAL no banco) para centavos (CurrencyInput espera centavos)
     const balanceInCents = Math.round((account.balance || 0) * 100);
@@ -60,7 +62,7 @@ export function EditAccountModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!account) return;
+    if (!account) {return;}
 
     if (!formData.name.trim() || !formData.type) {
       toast({

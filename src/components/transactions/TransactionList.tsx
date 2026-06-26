@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency } from "@/lib/formatters";
 import { TransactionActions } from "./TransactionActions";
-import { EditScope } from "../TransactionScopeDialog";
+import type { EditScope } from "../TransactionScopeDialog";
 import type { Transaction, Account, Category } from "@/types";
 import { memo, useMemo } from "react";
 import { useEntityMap } from "@/lib/performanceOptimizations";
@@ -19,7 +19,7 @@ interface TransactionListProps {
   onMarkAsPaid?: (transaction: Transaction) => void;
 }
 
-export const TransactionList = memo(function TransactionList({
+export const TransactionList = memo(({
   transactions,
   accounts,
   categories,
@@ -27,7 +27,7 @@ export const TransactionList = memo(function TransactionList({
   onEdit,
   onDelete,
   onMarkAsPaid,
-}: TransactionListProps) {
+}: TransactionListProps) => {
   // ✅ Otimização: Criar Maps para O(1) lookup ao invés de O(n) find
   const accountsMap = useEntityMap(accounts);
   const categoriesMap = useEntityMap(categories);
@@ -41,7 +41,7 @@ export const TransactionList = memo(function TransactionList({
 
   const getCategoryName = useMemo(
     () => (categoryId: string | null) => {
-      if (!categoryId) return "-";
+      if (!categoryId) {return "-";}
       return categoriesMap.get(categoryId)?.name || "-";
     },
     [categoriesMap]

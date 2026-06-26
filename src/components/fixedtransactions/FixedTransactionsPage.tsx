@@ -191,7 +191,7 @@ export function FixedTransactionsPage({
   const loadCategories = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {return;}
 
       const { data, error } = await supabase
         .from("categories")
@@ -199,7 +199,7 @@ export function FixedTransactionsPage({
         .eq("user_id", user.id)
         .order("name", { ascending: true });
 
-      if (error) throw error;
+      if (error) {throw error;}
       setCategories(data || []);
     } catch (error) {
       logger.error("Error loading categories:", error);
@@ -209,7 +209,7 @@ export function FixedTransactionsPage({
   const loadAccounts = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {return;}
 
       const { data, error } = await supabase
         .from("accounts")
@@ -217,7 +217,7 @@ export function FixedTransactionsPage({
         .eq("user_id", user.id)
         .order("name", { ascending: true });
 
-      if (error) throw error;
+      if (error) {throw error;}
       setAccounts(data || []);
     } catch (error) {
       logger.error("Error loading accounts:", error);
@@ -226,7 +226,7 @@ export function FixedTransactionsPage({
 
   const handleAdd = async (transaction: { description: string; amount: number; type: 'income' | 'expense'; category_id: string | null; account_id: string; date: string; is_fixed: boolean; status?: 'pending' | 'completed'; is_provision?: boolean }) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {return;}
 
     const saveOffline = async () => {
       const tempId = `temp-${Date.now()}`;
@@ -246,14 +246,14 @@ export function FixedTransactionsPage({
       if (transaction.category_id) {
           const cats = await offlineDatabase.getCategories(user.id);
           const cat = cats.find(c => c.id === transaction.category_id);
-          if (cat) categoryData = { name: cat.name, color: cat.color };
+          if (cat) {categoryData = { name: cat.name, color: cat.color };}
       }
       
       let accountData = null;
       if (transaction.account_id) {
           const accs = await offlineDatabase.getAccounts(user.id);
           const acc = accs.find(a => a.id === transaction.account_id);
-          if (acc) accountData = { name: acc.name };
+          if (acc) {accountData = { name: acc.name };}
       }
 
       // ✅ Type-safe: Criar transação com relações
@@ -395,9 +395,9 @@ export function FixedTransactionsPage({
 
   const handleEdit = async (transaction: Transaction) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {return;}
 
-    if (!transactionToEdit) return;
+    if (!transactionToEdit) {return;}
 
     // Comparar valores originais com editados e enviar apenas os campos alterados
     const updates: Record<string, unknown> = {};
@@ -486,7 +486,7 @@ export function FixedTransactionsPage({
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (statusError) throw statusError;
+      if (statusError) {throw statusError;}
 
       // Editar a transação principal SOMENTE se estiver PENDENTE
       if (mainTransaction?.status === "pending") {
@@ -501,7 +501,7 @@ export function FixedTransactionsPage({
           },
         });
 
-        if (mainError) throw mainError;
+        if (mainError) {throw mainError;}
 
         const result = Array.isArray(data) ? data[0] : data;
         if (result && !result.success) {
@@ -517,7 +517,7 @@ export function FixedTransactionsPage({
         .eq("user_id", user.id)
         .eq("status", "pending"); // Buscar APENAS pendentes
 
-      if (childError) throw childError;
+      if (childError) {throw childError;}
 
       // Editar apenas as filhas pendentes com os mesmos campos alterados
       if (childTransactions && childTransactions.length > 0) {
@@ -554,7 +554,7 @@ export function FixedTransactionsPage({
             },
           });
 
-          if (error) throw error;
+          if (error) {throw error;}
 
           const result = Array.isArray(data) ? data[0] : data;
           if (result && !result.success) {
@@ -583,7 +583,7 @@ export function FixedTransactionsPage({
 
       // Salvar tudo no cache offline
       const allUpdated = [];
-      if (updatedMainTx) allUpdated.push(updatedMainTx);
+      if (updatedMainTx) {allUpdated.push(updatedMainTx);}
       allUpdated.push(...updatedChildren);
       if (allUpdated.length > 0) {
         await offlineDatabase.saveTransactions(allUpdated as any);
@@ -625,12 +625,12 @@ export function FixedTransactionsPage({
   };
 
   const handleConfirmDelete = async () => {
-    if (!transactionToDelete) return;
+    if (!transactionToDelete) {return;}
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {return;}
 
     const isTempId = transactionToDelete.id.startsWith('temp-');
 
@@ -667,7 +667,7 @@ export function FixedTransactionsPage({
         }
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       // Verificar se restaram filhos CONCLUÍDOS após a exclusão
       const { count: remainingChildrenCount } = await supabase
@@ -726,7 +726,7 @@ export function FixedTransactionsPage({
   const handleGenerateNext12Months = async (transactionId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {return;}
 
       const isTempId = transactionId.startsWith('temp-');
       if (isTempId) {
@@ -757,7 +757,7 @@ export function FixedTransactionsPage({
         .order("date", { ascending: false })
         .limit(1);
 
-      if (childError) throw childError;
+      if (childError) {throw childError;}
 
       // Determinar a data inicial para os próximos 12 meses
       let startDate: Date;
@@ -811,7 +811,7 @@ export function FixedTransactionsPage({
         .from("transactions")
         .insert(transactionsToGenerate);
 
-      if (insertError) throw insertError;
+      if (insertError) {throw insertError;}
 
       toast({
         title: "Transações geradas",
@@ -849,7 +849,7 @@ export function FixedTransactionsPage({
     let result = transactions.filter((transaction) => {
       // Search Term Filter (Name OR Amount)
       const matchesSearch = (() => {
-        if (!searchTerm) return true;
+        if (!searchTerm) {return true;}
         const searchLower = searchTerm.toLowerCase();
         const matchesName = transaction.description.toLowerCase().includes(searchLower);
         
@@ -927,7 +927,7 @@ export function FixedTransactionsPage({
   const handleExportToExcel = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {return;}
 
       // Para cada parent, contar quantas children pending existem
       const exportDataPromises = filteredTransactions.map(async (transaction) => {
@@ -1198,7 +1198,7 @@ export function FixedTransactionsPage({
           open={editModalOpen}
           onOpenChange={(open) => {
             setEditModalOpen(open);
-            if (!open) setTransactionToEdit(null);
+            if (!open) {setTransactionToEdit(null);}
           }}
           onEditTransaction={handleEdit}
           transaction={transactionToEdit}

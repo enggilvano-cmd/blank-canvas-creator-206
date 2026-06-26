@@ -16,7 +16,7 @@ export function OfflineSyncIndicator() {
     let mounted = true;
     
     const checkQueue = async () => {
-      if (!mounted) return;
+      if (!mounted) {return;}
       
       const operations = await offlineQueue.getAll();
       const status = offlineSync.getStatus();

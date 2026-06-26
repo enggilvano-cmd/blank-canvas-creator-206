@@ -5,9 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TrendingUp, BarChart3 } from 'lucide-react';
 import { useChartResponsive } from '@/hooks/useChartResponsive';
 import { useSettings } from '@/context/SettingsContext';
-import { useDashboardChartData, ChartScaleType } from '@/hooks/useDashboardChartData';
+import type { ChartScaleType } from '@/hooks/useDashboardChartData';
+import { useDashboardChartData } from '@/hooks/useDashboardChartData';
 import type { Account, Transaction, DateFilterType } from '@/types';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import {
   ChartContainer,
   ChartTooltip,
@@ -74,8 +76,8 @@ export function FinancialEvolutionChart({
     customEndDate
   );
 
-  // DEBUG: Log chart data para diagnosticar problema das barras desaparecidas
-  console.log('📈 FinancialEvolutionChart - chartData:', {
+  // Log chart data for debugging
+  logger.debug('FinancialEvolutionChart - chartData:', {
     scale: chartScale,
     dataLength: chartData.length,
     sample: chartData.slice(0, 3).map(d => ({
@@ -124,7 +126,7 @@ export function FinancialEvolutionChart({
     [isMobile]
   );
 
-  if (chartData.length === 0) return null;
+  if (chartData.length === 0) {return null;}
 
   return (
     <Card className="financial-card">

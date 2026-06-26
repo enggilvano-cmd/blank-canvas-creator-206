@@ -20,12 +20,12 @@ export function useTransferMutations() {
     amount: number,
     date: Date
   ) => {
-    if (!user) throw new Error('Usuário não autenticado');
+    if (!user) {throw new Error('Usuário não autenticado');}
 
     try {
       const fromAccount = accounts.find((acc) => acc.id === fromAccountId);
       const toAccount = accounts.find((acc) => acc.id === toAccountId);
-      if (!fromAccount || !toAccount) throw new Error('Contas não encontradas');
+      if (!fromAccount || !toAccount) {throw new Error('Contas não encontradas');}
 
       // Chamada direta RPC para evitar problemas com Edge Function
       const { data, error } = await supabase.rpc('atomic_create_transfer', {
@@ -39,7 +39,7 @@ export function useTransferMutations() {
         p_status: 'completed',
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       // Verificar sucesso retornado pela função SQL
       // A função retorna uma tabela, então data é um array
@@ -68,7 +68,7 @@ export function useTransferMutations() {
   }, [user, accounts, queryClient, toast]);
 
   const handleDeleteTransfer = useCallback(async (transferId: string) => {
-    if (!user) throw new Error('Usuário não autenticado');
+    if (!user) {throw new Error('Usuário não autenticado');}
 
     try {
       const { error } = await supabase
@@ -76,7 +76,7 @@ export function useTransferMutations() {
         .delete()
         .eq('transfer_id', transferId);
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
@@ -99,7 +99,7 @@ export function useTransferMutations() {
   }, [user, queryClient, toast]);
 
   const handleEditTransfer = useCallback(async (transferId: string, updates: { amount?: number; date?: string, description?: string }) => {
-    if (!user) throw new Error('Usuário não autenticado');
+    if (!user) {throw new Error('Usuário não autenticado');}
 
     try {
       const { error } = await supabase.rpc('atomic_update_transfer', {
@@ -109,7 +109,7 @@ export function useTransferMutations() {
         p_description: updates.description,
       });
 
-      if (error) throw error;
+      if (error) {throw error;}
 
       queryClient.invalidateQueries({ queryKey: queryKeys.transactionsBase });
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts });

@@ -101,9 +101,9 @@ export function ImportCategoriesModal({
   const validateCategoryType = (tipo: string): 'income' | 'expense' | 'both' | null => {
     const normalizedType = normalizeString(tipo);
     // Suporte para PT-BR, EN-US, ES-ES (singular e plural)
-    if (['receita', 'receitas', 'income', 'entrada', 'entradas', 'ingreso', 'ingresos'].includes(normalizedType)) return 'income';
-    if (['despesa', 'despesas', 'expense', 'expenses', 'saida', 'saidas', 'gasto', 'gastos'].includes(normalizedType)) return 'expense';
-    if (['ambos', 'both', 'misto', 'mista'].includes(normalizedType)) return 'both';
+    if (['receita', 'receitas', 'income', 'entrada', 'entradas', 'ingreso', 'ingresos'].includes(normalizedType)) {return 'income';}
+    if (['despesa', 'despesas', 'expense', 'expenses', 'saida', 'saidas', 'gasto', 'gastos'].includes(normalizedType)) {return 'expense';}
+    if (['ambos', 'both', 'misto', 'mista'].includes(normalizedType)) {return 'both';}
     return null;
   };
 
@@ -193,7 +193,7 @@ export function ImportCategoriesModal({
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
+    if (!selectedFile) {return;}
 
     if (!selectedFile.name.match(/\.(xlsx|xls)$/)) {
       toast({
@@ -230,9 +230,9 @@ export function ImportCategoriesModal({
       setImportedData(validatedData);
 
       const summary = validatedData.reduce((acc, t) => {
-        if (!t.isValid) acc.invalid++;
-        else if (t.isDuplicate) acc.duplicates++;
-        else acc.new++;
+        if (!t.isValid) {acc.invalid++;}
+        else if (t.isDuplicate) {acc.duplicates++;}
+        else {acc.new++;}
         return acc;
       }, { new: 0, duplicates: 0, invalid: 0 });
 
