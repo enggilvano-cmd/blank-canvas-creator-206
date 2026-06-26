@@ -79,10 +79,10 @@ export function AccountCategoryFields({
                         <span className="text-body font-medium">{selectedAccount.name}</span>
                       </div>
                       <div className="text-caption text-muted-foreground pl-5">
-                        {formatCurrency(selectedAccount.balance * 100)}
-                        {selectedAccount.limit_amount && selectedAccount.limit_amount > 0 && (
+                        {formatCurrency(Math.round(selectedAccount.balance * 100))}
+                        {(selectedAccount.limit_amount && selectedAccount.limit_amount > 0) ? (
                           <span className="text-primary font-semibold"> + {formatCurrency(selectedAccount.limit_amount)} limite</span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -102,12 +102,12 @@ export function AccountCategoryFields({
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="font-medium truncate text-body">{account.name}</span>
                       <span className="text-caption text-muted-foreground">
-                        {formatCurrency(account.balance * 100)}
-                        {account.limit_amount && account.limit_amount > 0 && (
+                        {formatCurrency(Math.round(account.balance * 100))}
+                        {(account.limit_amount && account.limit_amount > 0) ? (
                           <span className="text-primary ml-1">
-                            + {formatCurrency(account.limit_amount)} limite
+                            {' '}+ {formatCurrency(account.limit_amount)} limite
                           </span>
-                        )}
+                        ) : null}
                       </span>
                     </div>
                   </div>

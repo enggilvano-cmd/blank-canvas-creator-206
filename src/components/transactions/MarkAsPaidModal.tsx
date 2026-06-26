@@ -32,7 +32,6 @@ export function MarkAsPaidModal({
   const [date, setDate] = useState<Date>(new Date());
   const [amount, setAmount] = useState<number>(0); // Em centavos
   const [accountId, setAccountId] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Obter a conta selecionada para verificar se é cartão de crédito
   const selectedAccount = useMemo(() => {
@@ -58,31 +57,18 @@ export function MarkAsPaidModal({
       // transaction.amount está em REAIS no banco, converter para centavos para o CurrencyInput
       setAmount(Math.round(Math.abs(transaction.amount) * 100));
       setAccountId(transaction.account_id);
-      setIsSubmitting(false);  // ⚠️ Reset isSubmitting ao abrir modal
     }
   }, [open, transaction]);
 
   const handleConfirm = () => {
-    // ⚠️ CRÍTICO: Evitar submissões duplicadas
-    if (isSubmitting) {
-      return;
-    }
-    
     if (!transaction || !accountId) {
       return;
     }
     
-    setIsSubmitting(true);
-    
-    try {
-      // Amount está em centavos (do CurrencyInput), converter para reais antes de enviar
-      const amountInReais = amount / 100;
-      onConfirm(transaction.id, date, amountInReais, accountId, invoiceMonth);
-      onOpenChange(false);
-    } finally {
-      // ⚠️ CRÍTICO: Sempre resetar isSubmitting
-      setIsSubmitting(false);
-    }
+    // Amount está em centavos (do CurrencyInput), converter para reais antes de enviar
+    const amountInReais = amount / 100;
+    onConfirm(transaction.id, date, amountInReais, accountId, invoiceMonth);
+    onOpenChange(false);
   };
 
   const handleAmountChange = (value: number) => {
@@ -144,14 +130,14 @@ export function MarkAsPaidModal({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
           <Button 
             onClick={handleConfirm}
-            disabled={!accountId || amount <= 0 || isSubmitting}
+            disabled={!accountId || amount <= 0}
           >
-            {isSubmitting ? "Processando..." : "Confirmar"}
+            Confirmar
           </Button>
         </DialogFooter>
       </DialogContent>

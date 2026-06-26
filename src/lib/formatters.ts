@@ -44,7 +44,10 @@ export function formatCurrency(
   if (typeof valueInCents === 'number' && (isNaN(valueInCents) || !isFinite(valueInCents))) {
     throw new Error('Invalid number');
   }
-  const value = valueInCents / 100;
+  
+  // ✅ Arredondar para centavos inteiros antes de converter para reais
+  const roundedCents = Math.round(valueInCents);
+  const value = roundedCents / 100;
   const finalLocale = locale || CURRENCY_LOCALES[currency] || 'pt-BR';
   
   try {
@@ -52,6 +55,7 @@ export function formatCurrency(
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   } catch (error) {
     // Fallback se a moeda não for suportada

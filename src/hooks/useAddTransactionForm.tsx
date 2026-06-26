@@ -212,6 +212,9 @@ export function useAddTransactionForm({
         });
         
         logger.error("Validation errors:", errors);
+        
+        // ✅ Resetar isSubmitting em caso de erro de validação
+        setIsSubmitting(false);
         return;
       }
     }
@@ -227,6 +230,9 @@ export function useAddTransactionForm({
         description: "Número de parcelas deve estar entre 2 e 360",
         variant: "destructive",
       });
+      
+      // ✅ Resetar isSubmitting em caso de erro de validação
+      setIsSubmitting(false);
       return;
     }
 
@@ -236,6 +242,9 @@ export function useAddTransactionForm({
         description: "Conta não encontrada",
         variant: "destructive",
       });
+      
+      // ✅ Resetar isSubmitting em caso de erro de validação
+      setIsSubmitting(false);
       return;
     }
 
@@ -255,6 +264,13 @@ export function useAddTransactionForm({
         categoryId: formData.category_id,
       });
 
+      // ✅ Fechar modal IMEDIATAMENTE para melhor UX
+      onClose();
+      
+      // ✅ Resetar isSubmitting
+      setIsSubmitting(false);
+      
+      // Processar transação em background (não bloqueia o fechamento do modal)
       if (isInstallment) {
         await handleInstallmentTransaction(installments);
       } else if (formData.isFixed) {
@@ -268,23 +284,21 @@ export function useAddTransactionForm({
         isInstallment,
         installmentCount: isInstallment ? installments : undefined,
       });
-
-      // Fechar modal (reset será feito pelo useEffect após animação)
-      onClose();
     } catch (error: unknown) {
       logger.error("Error creating transaction(s):", error);
       trackUserAction('Transaction Create Failed', 'transaction', {
         type: formData.type,
         error: getErrorMessage(error),
       });
+      
+      // ✅ Resetar isSubmitting em caso de erro
+      setIsSubmitting(false);
+      
       toast({
         title: "Erro",
         description: getErrorMessage(error) || "Erro ao criar transação",
         variant: "destructive",
       });
-    } finally {
-      // ⚠️ CRÍTICO: Sempre resetar isSubmitting (sucesso ou erro)
-      setIsSubmitting(false);
     }
   }, [formData, customInstallments, selectedAccount, toast, onClose, isSubmitting]);
 
