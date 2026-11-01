@@ -6,6 +6,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import type { Account, Category} from "@/types";
 import { ACCOUNT_TYPE_LABELS } from "@/types";
 import { formatCurrency } from "@/lib/formatters";
+import { getInvoiceMonthOptions } from "@/lib/dateUtils";
 
 interface EditTransactionFormFieldsProps {
   formData: {
@@ -211,21 +212,11 @@ export function EditTransactionFormFields({
               <SelectValue placeholder="Selecione o mês da fatura" />
             </SelectTrigger>
             <SelectContent>
-              {(() => {
-                const months = [];
-                const today = new Date();
-                for (let i = -2; i <= 12; i++) {
-                  const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-                  const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                  const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-                  months.push(
-                    <SelectItem key={value} value={value}>
-                      {label.charAt(0).toUpperCase() + label.slice(1)}
-                    </SelectItem>
-                  );
-                }
-                return months;
-              })()}
+              {getInvoiceMonthOptions(formData.invoiceMonth).map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <p className="text-caption text-muted-foreground">

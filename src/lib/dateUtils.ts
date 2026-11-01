@@ -15,6 +15,43 @@ function createFallbackDate(invalidInput?: unknown): Date {
   return new Date(0); // Retorna "1 Jan 1970"
 }
 
+const INVOICE_MONTHS_BACK = 12;
+const INVOICE_MONTHS_FORWARD = 12;
+
+/**
+ * Gera as opções do seletor de mês da fatura (YYYY-MM), do mais antigo ao mais recente.
+ * O mês já selecionado é sempre incluído, mesmo fora da janela, para não aparecer em branco.
+ */
+export function getInvoiceMonthOptions(
+  selectedMonth?: string,
+  baseDate: Date = new Date()
+): { value: string; label: string }[] {
+  const toOption = (date: Date) => {
+    const label = date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    return {
+      value: format(date, "yyyy-MM"),
+      label: label.charAt(0).toUpperCase() + label.slice(1),
+    };
+  };
+
+  const options = [];
+  for (let i = -INVOICE_MONTHS_BACK; i <= INVOICE_MONTHS_FORWARD; i++) {
+    options.push(toOption(new Date(baseDate.getFullYear(), baseDate.getMonth() + i, 1)));
+  }
+
+  if (
+    selectedMonth &&
+    /^\d{4}-\d{2}$/.test(selectedMonth) &&
+    !options.some((option) => option.value === selectedMonth)
+  ) {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    options.push(toOption(new Date(year, month - 1, 1)));
+    options.sort((a, b) => a.value.localeCompare(b.value));
+  }
+
+  return options;
+}
+
 /**
  * Calcula o mês de fatura (YYYY-MM) baseado na DATA DA COMPRA, DIA DE FECHAMENTO e DIA DE VENCIMENTO.
  * ✅ BUGFIX: Agora usa timezone do usuário corretamente
