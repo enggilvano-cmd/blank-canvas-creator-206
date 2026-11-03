@@ -100,6 +100,23 @@ Deno.serve(async (req) => {
 
     logger.info('Deleting user:', userId);
 
+    // Remove a foto de perfil, que fica fora do cascade do banco
+    const { data: avatarFiles, error: avatarListError } = await supabaseClient.storage
+      .from('avatars')
+      .list(userId)
+
+    if (avatarListError) {
+      logger.warn('Failed to list avatar files:', avatarListError);
+    } else if (avatarFiles?.length) {
+      const { error: avatarRemoveError } = await supabaseClient.storage
+        .from('avatars')
+        .remove(avatarFiles.map((file) => `${userId}/${file.name}`))
+
+      if (avatarRemoveError) {
+        logger.warn('Failed to remove avatar files:', avatarRemoveError);
+      }
+    }
+
     // Delete user from auth.users (this will cascade to profiles due to ON DELETE CASCADE) with retry
     const { error: deleteError } = await withRetry(
       () => supabaseClient.auth.admin.deleteUser(userId)

@@ -40,6 +40,7 @@ interface AuthContextType {
   isSubscriptionActive: () => boolean;
   getSubscriptionTimeRemaining: () => string | null;
   initializeUserData: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -116,6 +117,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
       return null; // CRITICAL: Return null on error
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (!user) {return;}
+
+    const profileData = await fetchProfile(user.id);
+    if (profileData) {
+      setProfile(profileData);
     }
   };
 
@@ -602,6 +612,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSubscriptionActive,
         getSubscriptionTimeRemaining,
         initializeUserData,
+        refreshProfile,
       }}
     >
       {children}

@@ -7,12 +7,15 @@ interface PWAUpdateConfig {
   onUpdateError?: (error: Error) => void;
 }
 
+const RESUME_CHECK_THROTTLE = 60 * 1000; // 1 minuto
+
 class PWAUpdateManager {
   private currentVersion: string = '';
   private currentBuildTime: string | null = null;
   private initialBuildTime: string | null = null; // Armazena o build time inicial da sessão
   private sw: ServiceWorkerRegistration | null = null;
   private updateCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private lastResumeCheck = 0;
   private listeners: Set<() => void> = new Set();
   private config: PWAUpdateConfig = {
     checkInterval: 60 * 60 * 1000, // 1 hora
@@ -79,10 +82,30 @@ class PWAUpdateManager {
       });
     }, this.config.checkInterval);
 
+    // No Android o app costuma ser retomado do segundo plano, sem navegação
+    // e com o setInterval congelado: é preciso verificar ao voltar a ficar visível
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
     logger.info(
       `[PWA] Verificação periódica de atualizações iniciada (intervalo: ${this.config.checkInterval}ms)`
     );
   }
+
+  /**
+   * Verifica atualizações quando o app volta ao primeiro plano
+   */
+  private handleVisibilityChange = () => {
+    if (document.visibilityState !== 'visible') {return;}
+
+    const now = Date.now();
+    if (now - this.lastResumeCheck < RESUME_CHECK_THROTTLE) {return;}
+    this.lastResumeCheck = now;
+
+    this.checkForUpdates().catch((error) => {
+      logger.warn('[PWA] Erro ao verificar atualizações ao retomar o app', error);
+    });
+  };
 
   /**
    * Verifica se há atualizações disponíveis
@@ -251,8 +274,8 @@ class PWAUpdateManager {
       } else {
         // Limpar apenas dados de cache/temp
         const keysToDelete = Object.keys(localStorage).filter((key) => {
-          // Manter dados críticos do usuário
-          return !key.startsWith('user_') && !key.startsWith('auth_');
+          // Manter dados críticos do usuário (sb-* guarda a sessão do Supabase)
+          return !key.startsWith('user_') && !key.startsWith('auth_') && !key.startsWith('sb-');
         });
 
         keysToDelete.forEach((key) => {
@@ -319,6 +342,7 @@ class PWAUpdateManager {
       clearInterval(this.updateCheckInterval);
       this.updateCheckInterval = null;
     }
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     logger.info('[PWA] Update manager destruído');
   }
 

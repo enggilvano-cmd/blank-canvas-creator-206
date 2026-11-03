@@ -1,19 +1,15 @@
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { offlineSync } from '@/lib/offlineSync';
 import { logger } from '@/lib/logger';
 import { pwaUpdateManager, type PWAUpdateConfig } from '@/lib/pwaUpdateManager';
 
 export function ReloadPrompt() {
-  const [isUpdating, setIsUpdating] = useState(false);
   const swRegistrationRef = useRef<ServiceWorkerRegistration | undefined>();
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r: ServiceWorkerRegistration | undefined) {
       logger.info('Service Worker registered', r);
@@ -25,7 +21,7 @@ export function ReloadPrompt() {
           checkInterval: 60 * 60 * 1000, // Verificar a cada 1 hora
           onUpdateAvailable: (registration) => {
             logger.info('PWA update available');
-            // O sistema de registro automaticamente mostrará o prompt
+            // Com registerType 'autoUpdate', o novo SW ativa sozinho e recarrega a página
           },
           onUpdateApplied: () => {
             logger.info('PWA update applied');
@@ -85,59 +81,6 @@ export function ReloadPrompt() {
       setOfflineReady(false);
     }
   }, [offlineReady, setOfflineReady]);
-
-  // Trata atualização do PWA
-  useEffect(() => {
-    if (needRefresh) {
-      logger.info('New content available, showing reload prompt');
-      toast({
-        title: "Nova versão disponível",
-        description: "Uma nova versão do aplicativo está disponível com melhorias e correções.",
-        action: (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleUpdate()}
-            disabled={isUpdating}
-          >
-            {isUpdating ? 'Atualizando...' : 'Atualizar'}
-          </Button>
-        ),
-        duration: Infinity,
-      });
-    }
-  }, [needRefresh, isUpdating]);
-
-  /**
-   * Realiza atualização automática do PWA
-   */
-  const handleUpdate = async () => {
-    try {
-      setIsUpdating(true);
-      logger.info('Starting PWA update process');
-
-      // Primeiro, atualizar via VitePWA
-      await updateServiceWorker(true);
-
-      // Depois aplicar limpeza de caches via gerenciador
-      setTimeout(async () => {
-        try {
-          await pwaUpdateManager.applyUpdate();
-        } catch (error) {
-          logger.error('Error applying PWA update', error);
-          // A página já foi recarregada, não precisa fazer nada
-        }
-      }, 100);
-    } catch (error) {
-      logger.error('Error during PWA update', error);
-      setIsUpdating(false);
-      toast({
-        title: "Erro na atualização",
-        description: "Houve um erro ao atualizar o aplicativo. Por favor, tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
 
   /**
    * Força limpeza completa e reinstalação

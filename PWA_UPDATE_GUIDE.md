@@ -87,60 +87,22 @@ Melhorias:
 
 ## Fluxo de Atualização
 
-```
-┌─────────────────────────────────────────────┐
-│   Novo Build Detectado                      │
-└─────────────────────┬───────────────────────┘
-                      │
-                      ▼
-         ┌────────────────────────┐
-         │ Comparar Versão        │
-         │ (via version.json)     │
-         └────────────┬───────────┘
-                      │
-               ┌──────▼──────┐
-               │  Versão     │
-               │ Diferente?  │
-               └──┬───────┬──┘
-              SIM│       │NÃO
-                 ▼       └─→ Nenhuma ação
-         ┌──────────────────┐
-         │ Mostrar Notif.   │
-         │ "Nova Versão"    │
-         └────────┬─────────┘
-                  │
-         ┌────────▼────────────┐
-         │ Usuário clica em    │
-         │ "Atualizar"         │
-         └────────┬────────────┘
-                  │
-         ┌────────▼────────────────┐
-         │ 1. Ativar novo SW       │
-         │ 2. Limpar caches        │
-         │ 3. Limpar storages      │
-         │ 4. Recarregar página    │
-         └────────┬────────────────┘
-                  │
-         ┌────────▼────────────────┐
-         │ ✅ PWA Atualizado       │
-         │ e Funcionando           │
-         └────────────────────────┘
-```
+O app usa `registerType: 'autoUpdate'`, então não há toast nem ação do usuário:
+
+1. O navegador encontra um novo `sw.js` em uma verificação.
+2. O novo service worker instala, ativa sozinho e assume o controle.
+3. A página recarrega automaticamente na nova versão.
 
 ## Como Usar
 
 ### 1. **Atualização Automática**
 
-A atualização ocorre automaticamente quando:
+A verificação ocorre quando:
 - Usuário abre o app
-- A cada 1 hora (intervalo configurável)
-- Detecta nova versão em `public/version.json`
+- O app volta do segundo plano (no máximo 1 vez por minuto)
+- A cada 1 hora, com o app em primeiro plano (intervalo configurável)
 
-### 2. **Atualização Manual (Via Interface)**
-
-Usuário clica em "Atualizar" no toast que aparece quando há nova versão.
-
-### 3. **Atualização Manual (Via Console/Debug)**
+### 2. **Atualização Manual (Via Console/Debug)**
 
 ```javascript
 // No console do navegador:
@@ -158,7 +120,7 @@ pwaStatus();
 // }
 ```
 
-### 4. **Compilar com Nova Versão**
+### 3. **Compilar com Nova Versão**
 
 ```bash
 # O script de versão é executado automaticamente
@@ -181,7 +143,7 @@ Quando `pwaUpdateManager.applyUpdate()` é executado:
 
 2. **Limpar Storage (Seletivo)**
    - Remove dados temporários
-   - Mantém dados críticos do usuário (auth_*, user_*)
+   - Mantém dados críticos do usuário (auth_*, user_*, sb-*)
    - Limpa sessionStorage completamente
 
 3. **Ativar Novo Service Worker**
@@ -288,9 +250,8 @@ caches.keys().then(names => {
 4. ✅ **Monitorar logs em produção**
    - Use o logger para rastrear problemas
 
-5. ✅ **Permitir que usuários controlem atualizações**
-   - Mostre UI clara quando há atualização
-   - Deixe usuário decidir quando atualizar
+5. ✅ **Lembrar que a atualização recarrega a página**
+   - Dados de formulários ainda não enviados são perdidos no recarregamento
 
 ## Troubleshooting
 

@@ -122,7 +122,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     componentTagger(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifestFilename: 'manifest.webmanifest',
       manifest: false, // Usar o manifest.webmanifest do public/

@@ -952,6 +952,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      update_own_avatar: {
+        Args: { p_avatar_url: string | null }
+        Returns: undefined
+      }
       validate_double_entry: {
         Args: { p_transaction_id: string }
         Returns: {

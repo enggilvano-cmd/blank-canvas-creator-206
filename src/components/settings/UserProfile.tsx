@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { User, Shield, Key, Activity, ShieldCheck, ShieldOff } from 'lucide-react';
 import { TwoFactorSetup } from "@/components/TwoFactorSetup";
+import { AvatarUpload } from "@/components/settings/AvatarUpload";
 import { logger } from '@/lib/logger';
 import {
   AlertDialog,
@@ -31,7 +31,7 @@ interface AuditLog {
 }
 
 export function UserProfile() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [recentActivities, setRecentActivities] = useState<AuditLog[]>([]);
@@ -265,12 +265,12 @@ export function UserProfile() {
             <CardContent className="space-y-4">
               {/* Avatar and Basic Info */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-                  <AvatarImage src={profile.avatar_url} />
-                  <AvatarFallback className="text-lg sm:text-xl">
-                    {profile.full_name?.charAt(0) || profile.email.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
+                <AvatarUpload
+                  userId={profile.user_id}
+                  avatarUrl={profile.avatar_url}
+                  fallback={profile.full_name?.charAt(0) || profile.email.charAt(0)}
+                  onChange={refreshProfile}
+                />
                 <div className="flex-1 space-y-1">
                   <h3 className="font-semibold text-base sm:text-lg">{profile.full_name || 'Sem Nome'}</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground break-all">{profile.email}</p>
