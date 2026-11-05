@@ -165,7 +165,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                     {formData.fromAccountId && (() => {
                       const selectedAccount = sourceAccounts.find((acc) => acc.id === formData.fromAccountId);
                       if (!selectedAccount) {return null;}
-                      const hasLimit = selectedAccount.limit_amount && selectedAccount.limit_amount > 0;
+                      const hasLimit = (selectedAccount.limit_amount ?? 0) > 0;
                       return (
                         <div className="flex flex-col gap-1 w-full py-1">
                           <div className="flex items-center gap-2">
@@ -190,7 +190,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                 </SelectTrigger>
                 <SelectContent>
                   {[...sourceAccounts].sort((a, b) => a.name.localeCompare(b.name)).map((account) => {
-                    const hasLimit = account.limit_amount && account.limit_amount > 0;
+                    const hasLimit = (account.limit_amount ?? 0) > 0;
                     
                     return (
                       <SelectItem key={account.id} value={account.id}>
@@ -232,7 +232,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                     {formData.toAccountId && (() => {
                       const selectedAccount = destinationAccounts.find((acc) => acc.id === formData.toAccountId);
                       if (!selectedAccount) {return null;}
-                      const hasLimit = selectedAccount.limit_amount && selectedAccount.limit_amount > 0;
+                      const hasLimit = (selectedAccount.limit_amount ?? 0) > 0;
                       return (
                         <div className="flex flex-col gap-1 w-full py-1">
                           <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ export function TransferModal({ open, onOpenChange, onTransfer }: TransferModalP
                   {[...destinationAccounts]
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((account) => {
-                      const hasLimit = account.limit_amount && account.limit_amount > 0;
+                      const hasLimit = (account.limit_amount ?? 0) > 0;
                       
                       return (
                         <SelectItem key={account.id} value={account.id}>

@@ -265,7 +265,7 @@ export function CreditPaymentModal({
                   {formData.bankAccountId && (() => {
                     const selectedAccount = bankAccounts.find((acc) => acc.id === formData.bankAccountId);
                     if (!selectedAccount) {return null;}
-                    const hasLimit = selectedAccount.limit_amount && selectedAccount.limit_amount > 0;
+                    const hasLimit = (selectedAccount.limit_amount ?? 0) > 0;
                     return (
                       <div className="flex flex-col gap-1 w-full py-1">
                         <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export function CreditPaymentModal({
                   </div>
                 ) : (
                   bankAccounts.map((account) => {
-                    const hasLimit = account.limit_amount && account.limit_amount > 0;
+                    const hasLimit = (account.limit_amount ?? 0) > 0;
                     return (
                       <SelectItem key={account.id} value={account.id}>
                         <div className="flex items-center gap-2 w-full">
