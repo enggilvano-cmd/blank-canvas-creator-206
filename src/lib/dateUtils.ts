@@ -359,8 +359,13 @@ export function calculateBillDetails(
     }
   }
 
+  // Arredonda para centavos para evitar resíduos de ponto flutuante (ex.: "-R$ 0,00")
+  const roundCents = (v: number) => Math.round(v * 100) / 100 || 0;
+  currentBillAmount = roundCents(currentBillAmount);
+  nextBillAmount = roundCents(nextBillAmount);
+
   // 4. Usa os novos valores calculados
-  const totalBalance = newTotalBalance; // Saldo devedor total (correto)
+  const totalBalance = roundCents(newTotalBalance); // Saldo devedor total (correto)
   // Fix: limit_amount is in cents, totalBalance is in units. Convert totalBalance to cents.
   const availableLimit = (account.limit_amount || 0) - Math.round(totalBalance * 100); // Limite disponível (correto)
   // --- FIM DA CORREÇÃO ---

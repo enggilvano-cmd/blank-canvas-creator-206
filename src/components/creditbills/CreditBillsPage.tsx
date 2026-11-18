@@ -251,10 +251,17 @@ export function CreditBillsPage({ onPayCreditCard, onReversePayment }: CreditBil
         adjustedOffset
       );
 
-      // Usar os valores calculados pela função base (que já considera invoice_month_overridden)
+      // Limite usado vem do saldo da conta no banco (soma de TODAS as transações concluídas).
+      // As transações aqui são só dos últimos 12 meses, então recalcular o usado a partir
+      // delas ignora despesas antigas e subestima o valor quando há pagamentos na janela.
+      const totalBalance = Math.round(-(account.balance ?? 0) * 100) / 100;
+      const availableLimit = (account.limit_amount ?? 0) - Math.round(totalBalance * 100);
+
       return {
         account,
         ...base,
+        totalBalance,
+        availableLimit,
       };
     });
   }, [
